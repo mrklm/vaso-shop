@@ -1,96 +1,282 @@
-import { useEffect, useState } from "react";
-import { Toaster } from "react-hot-toast";
-import { Sidebar } from "./components/layout/Sidebar";
-import { Toolbar } from "./components/layout/Toolbar";
+import { useEffect, useMemo, useState } from "react";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
-import { ProfileView2D } from "./components/viewer/ProfileView2D";
-import { TopView2D } from "./components/viewer/TopView2D";
-import { useVaseStore } from "./store/vase-store";
 import { useUIStore } from "./store/ui-store";
-import { useUrlShare } from "./hooks/useUrlShare";
+import { PLA_COLORS } from "./shop/shop-colors";
+import { SHOP_ORDER_FORM_ACTION, SHOP_ORDER_FORM_METHOD } from "./shop/shop-config";
+import { useShopStore } from "./shop/shop-store";
 import "./App.css";
 
 function App() {
-  const randomize = useVaseStore((s) => s.randomize);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const setShowGrid = useUIStore((s) => s.setShowGrid);
+  const setWireframe = useUIStore((s) => s.setWireframe);
+  const setFlatShading = useUIStore((s) => s.setFlatShading);
+  const setShowClipping = useUIStore((s) => s.setShowClipping);
+  const setRotationMode = useUIStore((s) => s.setRotationMode);
+  const setAutoRotate = useUIStore((s) => s.setAutoRotate);
+  const setVaseColor = useUIStore((s) => s.setVaseColor);
+  const generateNext = useShopStore((s) => s.generateNext);
+  const goPrevious = useShopStore((s) => s.goPrevious);
+  const goNext = useShopStore((s) => s.goNext);
+  const openOrderForCurrent = useShopStore((s) => s.openOrderForCurrent);
+  const closeOrder = useShopStore((s) => s.closeOrder);
+  const setSelectedColorId = useShopStore((s) => s.setSelectedColorId);
+  const entries = useShopStore((s) => s.entries);
+  const currentIndex = useShopStore((s) => s.currentIndex);
+  const selectedEntryId = useShopStore((s) => s.selectedEntryId);
+  const selectedColorId = useShopStore((s) => s.selectedColorId);
+  const [customerName, setCustomerName] = useState("");
+  const [customerContact, setCustomerContact] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [customerMessage, setCustomerMessage] = useState("");
 
-  // Load params from URL hash on mount
-  useUrlShare();
+  const currentEntry = entries[currentIndex] ?? null;
+  const selectedEntry = useMemo(
+    () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
+    [entries, selectedEntryId],
+  );
+  const availableColors = useMemo(
+    () => PLA_COLORS.filter((color) => color.available),
+    [],
+  );
+  const selectedColor = useMemo(
+    () => availableColors.find((color) => color.id === selectedColorId) ?? null,
+    [availableColors, selectedColorId],
+  );
+  const isOrderFormReady =
+    SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
+    !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
 
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        randomize();
-      }
-
-      // Ctrl+Z / Cmd+Z = undo
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        useVaseStore.temporal.getState().undo();
-      }
-
-      // Ctrl+Y / Cmd+Shift+Z = redo
-      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
-        e.preventDefault();
-        useVaseStore.temporal.getState().redo();
-      }
-
-      // P = toggle play/stop rotation
-      if (e.key === "p" || e.key === "P") {
-        const ui = useUIStore.getState();
-        ui.setAutoRotate(!ui.autoRotate);
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [randomize]);
+    setShowGrid(false);
+    setWireframe(false);
+    setFlatShading(false);
+    setShowClipping(false);
+    setRotationMode("camera");
+    setAutoRotate(true);
+    setVaseColor("#d9d2c7");
+  }, [
+    setAutoRotate,
+    setFlatShading,
+    setRotationMode,
+    setShowClipping,
+    setShowGrid,
+    setVaseColor,
+    setWireframe,
+  ]);
 
   return (
-    <div className="app">
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          style: {
-            background: "var(--color-panel)",
-            color: "var(--color-fg)",
-            border: "1px solid var(--color-accent)",
-            fontSize: "13px",
-          },
-        }}
-      />
-
-      <header className="app-header">
-        <h1>Vaso</h1>
-        <span className="version">Web Edition v{__APP_VERSION__}</span>
-        <button className="mobile-menu-btn" onClick={() => setPanelOpen(!panelOpen)} aria-label="Menu">
-          {panelOpen ? "\u2715" : "\u2630"}
-        </button>
-      </header>
-
-      <div className="app-body">
-        <div className={`sidebar-wrapper ${panelOpen ? "open" : ""}`}>
-          <Sidebar />
-        </div>
-
-        {panelOpen && <div className="mobile-overlay" aria-hidden="true" />}
-
-        <main className="main-content">
-          <div className="viewer-area">
-            <VaseViewer3D />
+    <div className="shop-app">
+      <main className="shop-shell">
+        <section className="shop-hero">
+          <div className="shop-copy">
+            <p className="shop-kicker">VASO SHOP</p>
+            <h1>Un vase genere, choisi en quelques secondes.</h1>
+            <p className="shop-lead">
+              Explore des modeles uniques, garde ton prefere, puis passe a la precommande.
+            </p>
           </div>
-          <Toolbar />
-        </main>
 
-        <aside className="right-panel">
-          <ProfileView2D />
-          <TopView2D />
-        </aside>
-      </div>
+          <div className="shop-actions">
+            <button className="shop-button shop-button-primary" onClick={generateNext}>
+              Generer un vase
+            </button>
+            <div className="shop-nav">
+              <button
+                className="shop-button shop-button-secondary"
+                onClick={goPrevious}
+                disabled={currentIndex === 0}
+              >
+                Precedent
+              </button>
+              <button
+                className="shop-button shop-button-secondary"
+                onClick={goNext}
+                disabled={currentIndex >= entries.length - 1}
+              >
+                Suivant
+              </button>
+            </div>
+            <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
+              Commander ce modele
+            </button>
+          </div>
+        </section>
+
+        <section className="shop-stage">
+          <div className="shop-viewer-card">
+            <div className="shop-viewer-header">
+              <span>Apercu 3D</span>
+              <span>Rotation automatique</span>
+            </div>
+            <div className="shop-viewer-frame">
+              <VaseViewer3D />
+            </div>
+          </div>
+
+          <aside className="shop-info-card">
+            <p className="shop-panel-title">Modele actuel</p>
+
+            <div className="shop-stats">
+              <div className="shop-stat">
+                <span className="shop-stat-label">Numero de seed</span>
+                <strong>{currentEntry?.seed ?? "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Version</span>
+                <strong>v{currentEntry?.version ?? "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Hauteur</span>
+                <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Diametre max</span>
+                <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Matiere</span>
+                <strong>{currentEntry?.material ?? "PLA"}</strong>
+              </div>
+            </div>
+
+            <p className="shop-history">
+              Vase {currentIndex + 1} sur {entries.length}
+            </p>
+          </aside>
+        </section>
+
+        {selectedEntry && (
+          <section className="shop-order-card">
+            <div className="shop-order-copy">
+              <p className="shop-panel-title">Commande en preparation</p>
+              <h2>Tu commandes ce vase precis.</h2>
+              <p>
+                Le modele est maintenant fige avec sa seed, sa version et ses dimensions. L&apos;etape
+                suivante est la precommande.
+              </p>
+            </div>
+
+            <div className="shop-order-summary">
+              <div className="shop-stat">
+                <span className="shop-stat-label">Seed</span>
+                <strong>{selectedEntry.seed}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Hauteur</span>
+                <strong>{selectedEntry.heightMm} mm</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Diametre max</span>
+                <strong>{selectedEntry.maxDiameterMm} mm</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Matiere</span>
+                <strong>{selectedEntry.material}</strong>
+              </div>
+            </div>
+
+            <div className="shop-color-block">
+              <label htmlFor="shop-color">Couleur PLA</label>
+              <select
+                id="shop-color"
+                value={selectedColorId}
+                onChange={(event) => setSelectedColorId(event.target.value)}
+              >
+                {availableColors.map((color) => (
+                  <option key={color.id} value={color.id}>
+                    {color.label}
+                  </option>
+                ))}
+              </select>
+
+              <div className="shop-color-swatches" aria-hidden="true">
+                {availableColors.map((color) => (
+                  <span
+                    key={color.id}
+                    className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                    style={{ backgroundColor: color.hex }}
+                    title={color.label}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <form
+              className="shop-order-form"
+              action={isOrderFormReady ? SHOP_ORDER_FORM_ACTION : undefined}
+              method={SHOP_ORDER_FORM_METHOD}
+            >
+              <input type="hidden" name="seed" value={selectedEntry.seed} />
+              <input type="hidden" name="version" value={selectedEntry.version} />
+              <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
+              <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
+              <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
+              <input type="hidden" name="material" value={selectedEntry.material} />
+
+              <label className="shop-field">
+                <span>Nom</span>
+                <input
+                  name="name"
+                  type="text"
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  placeholder="Votre nom"
+                  required
+                />
+              </label>
+
+              <label className="shop-field">
+                <span>Email ou telephone</span>
+                <input
+                  name="contact"
+                  type="text"
+                  value={customerContact}
+                  onChange={(event) => setCustomerContact(event.target.value)}
+                  placeholder="Email ou telephone"
+                  required
+                />
+              </label>
+
+              <label className="shop-field">
+                <span>Adresse</span>
+                <input
+                  name="address"
+                  type="text"
+                  value={customerAddress}
+                  onChange={(event) => setCustomerAddress(event.target.value)}
+                  placeholder="Optionnel pour l'instant"
+                />
+              </label>
+
+              <label className="shop-field">
+                <span>Message</span>
+                <textarea
+                  name="message"
+                  value={customerMessage}
+                  onChange={(event) => setCustomerMessage(event.target.value)}
+                  placeholder="Precisions, quantite, delai souhaite..."
+                  rows={4}
+                />
+              </label>
+
+              <div className="shop-order-actions">
+                <button className="shop-button shop-button-secondary" type="button" onClick={closeOrder}>
+                  Retour
+                </button>
+                <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
+                  Envoyer la precommande
+                </button>
+              </div>
+
+              <p className="shop-form-note">
+                {isOrderFormReady
+                  ? "Le formulaire est pret a envoyer la precommande."
+                  : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi."}
+              </p>
+            </form>
+          </section>
+        )}
+      </main>
     </div>
   );
 }
