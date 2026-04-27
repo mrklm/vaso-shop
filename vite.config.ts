@@ -5,7 +5,7 @@ const isElectron = process.env.ELECTRON === '1'
 
 export default defineConfig({
   plugins: [react()],
-  base: isElectron ? './' : '/vaso-web/',
+  base: isElectron ? './' : '/vaso-shop/',
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
   },
