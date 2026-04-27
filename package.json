@@ -1,13 +1,13 @@
 {
-  "name": "vaso-web",
+  "name": "vaso-shop",
   "private": true,
-  "version": "1.0.21",
-  "description": "Générateur paramétrique de vases pour impression 3D",
+  "version": "1.1.1",
+  "description": "Catalogue boutique de vases générés pour précommande",
   "author": {
     "name": "mrklm",
     "email": "mrklm@users.noreply.github.com"
   },
-  "homepage": "https://github.com/mrklm/vaso",
+  "homepage": "https://github.com/mrklm/vaso-shop",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -32,8 +32,8 @@
     "electron:build:win": "ELECTRON=1 npm run build && electron-builder --win"
   },
   "build": {
-    "appId": "com.mrklm.vaso",
-    "productName": "Vaso",
+    "appId": "com.mrklm.vasoshop",
+    "productName": "Vaso Shop",
     "directories": {
       "output": "release"
     },

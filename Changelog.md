@@ -2,171 +2,177 @@
 
 Toutes les modifications notables de ce projet seront documentées dans ce fichier.
 
-Le format est basé sur **Keep a Changelog**  
+Le format est basé sur **Keep a Changelog**
 et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.1] - 2026-04-28
+
+### Modifié
+- Incrémentation de version après publication de `1.1.0`
+- Mise à jour des métadonnées du projet pour `vaso-shop`
+
+## [1.1.0] - 2026-04-28
+
+### Modifié
+- Transformation de `vaso-web` en première version boutique `vaso-shop`
+- Remplacement de l'interface maker par un parcours simple : générer, parcourir, commander
+- Affichage des informations produit utiles : seed, version, hauteur, diamètre maximal, matière
+
+### Ajouté
+- Historique simple des vases générés avec navigation précédent / suivant
+- Sélection de couleur PLA via configuration dédiée
+- Formulaire de précommande prêt à être relié à Formspree
+- Configuration boutique séparée pour préparer la suite du projet
+
 ## [1.0.24] - 2026-03-28
 
-### 🎨 Modifié
-Fix: corrige le blocage export STL d'instanciation clipper après bundling
+### Modifié
+- Correction du blocage de l'export STL lié à l'instanciation de clipper après bundling
 
 ## [1.0.23] - 2026-03-28
 
-### 🎨 Modifié
- - correction gravure FDM robuste 
- - rétablit le workflow deploy
+### Modifié
+- Correction de la gravure FDM robuste
+- Rétablissement du workflow de déploiement
 
 ## [1.0.22] - 2026-03-28
 
-### 🎨 Modifié
- - Ajustement du texte sur STL pour impression
+### Modifié
+- Ajustement du texte STL pour l'impression
 
 ## [1.0.21] - 2026-03-28
 
-### 🎨 Modifié
- - Le N° de  Seed passe de 6 à 8 chiffres 
- - Probleme de capture d'écran résolu 
+### Modifié
+- Le numéro de seed passe de 6 à 8 chiffres
+- Correction d'un problème de capture d'écran
 
 ## [1.0.20] - 2026-03-26
 
-### 🎨 Modifié
- - Le vase initial de session correspond maintenant à la seed générée aléatoirement 
- - Le "M" de seed modifié est mainteant appliqué si:
-   - Style
-   - Forcer complexité
-   - Complexité
-   - Forcer texture
-   - Preset de profil imprimante 3D
-   est modifié / appliqué.
+### Modifié
+- Le vase initial de session correspond maintenant à la seed générée aléatoirement
+- Le marqueur `M` de seed modifiée s'applique maintenant si le style, la complexité, la texture ou le profil d'imprimante 3D est modifié
 
 ## [1.0.19] - 2026-03-26
 
-### 🎨 Modifié
- - Ajout imprimante 3D "Creality CR-10S" dans la liste des profils en 3eme position
- - Application complète des thèmes de couleurs (vase compris)
-
+### Modifié
+- Ajout de l'imprimante 3D `Creality CR-10S` dans la liste des profils
+- Application complète des thèmes de couleurs, vase compris
 
 ## [1.0.18] - 2026-03-26
 
-### 🎨 Modifié
- - Correction du mode de vue 3D "Flat Shading" qui ne fonctionnait pas
+### Modifié
+- Correction du mode de vue 3D `Flat Shading`
 
 ## [1.0.17] - 2026-03-26
- 
-### 🎨 Ajouté
- - Un "M"est affiché si il y a modification de la seed:
-   - Sur le rendu 3D
-   - Sur le STL
-   - Sur le bandeau de la capture d'écran 
+
+### Ajouté
+- Affichage d'un `M` quand la seed est modifiée, sur le rendu 3D, le STL et le bandeau de capture d'écran
    
 ## [1.0.16] - 2026-03-26
 
-### 🎨 Ajouté
- - Mise en place d'un critère d'épaisseur géométrique constante (evite les trous à la réduction d'echelle)
+### Ajouté
+- Mise en place d'un critère d'épaisseur géométrique constante pour éviter les trous à la réduction d'échelle
 
 ## [1.0.15] - 2026-03-25
 
-### 🎨 Ajouté
- - Bouton réinitialiser Vaso dans options 
+### Ajouté
+- Bouton de réinitialisation de Vaso dans les options
 
 ## [1.0.14] - 2026-03-25
 
-### 🎨 Modifié
- - Deplacement des paramètres avancés de STL de paramètres généraux à options
+### Modifié
+- Déplacement des paramètres avancés de STL depuis les paramètres généraux vers les options
 
 ## [1.0.13] - 2026-03-25
 
-### 🎨 Modifié
- - Le programme tiens maintenant compte de l'imprimante 3D selectionnée
+### Modifié
+- Le programme tient maintenant compte de l'imprimante 3D sélectionnée
 
-### 🎨 Ajouté
- - Ajout de plusieurs imprimante 3D dans les presets
+### Ajouté
+- Ajout de plusieurs imprimantes 3D dans les presets
 
 ## [1.0.12] - 2026-03-25
 
-### 🎨 Modifié
-
- - Supression du mode de rendu 3D "Enhanced" qui était pertinent en Python
- - n° de seed et plus N° de seed sur le bandeau capture d'écran
+### Modifié
+- Suppression du mode de rendu 3D `Enhanced`, pertinent dans l'ancienne version Python
+- Uniformisation du libellé `n° de seed` sur le bandeau de capture d'écran
 
 ## [1.0.11] - 2026-03-25
 
-### 🎨 Modifié
- - Texte titre + version + seed visible dans le rendu 3D
+### Modifié
+- Le titre, la version et la seed sont visibles dans le rendu 3D
 
 ## [1.0.10] - 2026-03-25
 
-### 🎨 Modifié
- - Séctions rétablies dans le menu option
+### Modifié
+- Sections rétablies dans le menu des options
 
 ## [1.0.9] - 2026-03-25
 
-### 🎨 Modifié
+### Modifié
 - Le menu option sur mobile se ferme lorsqu'on appuie sur X
 
 ## [1.0.8] - 2026-03-25
 
-### 🎨 Modifié
+### Modifié
 - Le menu option sur mobile ne se ferme plus lorsqu'on change de section
 
 ## [1.0.7] - 2026-03-25
 
-### 🎨 Modifié
-- Capture d'écran fonctionnelle + titre capture 
+### Modifié
+- Capture d'écran fonctionnelle avec titre
 
-### 🎨 Ajouté
-- Bandeau info sur la capture d'écran 
+### Ajouté
+- Bandeau d'information sur la capture d'écran
 
 ## [1.0.6] - 2026-03-25
 
-### 🎨 Ajouté
-- Nom du programme + version + N°de seed imprimé dans le vase
+### Ajouté
+- Nom du programme, version et numéro de seed imprimés dans le vase
 
-### 🎨 Modifié
-- Nettoyage du vieux pipeline soustractif 
+### Modifié
+- Nettoyage de l'ancien pipeline soustractif
 
 ## [1.0.5] - 2026-03-21
 
-### 🎨 Modifié
-- Résidu de la grille du milieu
+### Modifié
+- Correction d'un résidu de grille au milieu de la scène
 
 ## [1.0.4] - 2026-03-21
 
-### 🎨 Modifié
-- Probleme de bloc noir en version mobile résolu 
+### Modifié
+- Correction d'un problème de bloc noir sur mobile
 
 ## [1.0.3] - 2026-03-21
 
-### 🎨 Modifié
-- Probleme de bloc noir en version mobile
+### Modifié
+- Problème de bloc noir sur mobile
 
 ## [1.0.2] - 2026-03-21
 
-### 🎨 Modifié
-- Amélioration IG: les boutons du bas ne disparaissent plus au redimenssionnement
-
+### Modifié
+- Amélioration de l'interface : les boutons du bas ne disparaissent plus au redimensionnement
 
 ## [1.0.1] - 2026-03-21
 
-### 🎨 Modifié
+### Modifié
 - Positionnement correct de la grille 3D à la base du vase
 - Amélioration de la cohérence visuelle de la scène 3D
-
 - Inversion de la hiérarchie visuelle des boutons principaux :
   - **"Aléatoire"** devient le bouton principal (highlight)
   - **"Exporter STL"** devient secondaire
 
-### 🧠 Amélioré
+### Amélioré
 - Meilleure lisibilité de l’interface utilisateur
 - Comportement plus logique orienté génération avant export
 
 ---
 
-## [1.0.0] - Initial release
+## [1.0.0] - Version initiale
 
-### ✨ Fonctionnalités principales
+### Fonctionnalités principales
 - Génération de vases polygonaux paramétriques
 - Interpolation multi-profils (2 à 10 profils)
 - Aperçu 3D temps réel
