@@ -7,6 +7,13 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.2] - 2026-04-28
+
+### Modifié
+- Compactage de la page d'accueil sur ordinateur avec un hero et un viewer plus contenus
+- Réduction de la taille du titre principal pour améliorer le cadrage desktop
+- Mise à jour du texte d'accueil avec une formulation en vouvoiement
+
 ## [1.1.1] - 2026-04-28
 
 ### Modifié

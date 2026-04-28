@@ -70,10 +70,8 @@ function App() {
         <section className="shop-hero">
           <div className="shop-copy">
             <p className="shop-kicker">VASO SHOP</p>
-            <h1>Un vase genere, choisi en quelques secondes.</h1>
-            <p className="shop-lead">
-              Explore des modeles uniques, garde ton prefere, puis passe a la precommande.
-            </p>
+            <h1>Generez et comander un Vase un quelques secondes</h1>
+            <p className="shop-lead">Explorez des modeles unique et passez a la precommande</p>
           </div>
 
           <div className="shop-actions">
