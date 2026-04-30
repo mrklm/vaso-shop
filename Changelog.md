@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.3] - 2026-05-01
+
+### Modifié
+- Aligne le texte gravé du fond sur les derniers réglages validés du moteur
+
 ## [1.1.2] - 2026-04-28
 
 ### Modifié

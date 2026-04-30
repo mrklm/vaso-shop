@@ -19,10 +19,7 @@
 }
 
 .shop-hero {
-  display: grid;
-  grid-template-columns: 1.35fr 0.95fr;
-  gap: 18px;
-  align-items: end;
+  display: block;
   margin-bottom: 18px;
 }
 
@@ -65,7 +62,10 @@
 
 .shop-actions {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr) minmax(0, 1fr);
+  align-items: stretch;
   gap: 14px;
+  margin-top: 18px;
   padding: 18px;
   border: 1px solid rgb(143 180 255 / 18%);
   border-radius: 28px;
@@ -117,9 +117,9 @@
 
 .shop-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.85fr);
-  gap: 18px;
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1.8fr) 312px;
+  gap: 14px;
+  align-items: start;
 }
 
 .shop-viewer-card {
@@ -147,8 +147,8 @@
 .shop-info-card {
   display: grid;
   align-content: start;
-  gap: 18px;
-  padding: 20px;
+  gap: 14px;
+  padding: 18px;
 }
 
 .shop-panel-title {
@@ -184,7 +184,7 @@
 
 .shop-history {
   color: rgb(234 240 252 / 70%);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .shop-order-card {
@@ -319,8 +319,8 @@
 }
 
 @media (width <= 1080px) {
-  .shop-hero,
   .shop-stage,
+  .shop-actions,
   .shop-order-card {
     grid-template-columns: 1fr;
   }

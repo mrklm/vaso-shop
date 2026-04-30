@@ -73,31 +73,6 @@ function App() {
             <h1>Generez et comander un Vase un quelques secondes</h1>
             <p className="shop-lead">Explorez des modeles unique et passez a la precommande</p>
           </div>
-
-          <div className="shop-actions">
-            <button className="shop-button shop-button-primary" onClick={generateNext}>
-              Generer un vase
-            </button>
-            <div className="shop-nav">
-              <button
-                className="shop-button shop-button-secondary"
-                onClick={goPrevious}
-                disabled={currentIndex === 0}
-              >
-                Precedent
-              </button>
-              <button
-                className="shop-button shop-button-secondary"
-                onClick={goNext}
-                disabled={currentIndex >= entries.length - 1}
-              >
-                Suivant
-              </button>
-            </div>
-            <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
-              Commander ce modele
-            </button>
-          </div>
         </section>
 
         <section className="shop-stage">
@@ -116,12 +91,8 @@ function App() {
 
             <div className="shop-stats">
               <div className="shop-stat">
-                <span className="shop-stat-label">Numero de seed</span>
+                <span className="shop-stat-label">N de vase</span>
                 <strong>{currentEntry?.seed ?? "-"}</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Version</span>
-                <strong>v{currentEntry?.version ?? "-"}</strong>
               </div>
               <div className="shop-stat">
                 <span className="shop-stat-label">Hauteur</span>
@@ -133,7 +104,7 @@ function App() {
               </div>
               <div className="shop-stat">
                 <span className="shop-stat-label">Matiere</span>
-                <strong>{currentEntry?.material ?? "PLA"}</strong>
+                <strong>PLA - amidon de mais</strong>
               </div>
             </div>
 
@@ -141,6 +112,31 @@ function App() {
               Vase {currentIndex + 1} sur {entries.length}
             </p>
           </aside>
+        </section>
+
+        <section className="shop-actions">
+          <button className="shop-button shop-button-primary" onClick={generateNext}>
+            Generer un vase
+          </button>
+          <div className="shop-nav">
+            <button
+              className="shop-button shop-button-secondary"
+              onClick={goPrevious}
+              disabled={currentIndex === 0}
+            >
+              Precedent
+            </button>
+            <button
+              className="shop-button shop-button-secondary"
+              onClick={goNext}
+              disabled={currentIndex >= entries.length - 1}
+            >
+              Suivant
+            </button>
+          </div>
+          <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
+            Commander ce modele
+          </button>
         </section>
 
         {selectedEntry && (

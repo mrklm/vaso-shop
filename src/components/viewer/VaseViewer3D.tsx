@@ -15,11 +15,28 @@ import type { VaseParameters } from "../../engine/types";
 
 const ROTATE_SPEED = 0.05;
 const PREVIEW_TEXT_FIT_MARGIN_MM = 4;
-const PREVIEW_TEXT_WIDTH_FACTOR = 1.45;
-const PREVIEW_TEXT_HEIGHT_FACTOR = 0.44;
+const PREVIEW_TEXT_WIDTH_FACTOR = 1.9;
+const PREVIEW_TEXT_HEIGHT_FACTOR = 0.78;
 const PREVIEW_TEXT_CANVAS_WIDTH = 1536;
 const PREVIEW_TEXT_CANVAS_HEIGHT = 512;
 const PREVIEW_TEXT_Y_OFFSET = 0.08;
+const PREVIEW_TEXT_LINE_GAP_FACTOR = 0.55;
+const PREVIEW_TEXT_BASE_FONT_SIZES = [108, 96, 96] as const;
+const PREVIEW_TEXT_LINE_WIDTH_FACTORS = [0.98, 0.98] as const;
+const PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR = 0.92;
+const PREVIEW_TEXT_SIDE_MARGIN_PX = 29;
+
+function fitPreviewText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  baseFontSize: number,
+  targetWidth: number,
+): number {
+  context.font = `700 ${baseFontSize}px Arial`;
+  const measuredWidth = context.measureText(text).width;
+  if (measuredWidth <= 0) return baseFontSize;
+  return (baseFontSize * targetWidth) / measuredWidth;
+}
 
 function computePreviewBottomFitRadius(params: VaseParameters): number {
   const bottomProfiles = [...params.profiles]
@@ -61,18 +78,75 @@ function PreviewEngravingOverlay(
     context.fillStyle = "rgba(28,28,28,0.45)";
 
     const centerX = canvas.width / 2;
-    const line1Y = canvas.height * 0.39;
-    const line2Y = canvas.height * 0.69;
+    const lineFontSizes = lines.map((line, index) => {
+      const widthFactor = PREVIEW_TEXT_LINE_WIDTH_FACTORS[index];
+      if (widthFactor === undefined) {
+        return PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1];
+      }
+      return fitPreviewText(
+        context,
+        line,
+        PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1],
+        canvas.width * widthFactor,
+      );
+    });
+    const referenceFontSize = lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
+    for (let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length; index < lineFontSizes.length; index += 1) {
+      lineFontSizes[index] = referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR;
+    }
+    const maxHeight = canvas.height * 0.82;
+    const computeLayout = (fontSizes: number[]) => {
+      const lineGap = Math.max(20, Math.max(...fontSizes) * PREVIEW_TEXT_LINE_GAP_FACTOR);
+      const totalHeight =
+        fontSizes.reduce((sum, fontSize) => sum + fontSize, 0) +
+        lineGap * Math.max(0, fontSizes.length - 1);
+      const yScale = totalHeight > maxHeight ? maxHeight / totalHeight : 1;
+      const scaledLineHeights = fontSizes.map((fontSize) => fontSize * yScale);
+      const scaledGap = lineGap * yScale;
+      let currentY =
+        canvas.height * 0.5 -
+        (scaledLineHeights.reduce((sum, fontSize) => sum + fontSize, 0) +
+          scaledGap * Math.max(0, scaledLineHeights.length - 1)) *
+          0.5;
+      const lineCenters = scaledLineHeights.map((lineHeight) => {
+        const centerY = currentY + lineHeight * 0.5;
+        currentY += lineHeight + scaledGap;
+        return centerY;
+      });
+      return { lineGap, yScale, scaledLineHeights, scaledGap, lineCenters };
+    };
 
-    context.font = "700 108px Arial";
-    context.lineWidth = 10;
-    context.strokeText(lines[0], centerX, line1Y);
-    context.fillText(lines[0], centerX, line1Y);
+    const firstLayout = computeLayout(lineFontSizes);
+    const previewRadiusY = maxHeight * 0.5;
+    const safeFontSizes = lineFontSizes.map((fontSize, index) => {
+      const dy = (firstLayout.lineCenters[index] ?? canvas.height * 0.5) - canvas.height * 0.5;
+      const halfChordFactor = Math.sqrt(Math.max(0, 1 - (dy / previewRadiusY) ** 2));
+      const baseWidth =
+        canvas.width *
+        (PREVIEW_TEXT_LINE_WIDTH_FACTORS[index] ??
+          (PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1] * 0.55));
+      const allowedWidth = Math.max(0, baseWidth * halfChordFactor - PREVIEW_TEXT_SIDE_MARGIN_PX * 2);
+      if (allowedWidth <= 0) return fontSize;
+      context.font = `700 ${fontSize}px Arial`;
+      const measuredWidth = context.measureText(lines[index]).width;
+      if (measuredWidth <= 0 || measuredWidth <= allowedWidth) return fontSize;
+      return fontSize * (allowedWidth / measuredWidth);
+    });
 
-    context.font = "700 96px Arial";
-    context.lineWidth = 8;
-    context.strokeText(lines[1], centerX, line2Y);
-    context.fillText(lines[1], centerX, line2Y);
+    const finalLayout = computeLayout(safeFontSizes);
+
+    lines.forEach((line, index) => {
+      const fontSize = safeFontSizes[index];
+      const lineCenterY = finalLayout.lineCenters[index];
+      context.font = `700 ${fontSize}px Arial`;
+      context.lineWidth = Math.max(4, fontSize * 0.09);
+      context.save();
+      context.translate(centerX, lineCenterY);
+      context.scale(1, finalLayout.yScale);
+      context.strokeText(line, 0, 0);
+      context.fillText(line, 0, 0);
+      context.restore();
+    });
 
     const nextTexture = new THREE.CanvasTexture(canvas);
     nextTexture.colorSpace = THREE.SRGBColorSpace;

@@ -24,9 +24,12 @@ const GEOMETRY_WELD_TOLERANCE_MM = 1e-3;
 const PLANAR_PATCH_TOLERANCE_MM = 1e-4;
 const BOTTOM_FINISH_PLANE_TOLERANCE_MM = 5e-4;
 const ADDITIVE_TEXT_DEGENERATE_AREA_EPSILON_MM2 = 1e-12;
-const RAW_LINE_SIZES = [8.6, 7.1] as const;
-const TEXT_WIDTH_FACTOR = 0.58;
-const TEXT_HEIGHT_FACTOR = 0.45;
+const RAW_LINE_SIZES = [8.6, 7.8, 7.2] as const;
+const TEXT_LINE_WIDTH_FACTORS = [1.9, 1.9] as const;
+const TEXT_SIGNATURE_HEIGHT_FACTOR = 0.92;
+const TEXT_MAX_HEIGHT_FACTOR = 0.78;
+const TEXT_LINE_GAP_FACTOR = 0.55;
+const TEXT_SIDE_MARGIN_MM = 1.44;
 const TEXT_CURVE_SEGMENTS = 10;
 const PLANAR_TEXT_SIMPLIFICATION_MM = 0.05;
 
@@ -219,20 +222,95 @@ function buildPrintableLineGeometry(
   return { geometry, removedContours, removedHoles };
 }
 
-function buildTextGeometry(font: Font, seed: number, isSeedModified: boolean, printSafeScale = 1, printSafe = false): THREE.BufferGeometry | null {
+function buildTextGeometry(
+  font: Font,
+  seed: number,
+  isSeedModified: boolean,
+  fitRadius: number,
+  printSafeScale = 1,
+  printSafe = false,
+): THREE.BufferGeometry | null {
   const lines = formatEngravingLines(seed, isSeedModified);
-  const lineResults = lines.map((line, index) =>
-    buildPrintableLineGeometry(font, line, RAW_LINE_SIZES[index], printSafeScale, printSafe));
+  const lineResults = lines.map((line, index) => ({
+    geometry: buildPrintableLineGeometry(
+      font,
+      line,
+      RAW_LINE_SIZES[index] ?? RAW_LINE_SIZES[RAW_LINE_SIZES.length - 1],
+      printSafeScale,
+      printSafe,
+    ),
+    rawSize: RAW_LINE_SIZES[index] ?? RAW_LINE_SIZES[RAW_LINE_SIZES.length - 1],
+  }));
   const rawGeometries = lineResults
-    .map((result) => result.geometry)
+    .map((result) => result.geometry.geometry)
     .filter((geometry): geometry is THREE.BufferGeometry => geometry !== null);
-  const removedContours = lineResults.reduce((sum, result) => sum + result.removedContours, 0);
-  const removedHoles = lineResults.reduce((sum, result) => sum + result.removedHoles, 0);
+  const removedContours = lineResults.reduce((sum, result) => sum + result.geometry.removedContours, 0);
+  const removedHoles = lineResults.reduce((sum, result) => sum + result.geometry.removedHoles, 0);
   appendPipelineTrace(`[engraving] removed contours=${removedContours},removed holes=${removedHoles}`);
   if (rawGeometries.length === 0) return null;
 
-  const yOffsets = [FONT_LINE_HEIGHT * 0.5, -FONT_LINE_HEIGHT * 0.5];
-  rawGeometries.forEach((geometry, index) => geometry.translate(0, yOffsets[index], 0));
+  const getLineSize = (geometry: THREE.BufferGeometry, fallbackSize: number) => {
+    geometry.computeBoundingBox();
+    const bounds = geometry.boundingBox;
+    if (!bounds) return { width: fallbackSize, height: fallbackSize };
+    const size = bounds.getSize(new THREE.Vector3());
+    return { width: size.x, height: size.y };
+  };
+
+  rawGeometries.forEach((geometry, index) => {
+    const widthFactor = TEXT_LINE_WIDTH_FACTORS[index];
+    if (widthFactor === undefined) return;
+    const targetLineWidth = fitRadius * widthFactor;
+    const { width } = getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT);
+    if (width > 0) {
+      const scale = targetLineWidth / width;
+      geometry.scale(scale, scale, 1);
+    }
+  });
+
+  const referenceLineHeight =
+    getLineSize(rawGeometries[Math.min(1, rawGeometries.length - 1)], lineResults[Math.min(1, lineResults.length - 1)]?.rawSize ?? FONT_LINE_HEIGHT).height;
+  rawGeometries.forEach((geometry, index) => {
+    if (index < TEXT_LINE_WIDTH_FACTORS.length) return;
+    const { height } = getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT);
+    const targetHeight = referenceLineHeight * TEXT_SIGNATURE_HEIGHT_FACTOR;
+    if (height > 0 && targetHeight > 0) {
+      const scale = targetHeight / height;
+      geometry.scale(scale, scale, 1);
+    }
+  });
+
+  const computeLayout = () => {
+    const lineHeights = rawGeometries.map((geometry, index) =>
+      getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT).height);
+    const maxLineHeight = lineHeights.length > 0 ? Math.max(...lineHeights) : FONT_LINE_HEIGHT;
+    const lineGap = Math.max(0.8, maxLineHeight * TEXT_LINE_GAP_FACTOR);
+    const totalHeight = lineHeights.reduce((sum, height) => sum + height, 0) + lineGap * Math.max(0, lineHeights.length - 1);
+    let currentTop = totalHeight * 0.5;
+    const lineCenters = lineHeights.map((lineHeight) => {
+      const centerY = currentTop - lineHeight * 0.5;
+      currentTop -= lineHeight + lineGap;
+      return centerY;
+    });
+    return { lineCenters };
+  };
+
+  const firstLayout = computeLayout();
+  rawGeometries.forEach((geometry, index) => {
+    const centerY = firstLayout.lineCenters[index] ?? 0;
+    const { width } = getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT);
+    const halfChord = Math.sqrt(Math.max(0, fitRadius * fitRadius - centerY * centerY));
+    const allowedWidth = Math.max(0, halfChord * 2 - TEXT_SIDE_MARGIN_MM * 2);
+    if (width > 0 && allowedWidth > 0 && width > allowedWidth) {
+      const scale = allowedWidth / width;
+      geometry.scale(scale, scale, 1);
+    }
+  });
+
+  const finalLayout = computeLayout();
+  rawGeometries.forEach((geometry, index) => {
+    geometry.translate(0, finalLayout.lineCenters[index] ?? 0, 0);
+  });
 
   const merged = mergeGeometries(rawGeometries, false);
   rawGeometries.forEach((geometry) => geometry.dispose());
@@ -245,7 +323,20 @@ function buildTextGeometry(font: Font, seed: number, isSeedModified: boolean, pr
     return null;
   }
 
-  const center = bounds.getCenter(new THREE.Vector3());
+  const maxHeight = fitRadius * TEXT_MAX_HEIGHT_FACTOR;
+  const size = bounds.getSize(new THREE.Vector3());
+  if (size.y > maxHeight && size.y > 0) {
+    const yScale = maxHeight / size.y;
+    merged.scale(1, yScale, 1);
+    merged.computeBoundingBox();
+  }
+
+  const centeredBounds = merged.boundingBox;
+  if (!centeredBounds) {
+    merged.dispose();
+    return null;
+  }
+  const center = centeredBounds.getCenter(new THREE.Vector3());
   merged.translate(-center.x, -center.y, 0);
   merged.clearGroups();
   return merged;
@@ -402,7 +493,14 @@ function buildAdditiveTextGeometry(
   const compensatedScale = params.printSafeEngraving ? 1 / params.scale : 1;
   appendPipelineTrace(`[engraving] compensatedScale=${compensatedScale.toFixed(3)}`);
 
-  const merged = buildTextGeometry(font, seed, isSeedModified, compensatedScale, params.printSafeEngraving);
+  const merged = buildTextGeometry(
+    font,
+    seed,
+    isSeedModified,
+    fitRadius,
+    compensatedScale,
+    params.printSafeEngraving,
+  );
   if (!merged) return null;
 
   merged.computeBoundingBox();
@@ -424,7 +522,7 @@ function buildAdditiveTextGeometry(
   }
 
   const size = currentBounds.getSize(new THREE.Vector3());
-  const xyScale = Math.min((fitRadius * TEXT_WIDTH_FACTOR) / size.x, (fitRadius * TEXT_HEIGHT_FACTOR) / size.y);
+  const xyScale = 1;
   appendPipelineTrace(
     `[engraving] text bounds width=${size.x.toFixed(3)}mm,height=${size.y.toFixed(3)}mm,xyScale=${xyScale.toFixed(4)}`,
   );
