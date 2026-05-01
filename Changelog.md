@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.4] - 2026-05-01
+
+### Modifié
+- Refonte la presentation shop pour un rendu plus harmonieux et plus compact a l'ecran
+
 ## [1.1.3] - 2026-05-01
 
 ### Modifié

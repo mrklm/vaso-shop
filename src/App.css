@@ -1,75 +1,128 @@
 .shop-app {
-  --color-bg: #07111f;
-  --color-panel: rgb(10 22 38 / 88%);
-  --color-field: rgb(18 35 56 / 90%);
-  --color-fg: #f4f7fb;
-  --color-field-fg: #f4f7fb;
-  --color-accent: #2b6cff;
+  --color-bg: #f4efe6;
+  --color-panel: rgb(255 250 242 / 82%);
+  --color-field: rgb(248 242 232 / 94%);
+  --color-fg: #261d16;
+  --color-field-fg: #261d16;
+  --color-accent: #a54f2b;
+  --color-accent-soft: #d99062;
+  --color-line: rgb(93 58 37 / 14%);
   min-height: 100vh;
   color: var(--color-fg);
   background:
-    radial-gradient(circle at top, rgb(45 108 255 / 18%), transparent 34%),
-    linear-gradient(180deg, #08111d 0%, #050a12 100%);
+    radial-gradient(circle at top left, rgb(188 120 79 / 18%), transparent 32%),
+    radial-gradient(circle at 85% 12%, rgb(121 157 132 / 18%), transparent 26%),
+    linear-gradient(180deg, #f7f1e8 0%, #eee5d8 100%);
 }
 
 .shop-shell {
-  width: min(1320px, calc(100% - 32px));
+  width: min(1380px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 22px 0 28px;
+  padding: 22px 0 32px;
 }
 
 .shop-hero {
-  display: block;
-  margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .shop-copy,
+.shop-hero-note-box,
 .shop-info-card,
 .shop-viewer-card,
 .shop-order-card {
-  border: 1px solid rgb(143 180 255 / 18%);
-  border-radius: 28px;
-  background: rgb(8 17 30 / 78%);
-  box-shadow: 0 24px 70px rgb(0 0 0 / 24%);
-  backdrop-filter: blur(18px);
+  border: 1px solid var(--color-line);
+  border-radius: 30px;
+  background: var(--color-panel);
+  box-shadow:
+    0 24px 80px rgb(83 54 28 / 10%),
+    inset 0 1px 0 rgb(255 255 255 / 40%);
+  backdrop-filter: blur(18px) saturate(1.1);
 }
 
 .shop-copy {
-  padding: 22px 24px;
+  padding: 30px 32px;
 }
 
 .shop-kicker {
-  margin-bottom: 10px;
-  color: #8eb4ff;
-  font-size: 0.8rem;
+  margin-bottom: 12px;
+  color: #8f5331;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.2em;
 }
 
 .shop-copy h1 {
   max-width: 12ch;
-  margin-bottom: 10px;
-  font-size: clamp(1.45rem, 2.6vw, 2.35rem);
-  line-height: 1.02;
+  margin-bottom: 14px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4.6vw, 4.2rem);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
 }
 
 .shop-lead {
-  max-width: 42ch;
-  color: rgb(234 240 252 / 76%);
-  font-size: 0.96rem;
-  line-height: 1.45;
+  max-width: 50ch;
+  color: rgb(38 29 22 / 72%);
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+.shop-hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.shop-hero-pills span {
+  padding: 10px 14px;
+  border: 1px solid rgb(93 58 37 / 12%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 46%);
+  color: rgb(38 29 22 / 76%);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.shop-hero-note {
+  display: grid;
+  align-content: stretch;
+  gap: 10px;
+}
+
+.shop-hero-note-box {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgb(255 252 247 / 86%), rgb(246 236 220 / 94%)),
+    radial-gradient(circle at top right, rgb(165 79 43 / 10%), transparent 36%);
+}
+
+.shop-hero-note-box strong {
+  font-size: 1.02rem;
+}
+
+.shop-hero-note-box p {
+  color: rgb(38 29 22 / 68%);
+  line-height: 1.6;
 }
 
 .shop-actions {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.8fr) minmax(0, 1fr);
   align-items: stretch;
   gap: 14px;
-  margin-top: 18px;
-  padding: 18px;
-  border: 1px solid rgb(143 180 255 / 18%);
-  border-radius: 28px;
-  background: linear-gradient(180deg, rgb(14 31 50 / 92%), rgb(7 18 31 / 92%));
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgb(255 248 240 / 84%), rgb(246 237 226 / 94%));
+  box-shadow: 0 18px 40px rgb(83 54 28 / 8%);
 }
 
 .shop-nav {
@@ -79,11 +132,11 @@
 }
 
 .shop-button {
-  min-height: 50px;
-  padding: 0 18px;
+  min-height: 54px;
+  padding: 0 20px;
   border: 0;
   border-radius: 18px;
-  color: #f8fbff;
+  color: #fff9f1;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -94,7 +147,7 @@
 }
 
 .shop-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .shop-button:disabled {
@@ -103,22 +156,22 @@
 }
 
 .shop-button-primary {
-  background: linear-gradient(135deg, #2b6cff, #5b9dff);
-  box-shadow: 0 16px 38px rgb(43 108 255 / 30%);
+  background: linear-gradient(135deg, #a14b28, #c97244);
+  box-shadow: 0 16px 38px rgb(165 79 43 / 24%);
 }
 
 .shop-button-secondary {
-  background: #12233a;
+  background: linear-gradient(180deg, #4e4036, #31271f);
 }
 
 .shop-button-accent {
-  background: linear-gradient(135deg, #123d78, #1e66c6);
+  background: linear-gradient(135deg, #315746, #4b7f67);
 }
 
 .shop-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) 312px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.9fr) 340px;
+  gap: 16px;
   align-items: start;
 }
 
@@ -130,29 +183,50 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
-  color: rgb(234 240 252 / 68%);
-  font-size: 0.86rem;
+  margin-bottom: 12px;
+  color: rgb(38 29 22 / 56%);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .shop-viewer-frame {
-  height: min(56vh, 560px);
+  height: min(55vh, 540px);
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 24px;
   background:
-    radial-gradient(circle at top, rgb(76 135 255 / 16%), transparent 38%),
-    linear-gradient(180deg, #091220 0%, #060d17 100%);
+    radial-gradient(circle at top, rgb(199 114 68 / 18%), transparent 38%),
+    linear-gradient(180deg, #f7f1e8 0%, #e7dbcb 100%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 50%);
 }
 
 .shop-info-card {
   display: grid;
   align-content: start;
-  gap: 14px;
-  padding: 18px;
+  gap: 16px;
+  padding: 20px;
+}
+
+.shop-info-head {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-live-badge {
+  justify-self: start;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgb(73 124 101 / 10%);
+  color: #36644f;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .shop-panel-title {
-  color: #8eb4ff;
+  color: #8f5331;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -167,32 +241,43 @@
 .shop-stat {
   display: grid;
   gap: 6px;
-  padding: 12px 14px;
-  border: 1px solid rgb(143 180 255 / 14%);
+  padding: 14px 15px;
+  border: 1px solid rgb(93 58 37 / 10%);
   border-radius: 18px;
-  background: rgb(15 30 50 / 70%);
+  background: rgb(255 255 255 / 42%);
 }
 
 .shop-stat-label {
-  color: rgb(234 240 252 / 64%);
-  font-size: 0.84rem;
+  color: rgb(38 29 22 / 56%);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .shop-stat strong {
-  font-size: 1rem;
+  font-size: 1.04rem;
+}
+
+.shop-story {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgb(252 246 238 / 96%), rgb(244 234 220 / 96%));
+  color: rgb(38 29 22 / 70%);
+  line-height: 1.58;
 }
 
 .shop-history {
-  color: rgb(234 240 252 / 70%);
-  font-size: 0.9rem;
+  color: rgb(38 29 22 / 60%);
+  font-size: 0.88rem;
+  font-weight: 700;
 }
 
 .shop-order-card {
   display: grid;
   grid-template-columns: 1fr 0.85fr 1.05fr;
-  gap: 16px;
-  margin-top: 18px;
-  padding: 18px;
+  gap: 18px;
+  margin-top: 16px;
+  padding: 20px;
 }
 
 .shop-order-copy {
@@ -201,11 +286,13 @@
 }
 
 .shop-order-copy h2 {
-  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.6rem, 2.2vw, 2.2rem);
+  line-height: 1.02;
 }
 
 .shop-order-copy p {
-  color: rgb(234 240 252 / 74%);
+  color: rgb(38 29 22 / 70%);
   line-height: 1.6;
 }
 
@@ -227,9 +314,9 @@
 .shop-color-block select {
   min-height: 52px;
   padding: 0 14px;
-  border: 1px solid rgb(143 180 255 / 16%);
+  border: 1px solid rgb(93 58 37 / 12%);
   border-radius: 14px;
-  background: #12233a;
+  background: var(--color-field);
   color: var(--color-fg);
   font: inherit;
 }
@@ -245,11 +332,11 @@
   height: 28px;
   border: 2px solid transparent;
   border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(38 29 22 / 12%);
 }
 
 .shop-swatch.active {
-  border-color: #f5f8ff;
+  border-color: #2f241d;
 }
 
 .shop-order-actions {
@@ -277,9 +364,9 @@
 .shop-field textarea {
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid rgb(143 180 255 / 16%);
+  border: 1px solid rgb(93 58 37 / 12%);
   border-radius: 14px;
-  background: #12233a;
+  background: var(--color-field);
   color: var(--color-fg);
   font: inherit;
 }
@@ -291,18 +378,18 @@
 
 .shop-field input::placeholder,
 .shop-field textarea::placeholder {
-  color: rgb(234 240 252 / 44%);
+  color: rgb(38 29 22 / 34%);
 }
 
 .shop-field input:focus,
 .shop-field textarea:focus,
 .shop-color-block select:focus {
-  outline: 2px solid rgb(91 157 255 / 38%);
+  outline: 2px solid rgb(165 79 43 / 28%);
   outline-offset: 1px;
 }
 
 .shop-form-note {
-  color: rgb(234 240 252 / 66%);
+  color: rgb(38 29 22 / 62%);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -319,6 +406,7 @@
 }
 
 @media (width <= 1080px) {
+  .shop-hero,
   .shop-stage,
   .shop-actions,
   .shop-order-card {
@@ -340,12 +428,18 @@
   .shop-actions,
   .shop-info-card,
   .shop-order-card,
-  .shop-viewer-card {
+  .shop-viewer-card,
+  .shop-hero-note-box {
     border-radius: 22px;
   }
 
   .shop-copy {
     padding: 24px;
+  }
+
+  .shop-copy h1 {
+    max-width: 14ch;
+    font-size: clamp(2rem, 9vw, 3rem);
   }
 
   .shop-viewer-frame {

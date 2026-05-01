@@ -70,8 +70,27 @@ function App() {
         <section className="shop-hero">
           <div className="shop-copy">
             <p className="shop-kicker">VASO SHOP</p>
-            <h1>Generez et comander un Vase un quelques secondes</h1>
-            <p className="shop-lead">Explorez des modeles unique et passez a la precommande</p>
+            <h1>Generez un vase de collection et precommandez-le en quelques secondes.</h1>
+            <p className="shop-lead">
+              Explorez des formes uniques, choisissez votre coloris PLA et validez une precommande
+              a partir du modele affiche.
+            </p>
+            <div className="shop-hero-pills" aria-label="Points forts">
+              <span>Modele unique</span>
+              <span>Precommande atelier</span>
+              <span>PLA amidon de mais</span>
+            </div>
+          </div>
+
+          <div className="shop-hero-note">
+            <p className="shop-panel-title">Collection en direct</p>
+            <div className="shop-hero-note-box">
+              <strong>Une fiche produit vivante</strong>
+              <p>
+                Le viewer, les dimensions et la seed restent alignes pour que vous puissiez valider
+                un modele precis, sans ambiguite au moment de la commande.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -79,7 +98,7 @@ function App() {
           <div className="shop-viewer-card">
             <div className="shop-viewer-header">
               <span>Apercu 3D</span>
-              <span>Rotation automatique</span>
+              <span>Mode galerie</span>
             </div>
             <div className="shop-viewer-frame">
               <VaseViewer3D />
@@ -87,11 +106,14 @@ function App() {
           </div>
 
           <aside className="shop-info-card">
-            <p className="shop-panel-title">Modele actuel</p>
+            <div className="shop-info-head">
+              <p className="shop-panel-title">Modele actuel</p>
+              <span className="shop-live-badge">Disponible a la precommande</span>
+            </div>
 
             <div className="shop-stats">
               <div className="shop-stat">
-                <span className="shop-stat-label">N de vase</span>
+                <span className="shop-stat-label">Numero de vase</span>
                 <strong>{currentEntry?.seed ?? "-"}</strong>
               </div>
               <div className="shop-stat">
@@ -106,6 +128,13 @@ function App() {
                 <span className="shop-stat-label">Matiere</span>
                 <strong>PLA - amidon de mais</strong>
               </div>
+            </div>
+
+            <div className="shop-story">
+              <p>
+                Chaque generation produit une silhouette differente. Vous pouvez parcourir
+                l'historique, retenir un vase puis commander exactement ce modele.
+              </p>
             </div>
 
             <p className="shop-history">
@@ -143,10 +172,10 @@ function App() {
           <section className="shop-order-card">
             <div className="shop-order-copy">
               <p className="shop-panel-title">Commande en preparation</p>
-              <h2>Tu commandes ce vase precis.</h2>
+              <h2>Vous commandez ce vase precis.</h2>
               <p>
-                Le modele est maintenant fige avec sa seed, sa version et ses dimensions. L&apos;etape
-                suivante est la precommande.
+                Le modele est maintenant fige avec sa seed, sa version et ses dimensions. Il ne
+                reste plus qu'a choisir le coloris et laisser vos coordonnees de precommande.
               </p>
             </div>
 
