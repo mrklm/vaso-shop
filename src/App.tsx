@@ -80,23 +80,70 @@ function App() {
               <span>Precommande atelier</span>
               <span>PLA amidon de mais</span>
             </div>
+
+            <div className="shop-hero-note-strip" aria-label="Points forts visuels">
+              <article className="shop-feature-orb shop-feature-orb-vase">
+                <div className="shop-feature-orb-art" aria-hidden="true">
+                  <span className="shop-orb-vase-body" />
+                  <span className="shop-orb-vase-shadow" />
+                </div>
+                <strong>Visualisation</strong>
+                <span>Viewer 3D</span>
+              </article>
+
+              <article className="shop-feature-orb shop-feature-orb-seed">
+                <div className="shop-feature-orb-art" aria-hidden="true">
+                  <span className="shop-orb-seed-number">
+                    {currentEntry ? `${currentEntry.seed}`.padStart(8, "0") : "00000000"}
+                  </span>
+                  <span className="shop-orb-pointer">&#x2197;</span>
+                </div>
+                <strong>N° de vase</strong>
+                <span>Seed precise</span>
+              </article>
+
+              <article className="shop-feature-orb shop-feature-orb-printer">
+                <div className="shop-feature-orb-art" aria-hidden="true">
+                  <span className="shop-orb-printer-frame" />
+                  <span className="shop-orb-printer-head" />
+                  <span className="shop-orb-printer-bed" />
+                  <span className="shop-orb-printer-vase" />
+                </div>
+                <strong>Commande ciblee</strong>
+                <span>Atelier 3D</span>
+              </article>
+            </div>
           </div>
 
-          <div className="shop-hero-note">
-            <p className="shop-panel-title">Collection en direct</p>
-            <div className="shop-hero-note-box">
-              <strong>Une fiche produit vivante</strong>
-              <p>
-                Le viewer, les dimensions et la seed restent alignes pour que vous puissiez valider
-                un modele precis, sans ambiguite au moment de la commande.
-              </p>
+          <aside className="shop-hero-note shop-current-card">
+            <div className="shop-info-head">
+              <p className="shop-panel-title">Modele actuel</p>
+              <span className="shop-live-badge">Disponible a la precommande</span>
             </div>
-            <div className="shop-hero-note-strip">
-              <span>Viewer 3D en direct</span>
-              <span>Seed conservee</span>
-              <span>Commande ciblee</span>
+
+            <div className="shop-stats">
+              <div className="shop-stat">
+                <span className="shop-stat-label">N° de vase</span>
+                <strong>{currentEntry?.seed ?? "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Hauteur</span>
+                <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Diametre max</span>
+                <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
+              </div>
+              <div className="shop-stat">
+                <span className="shop-stat-label">Matiere</span>
+                <strong>PLA - amidon de mais</strong>
+              </div>
             </div>
-          </div>
+
+            <p className="shop-history">
+              Vase {currentIndex + 1} sur {entries.length}
+            </p>
+          </aside>
         </section>
 
         <section className="shop-stage">
@@ -104,9 +151,6 @@ function App() {
             <div className="shop-viewer-header">
               <span>Apercu 3D</span>
               <span>Mode galerie</span>
-            </div>
-            <div className="shop-viewer-frame">
-              <VaseViewer3D />
             </div>
             <div className="shop-inline-actions">
               <button className="shop-button shop-button-primary" onClick={generateNext}>
@@ -132,31 +176,21 @@ function App() {
                 Commander ce modele
               </button>
             </div>
+            <div className="shop-viewer-frame">
+              <VaseViewer3D />
+            </div>
           </div>
 
           <aside className="shop-info-card">
             <div className="shop-info-head">
-              <p className="shop-panel-title">Modele actuel</p>
-              <span className="shop-live-badge">Disponible a la precommande</span>
+              <p className="shop-panel-title">Collection en direct</p>
             </div>
 
-            <div className="shop-stats">
-              <div className="shop-stat">
-                <span className="shop-stat-label">Numero de vase</span>
-                <strong>{currentEntry?.seed ?? "-"}</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Hauteur</span>
-                <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Diametre max</span>
-                <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Matiere</span>
-                <strong>PLA - amidon de mais</strong>
-              </div>
+            <div className="shop-story">
+              <p>
+                Le viewer, les dimensions et la seed restent alignes pour que vous puissiez valider
+                un modele precis, sans ambiguite au moment de la commande.
+              </p>
             </div>
 
             <div className="shop-story">
@@ -165,10 +199,6 @@ function App() {
                 l'historique, retenir un vase puis commander exactement ce modele.
               </p>
             </div>
-
-            <p className="shop-history">
-              Vase {currentIndex + 1} sur {entries.length}
-            </p>
           </aside>
         </section>
 

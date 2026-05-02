@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.6] - 2026-05-02
+
+### Modifié
+- Recompose le hero shop avec un bandeau plus compact et des reperes visuels circulaires
+
 ## [1.1.5] - 2026-05-02
 
 ### Modifié
