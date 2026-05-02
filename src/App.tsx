@@ -74,10 +74,10 @@ function App() {
             <div className="shop-copy-top">
               <div className="shop-copy-main">
                 <p className="shop-kicker">VASO SHOP</p>
-                <h1>Generez un vase et precommandez-le en quelques secondes.</h1>
+                <h1>Générez un vase et commandez-le en quelques secondes.</h1>
                 <p className="shop-lead">
-                  Explorez des formes uniques, choisissez votre coloris PLA et validez une
-                  precommande a partir du modele affiche.
+                  Explorez des formes uniques, choisissez votre coloris PLA et passez commande à
+                  partir du modèle affiché.
                 </p>
                 <p className="shop-sublead">
                   <span className="shop-breton-flag" aria-hidden="true">
@@ -91,8 +91,8 @@ function App() {
                       <i />
                     </span>
                   </span>
-                  L'atelier de fabrication est en Bretagne : chaque vase est imprime a la demande,
-                  verifie, protege puis expedie avec soin depuis notre atelier.
+                  L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la
+                  demande, vérifié, protégé puis expédié avec soin.
                 </p>
               </div>
 
@@ -114,16 +114,16 @@ function App() {
             </div>
 
             <div className="shop-hero-pills" aria-label="Points forts">
-              <span>Modele unique</span>
-              <span>Precommande atelier</span>
-              <span>PLA amidon de mais</span>
+              <span>Modèle unique</span>
+              <span>Commande atelier</span>
+              <span>PLA amidon de maïs</span>
             </div>
           </div>
 
           <aside className="shop-hero-note shop-current-card">
             <div className="shop-info-head">
-              <p className="shop-panel-title">Modele actuel</p>
-              <span className="shop-live-badge">Disponible a la precommande</span>
+              <p className="shop-panel-title">Modèle actuel</p>
+              <span className="shop-live-badge">Disponible à la commande</span>
             </div>
 
             <div className="shop-stats">
@@ -136,12 +136,12 @@ function App() {
                 <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
               </div>
               <div className="shop-stat">
-                <span className="shop-stat-label">Diametre max</span>
+                <span className="shop-stat-label">Diamètre max</span>
                 <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
               </div>
               <div className="shop-stat">
-                <span className="shop-stat-label">Matiere</span>
-                <strong>PLA - amidon de mais</strong>
+                <span className="shop-stat-label">Matière</span>
+                <strong>PLA - amidon de maïs</strong>
               </div>
             </div>
 
@@ -150,35 +150,8 @@ function App() {
             </p>
 
             <div className="shop-material-note">
-              <strong>PLA :</strong> bioplastique sourcé a partir d'amidon vegetal, principalement
-              issu du mais.
-            </div>
-
-            <div className="shop-color-wheel-card">
-              <div className="shop-color-wheel-head">
-                <strong>Coloris disponibles</strong>
-                <span>Nuancier atelier</span>
-              </div>
-              <div className="shop-color-wheel" aria-hidden="true">
-                {availableColors.map((color) => (
-                  <span
-                    key={color.id}
-                    className={`shop-color-wheel-swatch ${selectedColorId === color.id ? "active" : ""}`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.label}
-                  />
-                ))}
-                <span className="shop-color-wheel-core">PLA</span>
-              </div>
-              <p className="shop-color-wheel-note">
-                Teintes selectionnees pour la fabrication en atelier, selon disponibilite des
-                bobines.
-              </p>
-            </div>
-
-            <div className="shop-material-note">
-              <strong>Finition :</strong> chaque vase est imprime en petite serie, controle puis
-              emballe avec attention avant expedition.
+              <strong>PLA :</strong> bioplastique sourcé à partir d'amidon végétal, principalement
+              issu du maïs.
             </div>
           </aside>
         </section>
@@ -199,7 +172,7 @@ function App() {
                   onClick={goPrevious}
                   disabled={currentIndex === 0}
                 >
-                  Precedent
+                  Précédent
                 </button>
                 <button
                   className="shop-button shop-button-secondary"
@@ -210,7 +183,7 @@ function App() {
                 </button>
               </div>
               <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
-                Commander ce modele
+                Commander ce modèle
               </button>
             </div>
             <div className="shop-viewer-frame">
@@ -220,20 +193,21 @@ function App() {
 
           <aside className="shop-info-card">
             <div className="shop-info-head">
-              <p className="shop-panel-title">Collection en direct</p>
+              <p className="shop-panel-title">Modèles générés en direct</p>
             </div>
 
             <div className="shop-story">
               <p>
-                La visualisation, les dimensions et le N° de vase restent alignes pour que vous
-                puissiez valider un modele precis, sans ambiguite au moment de la commande.
+                La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
+                affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
+                la commande.
               </p>
             </div>
 
             <div className="shop-story">
               <p>
-                Chaque generation produit une silhouette differente. Vous pouvez parcourir
-                l'historique, retenir un vase puis commander exactement ce modele.
+                Chaque génération produit une silhouette différente. Vous pouvez parcourir
+                l'historique, retenir un vase puis commander exactement ce modèle.
               </p>
             </div>
           </aside>
@@ -242,12 +216,12 @@ function App() {
         {selectedEntry && (
           <section className="shop-order-card">
             <div className="shop-order-copy">
-              <p className="shop-panel-title">Commande en preparation</p>
-              <h2>Vous commandez ce vase precis.</h2>
+              <p className="shop-panel-title">Commande en préparation</p>
+              <h2>Vous commandez ce vase précis.</h2>
               <p>
-                Le modele est maintenant fige avec son N° de vase, sa version et ses dimensions.
-                Il ne reste plus qu'a choisir le coloris et laisser vos coordonnees de
-                precommande.
+                Le modèle est maintenant figé avec son N° de vase, sa version et ses dimensions.
+                Il ne reste plus qu'à choisir le coloris et laisser vos coordonnées pour la
+                commande.
               </p>
             </div>
 
@@ -261,11 +235,11 @@ function App() {
                 <strong>{selectedEntry.heightMm} mm</strong>
               </div>
               <div className="shop-stat">
-                <span className="shop-stat-label">Diametre max</span>
+                <span className="shop-stat-label">Diamètre max</span>
                 <strong>{selectedEntry.maxDiameterMm} mm</strong>
               </div>
               <div className="shop-stat">
-                <span className="shop-stat-label">Matiere</span>
+                <span className="shop-stat-label">Matière</span>
                 <strong>{selectedEntry.material}</strong>
               </div>
             </div>
@@ -359,13 +333,13 @@ function App() {
                   Retour
                 </button>
                 <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
-                  Envoyer la precommande
+                  Envoyer la commande
                 </button>
               </div>
 
               <p className="shop-form-note">
                 {isOrderFormReady
-                  ? "Le formulaire est pret a envoyer la precommande."
+                  ? "Le formulaire est pret a envoyer la commande."
                   : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi."}
               </p>
             </form>
