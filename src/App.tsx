@@ -80,8 +80,19 @@ function App() {
                   precommande a partir du modele affiche.
                 </p>
                 <p className="shop-sublead">
-                  L'atelier de fabrication est en Bretagne : nous imprimerons puis expedierons
-                  votre vase avec soin.
+                  <span className="shop-breton-flag" aria-hidden="true">
+                    <span className="shop-breton-flag-stripes" />
+                    <span className="shop-breton-flag-canton">
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                  </span>
+                  L'atelier de fabrication est en Bretagne : chaque vase est imprime a la demande,
+                  verifie, protege puis expedie avec soin depuis notre atelier.
                 </p>
               </div>
 
@@ -141,6 +152,33 @@ function App() {
             <div className="shop-material-note">
               <strong>PLA :</strong> bioplastique sourcé a partir d'amidon vegetal, principalement
               issu du mais.
+            </div>
+
+            <div className="shop-color-wheel-card">
+              <div className="shop-color-wheel-head">
+                <strong>Coloris disponibles</strong>
+                <span>Nuancier atelier</span>
+              </div>
+              <div className="shop-color-wheel" aria-hidden="true">
+                {availableColors.map((color) => (
+                  <span
+                    key={color.id}
+                    className={`shop-color-wheel-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                    style={{ backgroundColor: color.hex }}
+                    title={color.label}
+                  />
+                ))}
+                <span className="shop-color-wheel-core">PLA</span>
+              </div>
+              <p className="shop-color-wheel-note">
+                Teintes selectionnees pour la fabrication en atelier, selon disponibilite des
+                bobines.
+              </p>
+            </div>
+
+            <div className="shop-material-note">
+              <strong>Finition :</strong> chaque vase est imprime en petite serie, controle puis
+              emballe avec attention avant expedition.
             </div>
           </aside>
         </section>

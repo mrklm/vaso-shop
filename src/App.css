@@ -87,6 +87,59 @@
   color: rgb(38 29 22 / 66%);
   font-size: 0.82rem;
   line-height: 1.42;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.shop-breton-flag {
+  position: relative;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 18px;
+  overflow: hidden;
+  border-radius: 3px;
+  border: 1px solid rgb(38 29 22 / 16%);
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0 11%,
+      #111111 11% 22%,
+      #ffffff 22% 33%,
+      #111111 33% 44%,
+      #ffffff 44% 55%,
+      #111111 55% 66%,
+      #ffffff 66% 77%,
+      #111111 77% 88%,
+      #ffffff 88% 100%
+    );
+  box-shadow: 0 2px 8px rgb(38 29 22 / 8%);
+}
+
+.shop-breton-flag-stripes {
+  position: absolute;
+  inset: 0;
+}
+
+.shop-breton-flag-canton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  padding: 1px;
+  background: #ffffff;
+}
+
+.shop-breton-flag-canton i {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: #111111;
+  opacity: 0.88;
 }
 
 .shop-hero-pills {
@@ -353,6 +406,114 @@
 
 .shop-material-note strong {
   color: var(--color-fg);
+}
+
+.shop-color-wheel-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgb(93 58 37 / 10%);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top, rgb(255 255 255 / 65%), transparent 55%),
+    rgb(255 255 255 / 42%);
+}
+
+.shop-color-wheel-head {
+  display: grid;
+  gap: 3px;
+}
+
+.shop-color-wheel-head strong {
+  font-size: 0.82rem;
+}
+
+.shop-color-wheel-head span {
+  color: rgb(38 29 22 / 56%);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.shop-color-wheel {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: 0 auto;
+}
+
+.shop-color-wheel-swatch {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px;
+  border-radius: 999px;
+  border: 2px solid rgb(255 255 255 / 86%);
+  box-shadow: 0 4px 10px rgb(38 29 22 / 12%);
+}
+
+.shop-color-wheel-swatch.active {
+  transform: scale(1.16);
+  box-shadow:
+    0 0 0 3px rgb(38 29 22 / 12%),
+    0 4px 12px rgb(38 29 22 / 18%);
+}
+
+.shop-color-wheel-swatch:nth-child(1) {
+  transform: translate(-50%, -50%) translate(0, -50px);
+}
+
+.shop-color-wheel-swatch:nth-child(2) {
+  transform: translate(-50%, -50%) translate(35px, -35px);
+}
+
+.shop-color-wheel-swatch:nth-child(3) {
+  transform: translate(-50%, -50%) translate(50px, 0);
+}
+
+.shop-color-wheel-swatch:nth-child(4) {
+  transform: translate(-50%, -50%) translate(35px, 35px);
+}
+
+.shop-color-wheel-swatch:nth-child(5) {
+  transform: translate(-50%, -50%) translate(0, 50px);
+}
+
+.shop-color-wheel-swatch:nth-child(6) {
+  transform: translate(-50%, -50%) translate(-35px, 35px);
+}
+
+.shop-color-wheel-swatch:nth-child(7) {
+  transform: translate(-50%, -50%) translate(-50px, 0);
+}
+
+.shop-color-wheel-swatch:nth-child(8) {
+  transform: translate(-50%, -50%) translate(-35px, -35px);
+}
+
+.shop-color-wheel-core {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fff8ef, #eadfce);
+  border: 1px solid rgb(93 58 37 / 12%);
+  color: rgb(38 29 22 / 78%);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.shop-color-wheel-note {
+  color: rgb(38 29 22 / 62%);
+  font-size: 0.76rem;
+  line-height: 1.42;
 }
 
 .shop-order-card {

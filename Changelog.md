@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.9] - 2026-05-02
+
+### Modifié
+- Ajoute plus de contexte atelier, un bloc coloris et corrige le titre de l'onglet shop
+
 ## [1.1.8] - 2026-05-02
 
 ### Modifié
