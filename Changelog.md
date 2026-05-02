@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.11] - 2026-05-02
+
+### Modifié
+- Adoucit les transitions de la galerie du hero et reduit legerement les images dans la bulle
+
 ## [1.1.10] - 2026-05-02
 
 ### Modifié

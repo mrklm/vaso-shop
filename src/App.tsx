@@ -17,6 +17,9 @@ const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
   .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
   .map(([, source]) => source);
 
+const HERO_GALLERY_INTERVAL_MS = 4200;
+const HERO_GALLERY_FADE_MS = 480;
+
 function App() {
   const setShowGrid = useUIStore((s) => s.setShowGrid);
   const setWireframe = useUIStore((s) => s.setWireframe);
@@ -40,6 +43,7 @@ function App() {
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
+  const [isHeroGalleryVisible, setIsHeroGalleryVisible] = useState(true);
 
   const currentEntry = entries[currentIndex] ?? null;
   const selectedEntry = useMemo(
@@ -80,14 +84,25 @@ function App() {
   useEffect(() => {
     if (HERO_GALLERY_IMAGES.length <= 1) {
       setHeroGalleryIndex(0);
+      setIsHeroGalleryVisible(true);
       return undefined;
     }
 
+    let swapTimeoutId: number | undefined;
     const intervalId = window.setInterval(() => {
-      setHeroGalleryIndex((currentIndex) => (currentIndex + 1) % HERO_GALLERY_IMAGES.length);
-    }, 3200);
+      setIsHeroGalleryVisible(false);
+      swapTimeoutId = window.setTimeout(() => {
+        setHeroGalleryIndex((currentIndex) => (currentIndex + 1) % HERO_GALLERY_IMAGES.length);
+        setIsHeroGalleryVisible(true);
+      }, HERO_GALLERY_FADE_MS);
+    }, HERO_GALLERY_INTERVAL_MS);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearInterval(intervalId);
+      if (swapTimeoutId !== undefined) {
+        window.clearTimeout(swapTimeoutId);
+      }
+    };
   }, []);
 
   return (
@@ -124,7 +139,11 @@ function App() {
                 <div className="shop-hero-gallery" aria-label="Photos d'atelier">
                   <div className="shop-hero-gallery-orb">
                     {currentHeroGalleryImage ? (
-                      <img key={currentHeroGalleryImage} src={currentHeroGalleryImage} alt="" />
+                      <img
+                        className={`shop-hero-gallery-image ${isHeroGalleryVisible ? "is-visible" : ""}`}
+                        src={currentHeroGalleryImage}
+                        alt=""
+                      />
                     ) : (
                       <div className="shop-hero-gallery-placeholder">
                         <span>Ajoutez vos photos</span>
