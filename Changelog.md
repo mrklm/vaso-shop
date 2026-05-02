@@ -10,7 +10,7 @@ et ce projet suit un versioning de type **SemVer**.
 ## [1.1.10] - 2026-05-02
 
 ### Modifié
-- Remplace les pastilles du hero par une galerie photo circulaire et integre le descriptif PLA au bloc matiere
+- Ajoute une galerie photo au hero, integre le descriptif PLA au bloc matiere et fiabilise le deploiement Pages
 
 ## [1.1.9] - 2026-05-02
 
