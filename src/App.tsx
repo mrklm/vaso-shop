@@ -69,49 +69,54 @@ function App() {
       <main className="shop-shell">
         <section className="shop-hero">
           <div className="shop-copy">
-            <p className="shop-kicker">VASO SHOP</p>
-            <h1>Generez un vase de collection et precommandez-le en quelques secondes.</h1>
-            <p className="shop-lead">
-              Explorez des formes uniques, choisissez votre coloris PLA et validez une precommande
-              a partir du modele affiche.
-            </p>
+            <div className="shop-copy-top">
+              <div className="shop-copy-main">
+                <p className="shop-kicker">VASO SHOP</p>
+                <h1>Generez un vase et precommandez-le en quelques secondes.</h1>
+                <p className="shop-lead">
+                  Explorez des formes uniques, choisissez votre coloris PLA et validez une
+                  precommande a partir du modele affiche.
+                </p>
+              </div>
+
+              <div className="shop-hero-note-strip" aria-label="Points forts visuels">
+                <article className="shop-feature-orb shop-feature-orb-vase">
+                  <div className="shop-feature-orb-art" aria-hidden="true">
+                    <span className="shop-orb-vase-body" />
+                    <span className="shop-orb-vase-shadow" />
+                  </div>
+                  <strong>Visualisation</strong>
+                  <span>Viewer 3D</span>
+                </article>
+
+                <article className="shop-feature-orb shop-feature-orb-seed">
+                  <div className="shop-feature-orb-art" aria-hidden="true">
+                    <span className="shop-orb-seed-number">
+                      {currentEntry ? `${currentEntry.seed}`.padStart(8, "0") : "00000000"}
+                    </span>
+                    <span className="shop-orb-pointer">&#x2197;</span>
+                  </div>
+                  <strong>N° de vase</strong>
+                  <span>Seed precise</span>
+                </article>
+
+                <article className="shop-feature-orb shop-feature-orb-printer">
+                  <div className="shop-feature-orb-art" aria-hidden="true">
+                    <span className="shop-orb-printer-frame" />
+                    <span className="shop-orb-printer-head" />
+                    <span className="shop-orb-printer-bed" />
+                    <span className="shop-orb-printer-vase" />
+                  </div>
+                  <strong>Commande ciblee</strong>
+                  <span>Atelier 3D</span>
+                </article>
+              </div>
+            </div>
+
             <div className="shop-hero-pills" aria-label="Points forts">
               <span>Modele unique</span>
               <span>Precommande atelier</span>
               <span>PLA amidon de mais</span>
-            </div>
-
-            <div className="shop-hero-note-strip" aria-label="Points forts visuels">
-              <article className="shop-feature-orb shop-feature-orb-vase">
-                <div className="shop-feature-orb-art" aria-hidden="true">
-                  <span className="shop-orb-vase-body" />
-                  <span className="shop-orb-vase-shadow" />
-                </div>
-                <strong>Visualisation</strong>
-                <span>Viewer 3D</span>
-              </article>
-
-              <article className="shop-feature-orb shop-feature-orb-seed">
-                <div className="shop-feature-orb-art" aria-hidden="true">
-                  <span className="shop-orb-seed-number">
-                    {currentEntry ? `${currentEntry.seed}`.padStart(8, "0") : "00000000"}
-                  </span>
-                  <span className="shop-orb-pointer">&#x2197;</span>
-                </div>
-                <strong>N° de vase</strong>
-                <span>Seed precise</span>
-              </article>
-
-              <article className="shop-feature-orb shop-feature-orb-printer">
-                <div className="shop-feature-orb-art" aria-hidden="true">
-                  <span className="shop-orb-printer-frame" />
-                  <span className="shop-orb-printer-head" />
-                  <span className="shop-orb-printer-bed" />
-                  <span className="shop-orb-printer-vase" />
-                </div>
-                <strong>Commande ciblee</strong>
-                <span>Atelier 3D</span>
-              </article>
             </div>
           </div>
 

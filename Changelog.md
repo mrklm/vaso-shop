@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.7] - 2026-05-02
+
+### Modifié
+- Reorganise le haut de page shop avec des reperes visuels empiles a droite du titre
+
 ## [1.1.6] - 2026-05-02
 
 ### Modifié
