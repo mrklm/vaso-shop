@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.13] - 2026-05-02
+
+### Modifié
+- Affine l'alignement de la grande bulle, allegue son contour et place le badge de commande a droite du titre du modele actuel
+
 ## [1.1.12] - 2026-05-02
 
 ### Modifié

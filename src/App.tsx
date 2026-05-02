@@ -159,7 +159,7 @@ function App() {
           </div>
 
           <aside className="shop-hero-note shop-current-card">
-            <div className="shop-info-head">
+            <div className="shop-info-head shop-info-head-inline">
               <p className="shop-panel-title">Modèle actuel</p>
               <span className="shop-live-badge">Disponible à la commande</span>
             </div>
