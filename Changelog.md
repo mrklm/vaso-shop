@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.8] - 2026-05-02
+
+### Modifié
+- Affine le haut de page shop avec des bulles imagees et un texte plus clair sur le modele
+
 ## [1.1.7] - 2026-05-02
 
 ### Modifié

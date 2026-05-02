@@ -4,6 +4,8 @@ import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
 import { SHOP_ORDER_FORM_ACTION, SHOP_ORDER_FORM_METHOD } from "./shop/shop-config";
 import { useShopStore } from "./shop/shop-store";
+import vaseBubbleImage from "./assets/shop/vase.png";
+import numberBubbleImage from "./assets/shop/num.png";
 import "./App.css";
 
 function App() {
@@ -77,38 +79,25 @@ function App() {
                   Explorez des formes uniques, choisissez votre coloris PLA et validez une
                   precommande a partir du modele affiche.
                 </p>
+                <p className="shop-sublead">
+                  L'atelier de fabrication est en Bretagne : nous imprimerons puis expedierons
+                  votre vase avec soin.
+                </p>
               </div>
 
               <div className="shop-hero-note-strip" aria-label="Points forts visuels">
                 <article className="shop-feature-orb shop-feature-orb-vase">
                   <div className="shop-feature-orb-art" aria-hidden="true">
-                    <span className="shop-orb-vase-body" />
-                    <span className="shop-orb-vase-shadow" />
+                    <img src={vaseBubbleImage} alt="" />
                   </div>
                   <strong>Visualisation</strong>
-                  <span>Viewer 3D</span>
                 </article>
 
                 <article className="shop-feature-orb shop-feature-orb-seed">
                   <div className="shop-feature-orb-art" aria-hidden="true">
-                    <span className="shop-orb-seed-number">
-                      {currentEntry ? `${currentEntry.seed}`.padStart(8, "0") : "00000000"}
-                    </span>
-                    <span className="shop-orb-pointer">&#x2197;</span>
+                    <img src={numberBubbleImage} alt="" />
                   </div>
                   <strong>N° de vase</strong>
-                  <span>Seed precise</span>
-                </article>
-
-                <article className="shop-feature-orb shop-feature-orb-printer">
-                  <div className="shop-feature-orb-art" aria-hidden="true">
-                    <span className="shop-orb-printer-frame" />
-                    <span className="shop-orb-printer-head" />
-                    <span className="shop-orb-printer-bed" />
-                    <span className="shop-orb-printer-vase" />
-                  </div>
-                  <strong>Commande ciblee</strong>
-                  <span>Atelier 3D</span>
                 </article>
               </div>
             </div>
@@ -148,13 +137,18 @@ function App() {
             <p className="shop-history">
               Vase {currentIndex + 1} sur {entries.length}
             </p>
+
+            <div className="shop-material-note">
+              <strong>PLA :</strong> bioplastique sourcé a partir d'amidon vegetal, principalement
+              issu du mais.
+            </div>
           </aside>
         </section>
 
         <section className="shop-stage">
           <div className="shop-viewer-card">
             <div className="shop-viewer-header">
-              <span>Apercu 3D</span>
+              <span>Visualisation 3D</span>
               <span>Mode galerie</span>
             </div>
             <div className="shop-inline-actions">
@@ -193,8 +187,8 @@ function App() {
 
             <div className="shop-story">
               <p>
-                Le viewer, les dimensions et la seed restent alignes pour que vous puissiez valider
-                un modele precis, sans ambiguite au moment de la commande.
+                La visualisation, les dimensions et le N° de vase restent alignes pour que vous
+                puissiez valider un modele precis, sans ambiguite au moment de la commande.
               </p>
             </div>
 
@@ -213,14 +207,15 @@ function App() {
               <p className="shop-panel-title">Commande en preparation</p>
               <h2>Vous commandez ce vase precis.</h2>
               <p>
-                Le modele est maintenant fige avec sa seed, sa version et ses dimensions. Il ne
-                reste plus qu'a choisir le coloris et laisser vos coordonnees de precommande.
+                Le modele est maintenant fige avec son N° de vase, sa version et ses dimensions.
+                Il ne reste plus qu'a choisir le coloris et laisser vos coordonnees de
+                precommande.
               </p>
             </div>
 
             <div className="shop-order-summary">
               <div className="shop-stat">
-                <span className="shop-stat-label">Seed</span>
+                <span className="shop-stat-label">N° de vase</span>
                 <strong>{selectedEntry.seed}</strong>
               </div>
               <div className="shop-stat">

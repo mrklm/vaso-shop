@@ -81,6 +81,14 @@
   line-height: 1.42;
 }
 
+.shop-sublead {
+  max-width: 48ch;
+  margin-top: 8px;
+  color: rgb(38 29 22 / 66%);
+  font-size: 0.82rem;
+  line-height: 1.42;
+}
+
 .shop-hero-pills {
   display: flex;
   flex-wrap: wrap;
@@ -145,19 +153,13 @@
 .shop-feature-orb {
   display: grid;
   justify-items: center;
-  gap: 6px;
+  gap: 7px;
   padding: 2px 0;
   text-align: center;
 }
 
 .shop-feature-orb strong {
   font-size: 0.76rem;
-  line-height: 1.15;
-}
-
-.shop-feature-orb span {
-  color: rgb(38 29 22 / 62%);
-  font-size: 0.68rem;
   line-height: 1.15;
 }
 
@@ -176,129 +178,11 @@
     0 14px 30px rgb(83 54 28 / 10%);
 }
 
-.shop-feature-orb-vase .shop-feature-orb-art {
-  background:
-    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 88%), rgb(255 255 255 / 10%) 24%, transparent 25%),
-    radial-gradient(circle at 52% 72%, rgb(87 66 50 / 18%), transparent 34%),
-    linear-gradient(150deg, #4d6271, #c6b8aa 56%, #f1e9dc);
-}
-
-.shop-orb-vase-body {
-  position: absolute;
-  left: 50%;
-  bottom: 19px;
-  width: 42px;
-  height: 62px;
-  transform: translateX(-50%);
-  border-radius: 16px 16px 20px 20px / 10px 10px 24px 24px;
-  background:
-    linear-gradient(180deg, #efe8db, #c9b9aa 42%, #8e7866 100%);
-  box-shadow:
-    inset -6px 0 8px rgb(56 41 30 / 14%),
-    inset 8px 0 10px rgb(255 255 255 / 34%);
-}
-
-.shop-orb-vase-body::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 4px;
-  right: 4px;
-  height: 12px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #f7f3ec, #cabaa9);
-}
-
-.shop-orb-vase-shadow {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  width: 56px;
-  height: 12px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: rgb(49 35 25 / 16%);
-  filter: blur(2px);
-}
-
-.shop-feature-orb-seed .shop-feature-orb-art {
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(circle at 24% 24%, rgb(255 255 255 / 92%), rgb(255 255 255 / 12%) 20%, transparent 21%),
-    linear-gradient(135deg, #201b17, #6d5d50 52%, #d6c7b6);
-}
-
-.shop-orb-seed-number {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #fff8ef;
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-shadow: 0 4px 16px rgb(0 0 0 / 26%);
-}
-
-.shop-orb-pointer {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  color: #f7efe3;
-  font-size: 1.3rem;
-  transform: rotate(6deg);
-  text-shadow: 0 4px 12px rgb(0 0 0 / 3%);
-}
-
-.shop-feature-orb-printer .shop-feature-orb-art {
-  background:
-    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 88%), rgb(255 255 255 / 10%) 24%, transparent 25%),
-    linear-gradient(145deg, #d4d9dc, #f6eee5 58%, #b9c5c8);
-}
-
-.shop-orb-printer-frame,
-.shop-orb-printer-head,
-.shop-orb-printer-bed,
-.shop-orb-printer-vase {
-  position: absolute;
-}
-
-.shop-orb-printer-frame {
-  inset: 24px;
-  border: 5px solid #44535f;
-  border-bottom-width: 7px;
-  border-radius: 10px;
-}
-
-.shop-orb-printer-head {
-  top: 34px;
-  left: 50%;
-  width: 24px;
-  height: 18px;
-  transform: translateX(-50%);
-  border-radius: 6px;
-  background: linear-gradient(180deg, #44535f, #1f2d36);
-  box-shadow: 0 18px 0 -6px #44535f;
-}
-
-.shop-orb-printer-bed {
-  left: 28px;
-  right: 28px;
-  bottom: 28px;
-  height: 10px;
-  border-radius: 999px;
-  background: #5b6f78;
-}
-
-.shop-orb-printer-vase {
-  left: 50%;
-  bottom: 38px;
-  width: 18px;
-  height: 28px;
-  transform: translateX(-50%);
-  border-radius: 7px 7px 10px 10px / 4px 4px 12px 12px;
-  background: linear-gradient(180deg, #d68f64, #8d5432);
+.shop-feature-orb-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .shop-nav {
@@ -455,6 +339,20 @@
   color: rgb(38 29 22 / 60%);
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.shop-material-note {
+  padding: 11px 12px;
+  border: 1px solid rgb(93 58 37 / 10%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 42%);
+  color: rgb(38 29 22 / 68%);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.shop-material-note strong {
+  color: var(--color-fg);
 }
 
 .shop-order-card {
