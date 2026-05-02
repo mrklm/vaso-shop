@@ -8,6 +8,15 @@ import vaseBubbleImage from "./assets/shop/vase.png";
 import numberBubbleImage from "./assets/shop/num.png";
 import "./App.css";
 
+const HERO_GALLERY_IMAGE_MODULES = import.meta.glob(
+  "./assets/shop/hero-gallery/*.{png,jpg,jpeg,webp,avif}",
+  { eager: true, import: "default" },
+) as Record<string, string>;
+
+const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
+  .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
+  .map(([, source]) => source);
+
 function App() {
   const setShowGrid = useUIStore((s) => s.setShowGrid);
   const setWireframe = useUIStore((s) => s.setWireframe);
@@ -30,6 +39,7 @@ function App() {
   const [customerContact, setCustomerContact] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
+  const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
 
   const currentEntry = entries[currentIndex] ?? null;
   const selectedEntry = useMemo(
@@ -44,6 +54,7 @@ function App() {
     () => availableColors.find((color) => color.id === selectedColorId) ?? null,
     [availableColors, selectedColorId],
   );
+  const currentHeroGalleryImage = HERO_GALLERY_IMAGES[heroGalleryIndex] ?? null;
   const isOrderFormReady =
     SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
     !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
@@ -65,6 +76,19 @@ function App() {
     setVaseColor,
     setWireframe,
   ]);
+
+  useEffect(() => {
+    if (HERO_GALLERY_IMAGES.length <= 1) {
+      setHeroGalleryIndex(0);
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setHeroGalleryIndex((currentIndex) => (currentIndex + 1) % HERO_GALLERY_IMAGES.length);
+    }, 3200);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   return (
     <div className="shop-app">
@@ -96,27 +120,36 @@ function App() {
                 </p>
               </div>
 
-              <div className="shop-hero-note-strip" aria-label="Points forts visuels">
-                <article className="shop-feature-orb shop-feature-orb-vase">
-                  <div className="shop-feature-orb-art" aria-hidden="true">
-                    <img src={vaseBubbleImage} alt="" />
+              <div className="shop-hero-media">
+                <div className="shop-hero-gallery" aria-label="Photos d'atelier">
+                  <div className="shop-hero-gallery-orb">
+                    {currentHeroGalleryImage ? (
+                      <img key={currentHeroGalleryImage} src={currentHeroGalleryImage} alt="" />
+                    ) : (
+                      <div className="shop-hero-gallery-placeholder">
+                        <span>Ajoutez vos photos</span>
+                        <small>src/assets/shop/hero-gallery/</small>
+                      </div>
+                    )}
                   </div>
-                  <strong>Visualisation</strong>
-                </article>
+                </div>
 
-                <article className="shop-feature-orb shop-feature-orb-seed">
-                  <div className="shop-feature-orb-art" aria-hidden="true">
-                    <img src={numberBubbleImage} alt="" />
-                  </div>
-                  <strong>N° de vase</strong>
-                </article>
+                <div className="shop-hero-note-strip" aria-label="Points forts visuels">
+                  <article className="shop-feature-orb shop-feature-orb-vase">
+                    <div className="shop-feature-orb-art" aria-hidden="true">
+                      <img src={vaseBubbleImage} alt="" />
+                    </div>
+                    <strong>Visualisation</strong>
+                  </article>
+
+                  <article className="shop-feature-orb shop-feature-orb-seed">
+                    <div className="shop-feature-orb-art" aria-hidden="true">
+                      <img src={numberBubbleImage} alt="" />
+                    </div>
+                    <strong>N° de vase</strong>
+                  </article>
+                </div>
               </div>
-            </div>
-
-            <div className="shop-hero-pills" aria-label="Points forts">
-              <span>Modèle unique</span>
-              <span>Commande atelier</span>
-              <span>PLA amidon de maïs</span>
             </div>
           </div>
 
@@ -139,20 +172,16 @@ function App() {
                 <span className="shop-stat-label">Diamètre max</span>
                 <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
               </div>
-              <div className="shop-stat">
+              <div className="shop-stat shop-stat-material">
                 <span className="shop-stat-label">Matière</span>
-                <strong>PLA - amidon de maïs</strong>
+                <strong>{currentEntry?.material ?? "PLA"}</strong>
+                <p>Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.</p>
               </div>
             </div>
 
             <p className="shop-history">
               Vase {currentIndex + 1} sur {entries.length}
             </p>
-
-            <div className="shop-material-note">
-              <strong>PLA :</strong> bioplastique sourcé à partir d'amidon végétal, principalement
-              issu du maïs.
-            </div>
           </aside>
         </section>
 
