@@ -91,6 +91,11 @@ function App() {
                 un modele precis, sans ambiguite au moment de la commande.
               </p>
             </div>
+            <div className="shop-hero-note-strip">
+              <span>Viewer 3D en direct</span>
+              <span>Seed conservee</span>
+              <span>Commande ciblee</span>
+            </div>
           </div>
         </section>
 
@@ -102,6 +107,30 @@ function App() {
             </div>
             <div className="shop-viewer-frame">
               <VaseViewer3D />
+            </div>
+            <div className="shop-inline-actions">
+              <button className="shop-button shop-button-primary" onClick={generateNext}>
+                Generer un vase
+              </button>
+              <div className="shop-nav">
+                <button
+                  className="shop-button shop-button-secondary"
+                  onClick={goPrevious}
+                  disabled={currentIndex === 0}
+                >
+                  Precedent
+                </button>
+                <button
+                  className="shop-button shop-button-secondary"
+                  onClick={goNext}
+                  disabled={currentIndex >= entries.length - 1}
+                >
+                  Suivant
+                </button>
+              </div>
+              <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
+                Commander ce modele
+              </button>
             </div>
           </div>
 
@@ -141,31 +170,6 @@ function App() {
               Vase {currentIndex + 1} sur {entries.length}
             </p>
           </aside>
-        </section>
-
-        <section className="shop-actions">
-          <button className="shop-button shop-button-primary" onClick={generateNext}>
-            Generer un vase
-          </button>
-          <div className="shop-nav">
-            <button
-              className="shop-button shop-button-secondary"
-              onClick={goPrevious}
-              disabled={currentIndex === 0}
-            >
-              Precedent
-            </button>
-            <button
-              className="shop-button shop-button-secondary"
-              onClick={goNext}
-              disabled={currentIndex >= entries.length - 1}
-            >
-              Suivant
-            </button>
-          </div>
-          <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
-            Commander ce modele
-          </button>
         </section>
 
         {selectedEntry && (
