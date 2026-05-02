@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.12] - 2026-05-02
+
+### Modifié
+- Recompose le hero avec une galerie photo plus ample, des transitions plus douces et un bloc atelier déporté à droite
+
 ## [1.1.11] - 2026-05-02
 
 ### Modifié

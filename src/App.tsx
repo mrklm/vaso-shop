@@ -4,8 +4,6 @@ import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
 import { SHOP_ORDER_FORM_ACTION, SHOP_ORDER_FORM_METHOD } from "./shop/shop-config";
 import { useShopStore } from "./shop/shop-store";
-import vaseBubbleImage from "./assets/shop/vase.png";
-import numberBubbleImage from "./assets/shop/num.png";
 import "./App.css";
 
 const HERO_GALLERY_IMAGE_MODULES = import.meta.glob(
@@ -17,8 +15,8 @@ const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
   .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
   .map(([, source]) => source);
 
-const HERO_GALLERY_INTERVAL_MS = 4200;
-const HERO_GALLERY_FADE_MS = 480;
+const HERO_GALLERY_INTERVAL_MS = 6800;
+const HERO_GALLERY_FADE_MS = 2200;
 
 function App() {
   const setShowGrid = useUIStore((s) => s.setShowGrid);
@@ -43,7 +41,7 @@ function App() {
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
-  const [isHeroGalleryVisible, setIsHeroGalleryVisible] = useState(true);
+  const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
 
   const currentEntry = entries[currentIndex] ?? null;
   const selectedEntry = useMemo(
@@ -59,6 +57,8 @@ function App() {
     [availableColors, selectedColorId],
   );
   const currentHeroGalleryImage = HERO_GALLERY_IMAGES[heroGalleryIndex] ?? null;
+  const previousHeroGalleryImage =
+    heroGalleryPreviousIndex === null ? null : HERO_GALLERY_IMAGES[heroGalleryPreviousIndex] ?? null;
   const isOrderFormReady =
     SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
     !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
@@ -84,23 +84,30 @@ function App() {
   useEffect(() => {
     if (HERO_GALLERY_IMAGES.length <= 1) {
       setHeroGalleryIndex(0);
-      setIsHeroGalleryVisible(true);
+      setHeroGalleryPreviousIndex(null);
       return undefined;
     }
 
-    let swapTimeoutId: number | undefined;
+    let clearPreviousTimeoutId: number | undefined;
     const intervalId = window.setInterval(() => {
-      setIsHeroGalleryVisible(false);
-      swapTimeoutId = window.setTimeout(() => {
-        setHeroGalleryIndex((currentIndex) => (currentIndex + 1) % HERO_GALLERY_IMAGES.length);
-        setIsHeroGalleryVisible(true);
+      if (clearPreviousTimeoutId !== undefined) {
+        window.clearTimeout(clearPreviousTimeoutId);
+      }
+
+      setHeroGalleryIndex((currentIndex) => {
+        setHeroGalleryPreviousIndex(currentIndex);
+        return (currentIndex + 1) % HERO_GALLERY_IMAGES.length;
+      });
+
+      clearPreviousTimeoutId = window.setTimeout(() => {
+        setHeroGalleryPreviousIndex(null);
       }, HERO_GALLERY_FADE_MS);
     }, HERO_GALLERY_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
-      if (swapTimeoutId !== undefined) {
-        window.clearTimeout(swapTimeoutId);
+      if (clearPreviousTimeoutId !== undefined) {
+        window.clearTimeout(clearPreviousTimeoutId);
       }
     };
   }, []);
@@ -118,29 +125,24 @@ function App() {
                   Explorez des formes uniques, choisissez votre coloris PLA et passez commande à
                   partir du modèle affiché.
                 </p>
-                <p className="shop-sublead">
-                  <span className="shop-breton-flag" aria-hidden="true">
-                    <span className="shop-breton-flag-stripes" />
-                    <span className="shop-breton-flag-canton">
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                  </span>
-                  L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la
-                  demande, vérifié, protégé puis expédié avec soin.
-                </p>
               </div>
 
               <div className="shop-hero-media">
                 <div className="shop-hero-gallery" aria-label="Photos d'atelier">
                   <div className="shop-hero-gallery-orb">
+                    {previousHeroGalleryImage && previousHeroGalleryImage !== currentHeroGalleryImage ? (
+                      <img
+                        key={`hero-gallery-previous-${heroGalleryPreviousIndex}-${previousHeroGalleryImage}`}
+                        className="shop-hero-gallery-image shop-hero-gallery-image-previous"
+                        src={previousHeroGalleryImage}
+                        alt=""
+                      />
+                    ) : null}
+
                     {currentHeroGalleryImage ? (
                       <img
-                        className={`shop-hero-gallery-image ${isHeroGalleryVisible ? "is-visible" : ""}`}
+                        key={`hero-gallery-current-${heroGalleryIndex}-${currentHeroGalleryImage}`}
+                        className="shop-hero-gallery-image shop-hero-gallery-image-current"
                         src={currentHeroGalleryImage}
                         alt=""
                       />
@@ -151,22 +153,6 @@ function App() {
                       </div>
                     )}
                   </div>
-                </div>
-
-                <div className="shop-hero-note-strip" aria-label="Points forts visuels">
-                  <article className="shop-feature-orb shop-feature-orb-vase">
-                    <div className="shop-feature-orb-art" aria-hidden="true">
-                      <img src={vaseBubbleImage} alt="" />
-                    </div>
-                    <strong>Visualisation</strong>
-                  </article>
-
-                  <article className="shop-feature-orb shop-feature-orb-seed">
-                    <div className="shop-feature-orb-art" aria-hidden="true">
-                      <img src={numberBubbleImage} alt="" />
-                    </div>
-                    <strong>N° de vase</strong>
-                  </article>
                 </div>
               </div>
             </div>
@@ -239,26 +225,50 @@ function App() {
             </div>
           </div>
 
-          <aside className="shop-info-card">
-            <div className="shop-info-head">
-              <p className="shop-panel-title">Modèles générés en direct</p>
-            </div>
+          <div className="shop-side-column">
+            <aside className="shop-info-card">
+              <div className="shop-info-head">
+                <p className="shop-panel-title">Modèles générés en direct</p>
+              </div>
 
-            <div className="shop-story">
-              <p>
-                La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
-                affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
-                la commande.
-              </p>
-            </div>
+              <div className="shop-story">
+                <p>
+                  La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
+                  affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
+                  la commande.
+                </p>
+              </div>
 
-            <div className="shop-story">
-              <p>
-                Chaque génération produit une silhouette différente. Vous pouvez parcourir
-                l'historique, retenir un vase puis commander exactement ce modèle.
+              <div className="shop-story">
+                <p>
+                  Chaque génération produit une silhouette différente. Vous pouvez parcourir
+                  l'historique, retenir un vase puis commander exactement ce modèle.
+                </p>
+              </div>
+            </aside>
+
+            <aside className="shop-info-card shop-workshop-card">
+              <div className="shop-info-head">
+                <p className="shop-panel-title">Atelier</p>
+              </div>
+
+              <p className="shop-sublead shop-workshop-note">
+                <span className="shop-breton-flag" aria-hidden="true">
+                  <span className="shop-breton-flag-stripes" />
+                  <span className="shop-breton-flag-canton">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                </span>
+                L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la
+                demande, vérifié, protégé puis expédié avec soin.
               </p>
-            </div>
-          </aside>
+            </aside>
+          </div>
         </section>
 
         {selectedEntry && (
