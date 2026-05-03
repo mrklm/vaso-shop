@@ -405,6 +405,10 @@ function App() {
                       <strong>{selectedEntry.heightMm} mm</strong>
                     </div>
                     <div className="shop-stat">
+                      <span className="shop-stat-label">Diamètre min</span>
+                      <strong>{selectedEntry.minDiameterMm} mm</strong>
+                    </div>
+                    <div className="shop-stat">
                       <span className="shop-stat-label">Diamètre max</span>
                       <strong>{selectedEntry.maxDiameterMm} mm</strong>
                     </div>

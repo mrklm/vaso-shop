@@ -17,6 +17,7 @@ function createEntry(id: string, seed: number, isSeedModified: boolean): ShopVas
     isSeedModified,
     version: "test",
     heightMm: params.heightMm,
+    minDiameterMm: 60,
     maxDiameterMm: 120,
     material: "PLA",
     params,

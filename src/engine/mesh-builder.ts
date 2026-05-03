@@ -396,26 +396,36 @@ export async function generateVaseMeshWithEngraving(
 export function generateOuterProfilePoints(
   params: VaseParameters,
   samplesZ = 200,
-): { zValues: Float64Array; radiusValues: Float64Array } {
+): { zValues: Float64Array; radiusValues: Float64Array; diameterValues: Float64Array } {
   validateParams(params);
   const zValues = linspace(0, params.heightMm, samplesZ);
   const contours = generateSupportSafeOuterContours(params, zValues);
   const radiusValues = new Float64Array(samplesZ);
+  const diameterValues = new Float64Array(samplesZ);
 
   for (let j = 0; j < samplesZ; j++) {
     const contour = contours[j];
     const n = contour.length / 2;
     let maxR = 0;
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < n; i++) {
       const x = contour[i * 2],
         y = contour[i * 2 + 1];
       const r = Math.sqrt(x * x + y * y);
       if (r > maxR) maxR = r;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
     }
     radiusValues[j] = maxR;
+    diameterValues[j] = Math.max(maxX - minX, maxY - minY);
   }
 
-  return { zValues, radiusValues };
+  return { zValues, radiusValues, diameterValues };
 }
 
 /**

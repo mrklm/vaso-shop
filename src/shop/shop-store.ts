@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { computeVaseEnvelopeMm } from "../engine/printer-volume";
+import { generateOuterProfilePoints } from "../engine/mesh-builder";
 import type { VaseParameters } from "../engine/types";
 import { useVaseStore } from "../store/vase-store";
 import { PLA_COLORS } from "./shop-colors";
@@ -15,6 +16,11 @@ function createEntryFromCurrentVase(): ShopVaseEntry {
   const { params, seed, isSeedModified } = useVaseStore.getState();
   const clonedParams = cloneParams(params);
   const envelope = computeVaseEnvelopeMm(clonedParams);
+  const { diameterValues } = generateOuterProfilePoints(clonedParams);
+  let minDiameterMm = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < diameterValues.length; i++) {
+    minDiameterMm = Math.min(minDiameterMm, diameterValues[i]);
+  }
 
   return {
     id: `${APP_VERSION}-${seed}-${Date.now()}`,
@@ -22,6 +28,7 @@ function createEntryFromCurrentVase(): ShopVaseEntry {
     isSeedModified,
     version: APP_VERSION,
     heightMm: clonedParams.heightMm,
+    minDiameterMm: Number.isFinite(minDiameterMm) ? Math.round(minDiameterMm) : 0,
     maxDiameterMm: Math.round(Math.max(envelope.width, envelope.depth)),
     material: "PLA",
     params: clonedParams,

@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.18] - 2026-05-03
+
+### Modifié
+- Ajoute le diametre min a la validation du modele
+
 ## [1.1.17] - 2026-05-03
 
 ### Modifié

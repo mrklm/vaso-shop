@@ -6,6 +6,7 @@ export interface ShopVaseEntry {
   isSeedModified: boolean;
   version: string;
   heightMm: number;
+  minDiameterMm: number;
   maxDiameterMm: number;
   material: "PLA";
   params: VaseParameters;

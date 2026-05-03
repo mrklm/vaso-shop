@@ -110,9 +110,10 @@ describe("generateOuterProfilePoints", () => {
     const params = defaultVaseParameters();
     params.radialSamples = 16;
     params.verticalSamples = 8;
-    const { zValues, radiusValues } = generateOuterProfilePoints(params, 50);
+    const { zValues, radiusValues, diameterValues } = generateOuterProfilePoints(params, 50);
     expect(zValues.length).toBe(50);
     expect(radiusValues.length).toBe(50);
+    expect(diameterValues.length).toBe(50);
   });
 
   it("z values span from 0 to heightMm", () => {
@@ -131,6 +132,16 @@ describe("generateOuterProfilePoints", () => {
     const { radiusValues } = generateOuterProfilePoints(params, 50);
     for (let i = 0; i < radiusValues.length; i++) {
       expect(radiusValues[i]).toBeGreaterThan(0);
+    }
+  });
+
+  it("diameter values are all positive", () => {
+    const params = defaultVaseParameters();
+    params.radialSamples = 16;
+    params.verticalSamples = 8;
+    const { diameterValues } = generateOuterProfilePoints(params, 50);
+    for (let i = 0; i < diameterValues.length; i++) {
+      expect(diameterValues[i]).toBeGreaterThan(0);
     }
   });
 });
