@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.14] - 2026-05-03
+
+### Modifié
+- Recompose la page de commande dans le meme esprit que le hero et prepare une structure claire pour l'integration de Stripe
+
 ## [1.1.13] - 2026-05-02
 
 ### Modifié

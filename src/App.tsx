@@ -273,134 +273,213 @@ function App() {
 
         {selectedEntry && (
           <section className="shop-order-card">
-            <div className="shop-order-copy">
-              <p className="shop-panel-title">Commande en préparation</p>
-              <h2>Vous commandez ce vase précis.</h2>
-              <p>
-                Le modèle est maintenant figé avec son N° de vase, sa version et ses dimensions.
-                Il ne reste plus qu'à choisir le coloris et laisser vos coordonnées pour la
-                commande.
-              </p>
-            </div>
+            <div className="shop-order-main">
+              <div className="shop-order-hero">
+                <div className="shop-order-copy">
+                  <p className="shop-panel-title">Page de commande</p>
+                  <h2>Finalisez ce vase précis.</h2>
+                  <p>
+                    Votre modèle reste figé avec son N° de vase, sa version et ses dimensions.
+                    Cette page prépare la commande et gardera naturellement sa place pour Stripe
+                    quand nous relierons le paiement.
+                  </p>
+                </div>
 
-            <div className="shop-order-summary">
-              <div className="shop-stat">
-                <span className="shop-stat-label">N° de vase</span>
-                <strong>{selectedEntry.seed}</strong>
+                <div className="shop-order-flow" aria-label="Parcours de commande">
+                  <article className="shop-order-step">
+                    <span>01</span>
+                    <strong>Vase confirmé</strong>
+                    <p>Le modèle choisi reste exactement celui affiché à l'écran.</p>
+                  </article>
+                  <article className="shop-order-step">
+                    <span>02</span>
+                    <strong>Couleur atelier</strong>
+                    <p>Vous choisissez votre teinte PLA avant validation de la commande.</p>
+                  </article>
+                  <article className="shop-order-step">
+                    <span>03</span>
+                    <strong>Infos de contact</strong>
+                    <p>Nous récupérons vos coordonnées avant d'ajouter le paiement Stripe.</p>
+                  </article>
+                </div>
               </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Hauteur</span>
-                <strong>{selectedEntry.heightMm} mm</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Diamètre max</span>
-                <strong>{selectedEntry.maxDiameterMm} mm</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Matière</span>
-                <strong>{selectedEntry.material}</strong>
-              </div>
-            </div>
 
-            <div className="shop-color-block">
-              <label htmlFor="shop-color">Couleur PLA</label>
-              <select
-                id="shop-color"
-                value={selectedColorId}
-                onChange={(event) => setSelectedColorId(event.target.value)}
+              <div className="shop-order-story-grid">
+                <div className="shop-story">
+                  <p>
+                    La commande reste liée à ce vase précis. Les dimensions, la matière et le
+                    numéro de vase sont conservés jusqu'à l'envoi.
+                  </p>
+                </div>
+                <div className="shop-story">
+                  <p>
+                    Stripe viendra se brancher ensuite sur cette étape. Pour l'instant, nous
+                    préparons la structure de commande et l'envoi des informations.
+                  </p>
+                </div>
+              </div>
+
+              <form
+                className="shop-order-form shop-order-form-card"
+                action={isOrderFormReady ? SHOP_ORDER_FORM_ACTION : undefined}
+                method={SHOP_ORDER_FORM_METHOD}
               >
-                {availableColors.map((color) => (
-                  <option key={color.id} value={color.id}>
-                    {color.label}
-                  </option>
-                ))}
-              </select>
+                <input type="hidden" name="seed" value={selectedEntry.seed} />
+                <input type="hidden" name="version" value={selectedEntry.version} />
+                <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
+                <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
+                <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
+                <input type="hidden" name="material" value={selectedEntry.material} />
 
-              <div className="shop-color-swatches" aria-hidden="true">
-                {availableColors.map((color) => (
-                  <span
-                    key={color.id}
-                    className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
-                    style={{ backgroundColor: color.hex }}
-                    title={color.label}
-                  />
-                ))}
-              </div>
+                <div className="shop-order-form-head">
+                  <div>
+                    <p className="shop-panel-title">Coordonnées</p>
+                    <h3>Informations de commande</h3>
+                  </div>
+                  <p>
+                    Laissez-nous vos informations pour préparer la suite du parcours, puis nous
+                    brancherons le paiement au même endroit.
+                  </p>
+                </div>
+
+                <div className="shop-order-form-grid">
+                  <label className="shop-field">
+                    <span>Nom</span>
+                    <input
+                      name="name"
+                      type="text"
+                      value={customerName}
+                      onChange={(event) => setCustomerName(event.target.value)}
+                      placeholder="Votre nom"
+                      required
+                    />
+                  </label>
+
+                  <label className="shop-field">
+                    <span>Email ou telephone</span>
+                    <input
+                      name="contact"
+                      type="text"
+                      value={customerContact}
+                      onChange={(event) => setCustomerContact(event.target.value)}
+                      placeholder="Email ou telephone"
+                      required
+                    />
+                  </label>
+
+                  <label className="shop-field shop-field-wide">
+                    <span>Adresse</span>
+                    <input
+                      name="address"
+                      type="text"
+                      value={customerAddress}
+                      onChange={(event) => setCustomerAddress(event.target.value)}
+                      placeholder="Optionnel pour l'instant"
+                    />
+                  </label>
+
+                  <label className="shop-field shop-field-wide">
+                    <span>Message</span>
+                    <textarea
+                      name="message"
+                      value={customerMessage}
+                      onChange={(event) => setCustomerMessage(event.target.value)}
+                      placeholder="Precisions, quantite, delai souhaite..."
+                      rows={5}
+                    />
+                  </label>
+                </div>
+
+                <div className="shop-order-actions">
+                  <button className="shop-button shop-button-secondary" type="button" onClick={closeOrder}>
+                    Retour au modele
+                  </button>
+                  <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
+                    Envoyer les informations
+                  </button>
+                </div>
+
+                <p className="shop-form-note">
+                  {isOrderFormReady
+                    ? "Le paiement Stripe sera raccorde ensuite. Cette etape envoie deja les informations de commande."
+                    : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi."}
+                </p>
+              </form>
             </div>
 
-            <form
-              className="shop-order-form"
-              action={isOrderFormReady ? SHOP_ORDER_FORM_ACTION : undefined}
-              method={SHOP_ORDER_FORM_METHOD}
-            >
-              <input type="hidden" name="seed" value={selectedEntry.seed} />
-              <input type="hidden" name="version" value={selectedEntry.version} />
-              <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
-              <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
-              <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
-              <input type="hidden" name="material" value={selectedEntry.material} />
+            <aside className="shop-order-sidebar">
+              <div className="shop-order-sidebar-card">
+                <div className="shop-info-head shop-info-head-inline">
+                  <p className="shop-panel-title">Recapitulatif</p>
+                  <span className="shop-live-badge">Modele selectionne</span>
+                </div>
 
-              <label className="shop-field">
-                <span>Nom</span>
-                <input
-                  name="name"
-                  type="text"
-                  value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Votre nom"
-                  required
-                />
-              </label>
+                <div className="shop-order-summary">
+                  <div className="shop-stat">
+                    <span className="shop-stat-label">N° de vase</span>
+                    <strong>{selectedEntry.seed}</strong>
+                  </div>
+                  <div className="shop-stat">
+                    <span className="shop-stat-label">Version</span>
+                    <strong>{selectedEntry.version}</strong>
+                  </div>
+                  <div className="shop-stat">
+                    <span className="shop-stat-label">Hauteur</span>
+                    <strong>{selectedEntry.heightMm} mm</strong>
+                  </div>
+                  <div className="shop-stat">
+                    <span className="shop-stat-label">Diamètre max</span>
+                    <strong>{selectedEntry.maxDiameterMm} mm</strong>
+                  </div>
+                  <div className="shop-stat shop-stat-material">
+                    <span className="shop-stat-label">Matière</span>
+                    <strong>{selectedEntry.material}</strong>
+                    <p>Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.</p>
+                  </div>
+                </div>
 
-              <label className="shop-field">
-                <span>Email ou telephone</span>
-                <input
-                  name="contact"
-                  type="text"
-                  value={customerContact}
-                  onChange={(event) => setCustomerContact(event.target.value)}
-                  placeholder="Email ou telephone"
-                  required
-                />
-              </label>
+                <div className="shop-color-block">
+                  <label htmlFor="shop-color">Couleur PLA</label>
+                  <select
+                    id="shop-color"
+                    value={selectedColorId}
+                    onChange={(event) => setSelectedColorId(event.target.value)}
+                  >
+                    {availableColors.map((color) => (
+                      <option key={color.id} value={color.id}>
+                        {color.label}
+                      </option>
+                    ))}
+                  </select>
 
-              <label className="shop-field">
-                <span>Adresse</span>
-                <input
-                  name="address"
-                  type="text"
-                  value={customerAddress}
-                  onChange={(event) => setCustomerAddress(event.target.value)}
-                  placeholder="Optionnel pour l'instant"
-                />
-              </label>
+                  <div className="shop-color-swatches" aria-hidden="true">
+                    {availableColors.map((color) => (
+                      <span
+                        key={color.id}
+                        className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                        style={{ backgroundColor: color.hex }}
+                        title={color.label}
+                      />
+                    ))}
+                  </div>
 
-              <label className="shop-field">
-                <span>Message</span>
-                <textarea
-                  name="message"
-                  value={customerMessage}
-                  onChange={(event) => setCustomerMessage(event.target.value)}
-                  placeholder="Precisions, quantite, delai souhaite..."
-                  rows={4}
-                />
-              </label>
+                  <p className="shop-order-helper">
+                    Les couleurs suivent le stock atelier disponible au moment de la fabrication.
+                  </p>
+                </div>
 
-              <div className="shop-order-actions">
-                <button className="shop-button shop-button-secondary" type="button" onClick={closeOrder}>
-                  Retour
-                </button>
-                <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
-                  Envoyer la commande
-                </button>
+                <div className="shop-order-note-stack">
+                  <div className="shop-order-note">
+                    <strong>Fabrication a la demande</strong>
+                    <p>Le vase est imprime a l'atelier apres validation des informations.</p>
+                  </div>
+                  <div className="shop-order-note">
+                    <strong>Paiement a venir</strong>
+                    <p>Cette zone accueillera ensuite le paiement Stripe sans changer le reste de la page.</p>
+                  </div>
+                </div>
               </div>
-
-              <p className="shop-form-note">
-                {isOrderFormReady
-                  ? "Le formulaire est pret a envoyer la commande."
-                  : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi."}
-              </p>
-            </form>
+            </aside>
           </section>
         )}
       </main>
