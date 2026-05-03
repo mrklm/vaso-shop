@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.19] - 2026-05-03
+
+### Modifié
+- Complete les coordonnees client avec ville, code postal et pays
+
 ## [1.1.18] - 2026-05-03
 
 ### Modifié

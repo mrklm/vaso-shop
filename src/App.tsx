@@ -41,6 +41,9 @@ function App() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [customerCity, setCustomerCity] = useState("");
+  const [customerPostalCode, setCustomerPostalCode] = useState("");
+  const [customerCountry, setCustomerCountry] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
@@ -73,11 +76,21 @@ function App() {
   const customerContactSummary = [customerEmail.trim(), customerPhone.trim()]
     .filter(Boolean)
     .join(" · ");
+  const customerAddressSummary = [
+    customerAddress.trim(),
+    [customerPostalCode.trim(), customerCity.trim()].filter(Boolean).join(" "),
+    customerCountry.trim(),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const isClientInfoComplete =
     customerLastName.trim().length > 0 &&
     customerFirstName.trim().length > 0 &&
     customerEmail.trim().length > 0 &&
-    customerAddress.trim().length > 0;
+    customerAddress.trim().length > 0 &&
+    customerCity.trim().length > 0 &&
+    customerPostalCode.trim().length > 0 &&
+    customerCountry.trim().length > 0;
   const isOrderFormReady =
     SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
     !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
@@ -171,11 +184,14 @@ function App() {
     setIsGlobalStepConfirmed(false);
   }, [
     customerAddress,
+    customerCity,
     customerEmail,
     customerFirstName,
     customerLastName,
     customerMessage,
+    customerPostalCode,
     customerPhone,
+    customerCountry,
     selectedEntry,
   ]);
 
@@ -583,6 +599,48 @@ function App() {
                       />
                     </label>
 
+                    <label className="shop-field">
+                      <span>Ville</span>
+                      <input
+                        name="city"
+                        type="text"
+                        value={customerCity}
+                        onChange={(event) => setCustomerCity(event.target.value)}
+                        placeholder="Votre ville"
+                        disabled={!canAccessClientStep}
+                        required
+                        autoComplete="address-level2"
+                      />
+                    </label>
+
+                    <label className="shop-field">
+                      <span>Code postal</span>
+                      <input
+                        name="postalCode"
+                        type="text"
+                        value={customerPostalCode}
+                        onChange={(event) => setCustomerPostalCode(event.target.value)}
+                        placeholder="Votre code postal"
+                        disabled={!canAccessClientStep}
+                        required
+                        autoComplete="postal-code"
+                      />
+                    </label>
+
+                    <label className="shop-field shop-field-wide">
+                      <span>Pays</span>
+                      <input
+                        name="country"
+                        type="text"
+                        value={customerCountry}
+                        onChange={(event) => setCustomerCountry(event.target.value)}
+                        placeholder="Votre pays"
+                        disabled={!canAccessClientStep}
+                        required
+                        autoComplete="country-name"
+                      />
+                    </label>
+
                     <label className="shop-field shop-field-wide">
                       <span>Message</span>
                       <textarea
@@ -642,10 +700,8 @@ function App() {
                     </div>
                     <div className="shop-order-note">
                       <strong>Client</strong>
-                      <p>
-                        {customerFullName || "Nom et prénom à renseigner"} ·{" "}
-                        {customerContactSummary || "E-mail à renseigner"}
-                      </p>
+                      <p>{customerFullName || "Nom et prénom à renseigner"} · {customerContactSummary || "E-mail à renseigner"}</p>
+                      <p>{customerAddressSummary || "Adresse complète à renseigner"}</p>
                     </div>
                   </div>
                   <p>
