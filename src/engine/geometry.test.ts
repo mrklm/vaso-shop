@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  alignContourToPrevious,
   regularPolygonVertices,
   resampleClosedContour,
   buildProfileContour,
   interpolateContours,
+  rotateContour,
 } from "./geometry";
 import { createProfile } from "./types";
 
@@ -30,7 +32,6 @@ describe("regularPolygonVertices", () => {
   it("respects rotation", () => {
     const profile = createProfile({ zRatio: 0, diameter: 100, sides: 4, rotationDeg: 45 });
     const verts = regularPolygonVertices(profile);
-    // First vertex should be at 45° → x = r*cos(45°), y = r*sin(45°)
     const r = 50;
     expect(verts[0]).toBeCloseTo(r * Math.cos(Math.PI / 4), 5);
     expect(verts[1]).toBeCloseTo(r * Math.sin(Math.PI / 4), 5);
@@ -41,7 +42,7 @@ describe("regularPolygonVertices", () => {
     profile.scaleX = 2;
     profile.scaleY = 0.5;
     const verts = regularPolygonVertices(profile);
-    expect(verts[0]).toBeCloseTo(100, 5); // x = 50 * 2
+    expect(verts[0]).toBeCloseTo(100, 5);
     expect(verts[1]).toBeCloseTo(0, 5);
   });
 
@@ -50,17 +51,16 @@ describe("regularPolygonVertices", () => {
     profile.offsetX = 10;
     profile.offsetY = -5;
     const verts = regularPolygonVertices(profile);
-    expect(verts[0]).toBeCloseTo(60, 5); // 50 + 10
-    expect(verts[1]).toBeCloseTo(-5, 5); // 0 + (-5)
+    expect(verts[0]).toBeCloseTo(60, 5);
+    expect(verts[1]).toBeCloseTo(-5, 5);
   });
 });
 
 describe("resampleClosedContour", () => {
   it("resamples a triangle to desired number of points", () => {
-    // Equilateral triangle
     const tri = new Float64Array([0, 1, -0.866, -0.5, 0.866, -0.5]);
     const resampled = resampleClosedContour(tri, 12);
-    expect(resampled.length).toBe(24); // 12 × 2
+    expect(resampled.length).toBe(24);
   });
 
   it("throws for fewer than 3 points", () => {
@@ -69,13 +69,11 @@ describe("resampleClosedContour", () => {
   });
 
   it("preserves approximate shape", () => {
-    // Square centered at origin
     const sq = new Float64Array([1, 1, -1, 1, -1, -1, 1, -1]);
     const resampled = resampleClosedContour(sq, 8);
-    // All points should be roughly at distance sqrt(2) or 1 from origin
     for (let i = 0; i < 8; i++) {
-      const x = resampled[i * 2],
-        y = resampled[i * 2 + 1];
+      const x = resampled[i * 2];
+      const y = resampled[i * 2 + 1];
       const dist = Math.sqrt(x * x + y * y);
       expect(dist).toBeGreaterThan(0.5);
       expect(dist).toBeLessThanOrEqual(Math.sqrt(2) + 0.01);
@@ -87,7 +85,27 @@ describe("buildProfileContour", () => {
   it("returns the correct number of samples", () => {
     const profile = createProfile({ zRatio: 0, diameter: 80, sides: 6, rotationDeg: 0 });
     const contour = buildProfileContour(profile, 48);
-    expect(contour.length).toBe(96); // 48 × 2
+    expect(contour.length).toBe(96);
+  });
+
+  it("places the seam near the middle of a stable back edge for faceted profiles", () => {
+    const profile = createProfile({ zRatio: 0, diameter: 80, sides: 6, rotationDeg: 0 });
+    const contour = buildProfileContour(profile, 48);
+    const x = contour[0];
+    const y = contour[1];
+    const angle = Math.atan2(y, x);
+
+    expect(Math.abs(angle + Math.PI / 2)).toBeLessThan(0.6);
+  });
+
+  it("keeps the seam at a stable back angle for rounder profiles", () => {
+    const profile = createProfile({ zRatio: 0, diameter: 80, sides: 24, rotationDeg: 0 });
+    const contour = buildProfileContour(profile, 96);
+    const x = contour[0];
+    const y = contour[1];
+    const angle = Math.atan2(y, x);
+
+    expect(Math.abs(angle + Math.PI / 2)).toBeLessThan(0.2);
   });
 });
 
@@ -114,5 +132,62 @@ describe("interpolateContours", () => {
     const result = interpolateContours(c1, c2, 0.5);
     expect(result[0]).toBeCloseTo(5);
     expect(result[2]).toBeCloseTo(15);
+  });
+});
+
+describe("rotateContour", () => {
+  it("rotates a contour by a cyclic shift", () => {
+    const contour = new Float64Array([0, 0, 1, 0, 1, 1, 0, 1]);
+    const rotated = rotateContour(contour, 1);
+
+    expect(Array.from(rotated)).toEqual([1, 0, 1, 1, 0, 1, 0, 0]);
+  });
+});
+
+describe("alignContourToPrevious", () => {
+  it("realigns a cyclically shifted contour to the previous one", () => {
+    const previous = new Float64Array([0, 0, 1, 0, 1, 1, 0, 1]);
+    const shifted = new Float64Array([1, 0, 1, 1, 0, 1, 0, 0]);
+
+    const aligned = alignContourToPrevious(shifted, previous);
+
+    expect(Array.from(aligned)).toEqual(Array.from(previous));
+  });
+
+  it("keeps shift 0 when an alternative alignment is only marginally better", () => {
+    const previous = new Float64Array([0, 0, 10, 0, 10, 10, 0, 10]);
+    const contour = new Float64Array([
+      0.4, 0,
+      10.4, 0,
+      10.4, 10,
+      0.4, 10,
+    ]);
+
+    const aligned = alignContourToPrevious(contour, previous);
+
+    expect(Array.from(aligned)).toEqual(Array.from(contour));
+  });
+
+  it("limits seam drift to a local neighborhood when requested", () => {
+    const previous = new Float64Array([0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0]);
+    const shifted = new Float64Array([4, 0, 5, 0, 0, 0, 1, 0, 2, 0, 3, 0]);
+
+    const aligned = alignContourToPrevious(shifted, previous, { maxShift: 1, minImprovementMm: 0 });
+
+    expect(Array.from(aligned)).not.toEqual(Array.from(previous));
+    expect(Array.from(aligned)).toEqual([5, 0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0]);
+  });
+
+  it("can bias the seam toward a locally preferred candidate", () => {
+    const previous = new Float64Array([0, 0, 1, 0, 2, 0, 3, 0]);
+    const contour = new Float64Array([0, 0, 1, 0, 2, 0, 3, 0]);
+
+    const aligned = alignContourToPrevious(contour, previous, {
+      extraShiftScore: (shift) => (shift === 1 ? -10 : 0),
+      maxShift: 1,
+      minImprovementMm: 0,
+    });
+
+    expect(Array.from(aligned)).toEqual([1, 0, 2, 0, 3, 0, 0, 0]);
   });
 });

@@ -36,8 +36,10 @@ function App() {
   const currentIndex = useShopStore((s) => s.currentIndex);
   const selectedEntryId = useShopStore((s) => s.selectedEntryId);
   const selectedColorId = useShopStore((s) => s.selectedColorId);
-  const [customerName, setCustomerName] = useState("");
-  const [customerContact, setCustomerContact] = useState("");
+  const [customerLastName, setCustomerLastName] = useState("");
+  const [customerFirstName, setCustomerFirstName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
@@ -65,9 +67,17 @@ function App() {
   const previousHeroGalleryImage =
     heroGalleryPreviousIndex === null ? null : HERO_GALLERY_IMAGES[heroGalleryPreviousIndex] ?? null;
   const selectedColorLabel = selectedColor?.label ?? "A choisir";
+  const customerFullName = [customerFirstName.trim(), customerLastName.trim()]
+    .filter(Boolean)
+    .join(" ");
+  const customerContactSummary = [customerEmail.trim(), customerPhone.trim()]
+    .filter(Boolean)
+    .join(" · ");
   const isClientInfoComplete =
-    customerName.trim().length > 0 &&
-    customerContact.trim().length > 0;
+    customerLastName.trim().length > 0 &&
+    customerFirstName.trim().length > 0 &&
+    customerEmail.trim().length > 0 &&
+    customerAddress.trim().length > 0;
   const isOrderFormReady =
     SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
     !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
@@ -159,7 +169,15 @@ function App() {
 
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
-  }, [customerName, customerContact, customerAddress, customerMessage, selectedEntry]);
+  }, [
+    customerAddress,
+    customerEmail,
+    customerFirstName,
+    customerLastName,
+    customerMessage,
+    customerPhone,
+    selectedEntry,
+  ]);
 
   const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
     `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
@@ -374,17 +392,13 @@ function App() {
                 </div>
                 <div className="shop-order-step-content">
                   <p>
-                    Vous validez ici le vase exact qui sera repris dans la commande. Son numero, sa
-                    version et ses dimensions restent fixes pour la suite du parcours.
+                    Vous validez ici le vase exact qui sera repris dans la commande. Son numéro et
+                    ses dimensions restent fixes pour la suite du parcours.
                   </p>
                   <div className="shop-order-summary shop-order-summary-wide">
                     <div className="shop-stat">
                       <span className="shop-stat-label">N° de vase</span>
                       <strong>{selectedEntry.seed}</strong>
-                    </div>
-                    <div className="shop-stat">
-                      <span className="shop-stat-label">Version</span>
-                      <strong>{selectedEntry.version}</strong>
                     </div>
                     <div className="shop-stat">
                       <span className="shop-stat-label">Hauteur</span>
@@ -398,10 +412,10 @@ function App() {
                 </div>
                 <div className="shop-order-step-actions">
                   {isModelStepConfirmed ? (
-                    <span className="shop-step-status">Modele valide</span>
+                    <span className="shop-step-status">Modèle validé</span>
                   ) : (
                     <button className="shop-button shop-button-accent" type="button" onClick={() => setIsModelStepConfirmed(true)}>
-                      Je valide ce modele
+                      Je valide ce modèle
                     </button>
                   )}
                 </div>
@@ -431,16 +445,30 @@ function App() {
                       ))}
                     </select>
 
-                    <div className="shop-color-swatches" aria-hidden="true">
+                    <div className="shop-color-swatches" aria-label="Pastilles de couleur PLA">
                       {availableColors.map((color) => (
-                        <span
+                        <button
                           key={color.id}
-                          className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
-                          style={{ backgroundColor: color.hex }}
+                          className={`shop-swatch-button ${selectedColorId === color.id ? "active" : ""}`}
+                          type="button"
+                          onClick={() => setSelectedColorId(color.id)}
+                          disabled={!canAccessColorStep}
+                          aria-pressed={selectedColorId === color.id}
                           title={color.label}
-                        />
+                        >
+                          <span
+                            className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                            style={{ backgroundColor: color.hex }}
+                            aria-hidden="true"
+                          />
+                          <span className="shop-swatch-label">{color.label}</span>
+                        </button>
                       ))}
                     </div>
+                    <p className="shop-color-helper">
+                      Cliquez sur une pastille pour mettre à jour la couleur sélectionnée dans la
+                      liste.
+                    </p>
                   </div>
                   <div className="shop-order-note shop-order-note-highlight shop-order-warning">
                     <span className="shop-order-warning-icon" aria-hidden="true">
@@ -485,26 +513,55 @@ function App() {
                     <label className="shop-field">
                       <span>Nom</span>
                       <input
-                        name="name"
+                        name="lastName"
                         type="text"
-                        value={customerName}
-                        onChange={(event) => setCustomerName(event.target.value)}
+                        value={customerLastName}
+                        onChange={(event) => setCustomerLastName(event.target.value)}
                         placeholder="Votre nom"
                         required
                         disabled={!canAccessClientStep}
+                        autoComplete="family-name"
                       />
                     </label>
 
                     <label className="shop-field">
-                      <span>Email ou telephone</span>
+                      <span>Prénom</span>
                       <input
-                        name="contact"
+                        name="firstName"
                         type="text"
-                        value={customerContact}
-                        onChange={(event) => setCustomerContact(event.target.value)}
-                        placeholder="Email ou telephone"
+                        value={customerFirstName}
+                        onChange={(event) => setCustomerFirstName(event.target.value)}
+                        placeholder="Votre prénom"
                         required
                         disabled={!canAccessClientStep}
+                        autoComplete="given-name"
+                      />
+                    </label>
+
+                    <label className="shop-field">
+                      <span>E-mail</span>
+                      <input
+                        name="email"
+                        type="email"
+                        value={customerEmail}
+                        onChange={(event) => setCustomerEmail(event.target.value)}
+                        placeholder="votre@email.com"
+                        required
+                        disabled={!canAccessClientStep}
+                        autoComplete="email"
+                      />
+                    </label>
+
+                    <label className="shop-field">
+                      <span>N° de téléphone (facultatif)</span>
+                      <input
+                        name="phone"
+                        type="tel"
+                        value={customerPhone}
+                        onChange={(event) => setCustomerPhone(event.target.value)}
+                        placeholder="Votre numéro de téléphone"
+                        disabled={!canAccessClientStep}
+                        autoComplete="tel"
                       />
                     </label>
 
@@ -515,8 +572,10 @@ function App() {
                         type="text"
                         value={customerAddress}
                         onChange={(event) => setCustomerAddress(event.target.value)}
-                        placeholder="Optionnel pour l'instant"
+                        placeholder="Votre adresse de livraison"
                         disabled={!canAccessClientStep}
+                        required
+                        autoComplete="street-address"
                       />
                     </label>
 
@@ -578,8 +637,11 @@ function App() {
                       <p>{selectedColorLabel}</p>
                     </div>
                     <div className="shop-order-note">
-                      <strong>Contact</strong>
-                      <p>{customerName || "Nom a renseigner"} · {customerContact || "Contact a renseigner"}</p>
+                      <strong>Client</strong>
+                      <p>
+                        {customerFullName || "Nom et prénom à renseigner"} ·{" "}
+                        {customerContactSummary || "E-mail à renseigner"}
+                      </p>
                     </div>
                   </div>
                   <p>

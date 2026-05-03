@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.17] - 2026-05-03
+
+### Modifié
+- Passe la commande aux pastilles cliquables et aligne le moteur sur les correctifs de couture et du suffixe M
+
 ## [1.1.16] - 2026-05-03
 
 ### Modifié
