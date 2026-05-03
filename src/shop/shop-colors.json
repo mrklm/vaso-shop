@@ -1,0 +1,92 @@
+[
+  {
+    "id": "natural-translucent",
+    "label": "Naturel (translucide)",
+    "hex": "#efe4cc",
+    "available": true
+  },
+  {
+    "id": "snow-white",
+    "label": "Blanc neige",
+    "hex": "#f7f7f2",
+    "available": true
+  },
+  {
+    "id": "matte-black",
+    "label": "Noir mat",
+    "hex": "#161616",
+    "available": true
+  },
+  {
+    "id": "pastel-yellow",
+    "label": "Jaune Pastel",
+    "hex": "#f4e58d",
+    "available": true
+  },
+  {
+    "id": "ral-1016",
+    "label": "Jaune RAL 1016",
+    "hex": "#f5f328",
+    "available": true
+  },
+  {
+    "id": "fluorescent-orange",
+    "label": "Orange fluo",
+    "hex": "#ff6a00",
+    "available": true
+  },
+  {
+    "id": "gold-orange",
+    "label": "Orange OR",
+    "hex": "#d88b20",
+    "available": true
+  },
+  {
+    "id": "terracotta-wine",
+    "label": "Terracotta (lie de vin)",
+    "hex": "#7a3b35",
+    "available": true
+  },
+  {
+    "id": "ral-3020",
+    "label": "Rouge RAL 3020",
+    "hex": "#c91414",
+    "available": true
+  },
+  {
+    "id": "ral-4008",
+    "label": "Violet RAL 4008",
+    "hex": "#8a3f63",
+    "available": true
+  },
+  {
+    "id": "ral-6017",
+    "label": "Vert mai RAL 6017",
+    "hex": "#54b948",
+    "available": true
+  },
+  {
+    "id": "pearlescent-green",
+    "label": "Vert nacré",
+    "hex": "#6b927a",
+    "available": true
+  },
+  {
+    "id": "turquoise-blue",
+    "label": "Bleu turquoise",
+    "hex": "#26b8c7",
+    "available": true
+  },
+  {
+    "id": "ral-5015",
+    "label": "Bleu ciel RAL 5015",
+    "hex": "#2b84c6",
+    "available": true
+  },
+  {
+    "id": "pastel-blue",
+    "label": "Bleu Pastel",
+    "hex": "#8aaee8",
+    "available": true
+  }
+]

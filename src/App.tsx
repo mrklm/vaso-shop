@@ -442,12 +442,21 @@ function App() {
                       ))}
                     </div>
                   </div>
-                  <div className="shop-order-note shop-order-note-highlight">
-                    <strong>Vase decoratif</strong>
-                    <p>
-                      Ce vase est decoratif. Le PLA bio source n'est pas prevu pour contenir de
-                      l'eau durablement.
-                    </p>
+                  <div className="shop-order-note shop-order-note-highlight shop-order-warning">
+                    <span className="shop-order-warning-icon" aria-hidden="true">
+                      <span>!</span>
+                    </span>
+                    <div className="shop-order-warning-copy">
+                      <strong>Attention</strong>
+                      <p>
+                        Nous attirons votre attention sur le fait que le vase produit en PLA n'est
+                        pas prévu pour contenir de l'eau. En effet, la matière étant biosourcée à
+                        base d'amidon de maïs, il s'agit d'un matériau biodégradable : le mettre en
+                        contact avec de l'eau dégraderait rapidement le vase. En vérifiant les
+                        dimensions du vase, vous pouvez toutefois prévoir l'ajout d'un contenant en
+                        verre à l'intérieur.
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="shop-order-step-actions">

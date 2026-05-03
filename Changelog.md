@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.16] - 2026-05-03
+
+### Modifié
+- Externalise les couleurs PLA et clarifie l'avertissement decoratif du vase
+
 ## [1.1.15] - 2026-05-03
 
 ### Modifié

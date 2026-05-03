@@ -654,6 +654,36 @@
     linear-gradient(180deg, rgb(252 246 238 / 96%), rgb(244 234 220 / 96%));
 }
 
+.shop-order-warning {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.shop-order-warning-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 28px;
+  margin-top: 1px;
+  clip-path: polygon(50% 3%, 4% 97%, 96% 97%);
+  background: rgb(198 39 39 / 12%);
+}
+
+.shop-order-warning-icon span {
+  margin-top: 4px;
+  color: #b72626;
+  font-size: 0.96rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.shop-order-warning-copy {
+  display: grid;
+  gap: 6px;
+}
+
 .shop-legal-note {
   border: 1px solid rgb(73 124 101 / 10%);
   background:
