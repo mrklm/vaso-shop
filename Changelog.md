@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.15] - 2026-05-03
+
+### Modifié
+- Transforme la commande en parcours par etapes avec defilement automatique et une etape Stripe preparee
+
 ## [1.1.14] - 2026-05-03
 
 ### Modifié

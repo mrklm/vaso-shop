@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
@@ -42,6 +42,11 @@ function App() {
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
+  const [isModelStepConfirmed, setIsModelStepConfirmed] = useState(false);
+  const [isColorStepConfirmed, setIsColorStepConfirmed] = useState(false);
+  const [isClientStepConfirmed, setIsClientStepConfirmed] = useState(false);
+  const [isGlobalStepConfirmed, setIsGlobalStepConfirmed] = useState(false);
+  const orderSectionRef = useRef<HTMLElement | null>(null);
 
   const currentEntry = entries[currentIndex] ?? null;
   const selectedEntry = useMemo(
@@ -59,9 +64,17 @@ function App() {
   const currentHeroGalleryImage = HERO_GALLERY_IMAGES[heroGalleryIndex] ?? null;
   const previousHeroGalleryImage =
     heroGalleryPreviousIndex === null ? null : HERO_GALLERY_IMAGES[heroGalleryPreviousIndex] ?? null;
+  const selectedColorLabel = selectedColor?.label ?? "A choisir";
+  const isClientInfoComplete =
+    customerName.trim().length > 0 &&
+    customerContact.trim().length > 0;
   const isOrderFormReady =
     SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
     !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
+  const canAccessColorStep = isModelStepConfirmed;
+  const canAccessClientStep = isColorStepConfirmed;
+  const canAccessGlobalStep = isClientStepConfirmed && isClientInfoComplete;
+  const canAccessStripeStep = isGlobalStepConfirmed;
 
   useEffect(() => {
     setShowGrid(false);
@@ -111,6 +124,53 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedEntry) {
+      return;
+    }
+
+    setIsModelStepConfirmed(false);
+    setIsColorStepConfirmed(false);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+
+    const scrollTimeoutId = window.setTimeout(() => {
+      orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+
+    return () => window.clearTimeout(scrollTimeoutId);
+  }, [selectedEntry]);
+
+  useEffect(() => {
+    if (!selectedEntry) {
+      return;
+    }
+
+    setIsColorStepConfirmed(false);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+  }, [selectedColorId, selectedEntry]);
+
+  useEffect(() => {
+    if (!selectedEntry) {
+      return;
+    }
+
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+  }, [customerName, customerContact, customerAddress, customerMessage, selectedEntry]);
+
+  const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
+    `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
+
+  const handleOpenOrder = () => {
+    if (selectedEntry?.id === currentEntry?.id) {
+      orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    openOrderForCurrent();
+  };
 
   return (
     <div className="shop-app">
@@ -216,7 +276,7 @@ function App() {
                   Suivant
                 </button>
               </div>
-              <button className="shop-button shop-button-accent" onClick={openOrderForCurrent}>
+              <button className="shop-button shop-button-accent" onClick={handleOpenOrder}>
                 Commander ce modèle
               </button>
             </div>
@@ -272,214 +332,302 @@ function App() {
         </section>
 
         {selectedEntry && (
-          <section className="shop-order-card">
-            <div className="shop-order-main">
-              <div className="shop-order-hero">
-                <div className="shop-order-copy">
+          <section ref={orderSectionRef} className="shop-order-card">
+            <form
+              className="shop-order-journey"
+              action={isOrderFormReady ? SHOP_ORDER_FORM_ACTION : undefined}
+              method={SHOP_ORDER_FORM_METHOD}
+              onSubmit={(event) => {
+                if (!canAccessStripeStep || !isOrderFormReady) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              <input type="hidden" name="seed" value={selectedEntry.seed} />
+              <input type="hidden" name="version" value={selectedEntry.version} />
+              <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
+              <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
+              <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
+              <input type="hidden" name="material" value={selectedEntry.material} />
+
+              <div className="shop-order-copy shop-order-journey-head">
+                <div>
                   <p className="shop-panel-title">Page de commande</p>
-                  <h2>Finalisez ce vase précis.</h2>
+                  <h2>Un parcours clair avant le paiement.</h2>
                   <p>
-                    Votre modèle reste figé avec son N° de vase, sa version et ses dimensions.
-                    Cette page prépare la commande et gardera naturellement sa place pour Stripe
-                    quand nous relierons le paiement.
+                    La page descend automatiquement jusqu'ici pour valider le modele, choisir la
+                    couleur, renseigner vos informations puis preparer l'etape Stripe.
                   </p>
                 </div>
-
-                <div className="shop-order-flow" aria-label="Parcours de commande">
-                  <article className="shop-order-step">
-                    <span>01</span>
-                    <strong>Vase confirmé</strong>
-                    <p>Le modèle choisi reste exactement celui affiché à l'écran.</p>
-                  </article>
-                  <article className="shop-order-step">
-                    <span>02</span>
-                    <strong>Couleur atelier</strong>
-                    <p>Vous choisissez votre teinte PLA avant validation de la commande.</p>
-                  </article>
-                  <article className="shop-order-step">
-                    <span>03</span>
-                    <strong>Infos de contact</strong>
-                    <p>Nous récupérons vos coordonnées avant d'ajouter le paiement Stripe.</p>
-                  </article>
-                </div>
+                <button className="shop-button shop-button-secondary" type="button" onClick={closeOrder}>
+                  Retour au modele
+                </button>
               </div>
 
-              <div className="shop-order-story-grid">
-                <div className="shop-story">
-                  <p>
-                    La commande reste liée à ce vase précis. Les dimensions, la matière et le
-                    numéro de vase sont conservés jusqu'à l'envoi.
-                  </p>
-                </div>
-                <div className="shop-story">
-                  <p>
-                    Stripe viendra se brancher ensuite sur cette étape. Pour l'instant, nous
-                    préparons la structure de commande et l'envoi des informations.
-                  </p>
-                </div>
-              </div>
-
-              <form
-                className="shop-order-form shop-order-form-card"
-                action={isOrderFormReady ? SHOP_ORDER_FORM_ACTION : undefined}
-                method={SHOP_ORDER_FORM_METHOD}
-              >
-                <input type="hidden" name="seed" value={selectedEntry.seed} />
-                <input type="hidden" name="version" value={selectedEntry.version} />
-                <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
-                <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
-                <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
-                <input type="hidden" name="material" value={selectedEntry.material} />
-
-                <div className="shop-order-form-head">
+              <article className={getOrderStepClassName(isModelStepConfirmed, true)}>
+                <div className="shop-order-step-head">
+                  <span className="shop-order-step-index">01</span>
                   <div>
-                    <p className="shop-panel-title">Coordonnées</p>
-                    <h3>Informations de commande</h3>
+                    <p className="shop-panel-title">Validation du modele</p>
+                    <h3>Confirmez le vase selectionne</h3>
+                  </div>
+                </div>
+                <div className="shop-order-step-content">
+                  <p>
+                    Vous validez ici le vase exact qui sera repris dans la commande. Son numero, sa
+                    version et ses dimensions restent fixes pour la suite du parcours.
+                  </p>
+                  <div className="shop-order-summary shop-order-summary-wide">
+                    <div className="shop-stat">
+                      <span className="shop-stat-label">N° de vase</span>
+                      <strong>{selectedEntry.seed}</strong>
+                    </div>
+                    <div className="shop-stat">
+                      <span className="shop-stat-label">Version</span>
+                      <strong>{selectedEntry.version}</strong>
+                    </div>
+                    <div className="shop-stat">
+                      <span className="shop-stat-label">Hauteur</span>
+                      <strong>{selectedEntry.heightMm} mm</strong>
+                    </div>
+                    <div className="shop-stat">
+                      <span className="shop-stat-label">Diamètre max</span>
+                      <strong>{selectedEntry.maxDiameterMm} mm</strong>
+                    </div>
+                  </div>
+                </div>
+                <div className="shop-order-step-actions">
+                  {isModelStepConfirmed ? (
+                    <span className="shop-step-status">Modele valide</span>
+                  ) : (
+                    <button className="shop-button shop-button-accent" type="button" onClick={() => setIsModelStepConfirmed(true)}>
+                      Je valide ce modele
+                    </button>
+                  )}
+                </div>
+              </article>
+
+              <article className={getOrderStepClassName(isColorStepConfirmed, canAccessColorStep)}>
+                <div className="shop-order-step-head">
+                  <span className="shop-order-step-index">02</span>
+                  <div>
+                    <p className="shop-panel-title">Selection de la couleur</p>
+                    <h3>Choisissez la teinte atelier</h3>
+                  </div>
+                </div>
+                <div className="shop-order-step-content">
+                  <div className="shop-color-block shop-color-block-journey">
+                    <label htmlFor="shop-color">Couleur PLA</label>
+                    <select
+                      id="shop-color"
+                      value={selectedColorId}
+                      onChange={(event) => setSelectedColorId(event.target.value)}
+                      disabled={!canAccessColorStep}
+                    >
+                      {availableColors.map((color) => (
+                        <option key={color.id} value={color.id}>
+                          {color.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="shop-color-swatches" aria-hidden="true">
+                      {availableColors.map((color) => (
+                        <span
+                          key={color.id}
+                          className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                          style={{ backgroundColor: color.hex }}
+                          title={color.label}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="shop-order-note shop-order-note-highlight">
+                    <strong>Vase decoratif</strong>
+                    <p>
+                      Ce vase est decoratif. Le PLA bio source n'est pas prevu pour contenir de
+                      l'eau durablement.
+                    </p>
+                  </div>
+                </div>
+                <div className="shop-order-step-actions">
+                  {isColorStepConfirmed ? (
+                    <span className="shop-step-status">Couleur validee</span>
+                  ) : canAccessColorStep ? (
+                    <button className="shop-button shop-button-accent" type="button" onClick={() => setIsColorStepConfirmed(true)}>
+                      Je valide cette couleur
+                    </button>
+                  ) : (
+                    <span className="shop-step-hint">Validez d'abord le modele</span>
+                  )}
+                </div>
+              </article>
+
+              <article className={getOrderStepClassName(isClientStepConfirmed, canAccessClientStep)}>
+                <div className="shop-order-step-head">
+                  <span className="shop-order-step-index">03</span>
+                  <div>
+                    <p className="shop-panel-title">Informations client</p>
+                    <h3>Renseignez vos coordonnees</h3>
+                  </div>
+                </div>
+                <div className="shop-order-step-content">
+                  <div className="shop-order-form-grid">
+                    <label className="shop-field">
+                      <span>Nom</span>
+                      <input
+                        name="name"
+                        type="text"
+                        value={customerName}
+                        onChange={(event) => setCustomerName(event.target.value)}
+                        placeholder="Votre nom"
+                        required
+                        disabled={!canAccessClientStep}
+                      />
+                    </label>
+
+                    <label className="shop-field">
+                      <span>Email ou telephone</span>
+                      <input
+                        name="contact"
+                        type="text"
+                        value={customerContact}
+                        onChange={(event) => setCustomerContact(event.target.value)}
+                        placeholder="Email ou telephone"
+                        required
+                        disabled={!canAccessClientStep}
+                      />
+                    </label>
+
+                    <label className="shop-field shop-field-wide">
+                      <span>Adresse</span>
+                      <input
+                        name="address"
+                        type="text"
+                        value={customerAddress}
+                        onChange={(event) => setCustomerAddress(event.target.value)}
+                        placeholder="Optionnel pour l'instant"
+                        disabled={!canAccessClientStep}
+                      />
+                    </label>
+
+                    <label className="shop-field shop-field-wide">
+                      <span>Message</span>
+                      <textarea
+                        name="message"
+                        value={customerMessage}
+                        onChange={(event) => setCustomerMessage(event.target.value)}
+                        placeholder="Precisions, quantite, delai souhaite..."
+                        rows={4}
+                        disabled={!canAccessClientStep}
+                      />
+                    </label>
+                  </div>
+                  <div className="shop-order-note shop-legal-note">
+                    <strong>Mentions et donnees personnelles</strong>
+                    <p>
+                      Ces informations servent uniquement a traiter cette demande de commande et a
+                      preparer le futur paiement. Prevu au branchement final : effacement
+                      automatique des demandes inactives apres 30 jours.
+                    </p>
+                  </div>
+                </div>
+                <div className="shop-order-step-actions">
+                  {isClientStepConfirmed ? (
+                    <span className="shop-step-status">Informations validees</span>
+                  ) : canAccessClientStep ? (
+                    <button
+                      className="shop-button shop-button-accent"
+                      type="button"
+                      onClick={() => setIsClientStepConfirmed(true)}
+                      disabled={!isClientInfoComplete}
+                    >
+                      Je valide mes informations
+                    </button>
+                  ) : (
+                    <span className="shop-step-hint">Validez d'abord la couleur</span>
+                  )}
+                </div>
+              </article>
+
+              <article className={getOrderStepClassName(isGlobalStepConfirmed, canAccessGlobalStep)}>
+                <div className="shop-order-step-head">
+                  <span className="shop-order-step-index">04</span>
+                  <div>
+                    <p className="shop-panel-title">Confirmation globale</p>
+                    <h3>Verifiez une derniere fois l'ensemble</h3>
+                  </div>
+                </div>
+                <div className="shop-order-step-content">
+                  <div className="shop-order-confirm-grid">
+                    <div className="shop-order-note">
+                      <strong>Modele</strong>
+                      <p>Vase N° {selectedEntry.seed} · {selectedEntry.heightMm} mm · {selectedEntry.maxDiameterMm} mm max</p>
+                    </div>
+                    <div className="shop-order-note">
+                      <strong>Couleur</strong>
+                      <p>{selectedColorLabel}</p>
+                    </div>
+                    <div className="shop-order-note">
+                      <strong>Contact</strong>
+                      <p>{customerName || "Nom a renseigner"} · {customerContact || "Contact a renseigner"}</p>
+                    </div>
                   </div>
                   <p>
-                    Laissez-nous vos informations pour préparer la suite du parcours, puis nous
-                    brancherons le paiement au même endroit.
+                    Cette validation verrouille votre parcours avant l'etape de paiement. Stripe
+                    prendra ensuite place juste apres cette confirmation.
                   </p>
                 </div>
-
-                <div className="shop-order-form-grid">
-                  <label className="shop-field">
-                    <span>Nom</span>
-                    <input
-                      name="name"
-                      type="text"
-                      value={customerName}
-                      onChange={(event) => setCustomerName(event.target.value)}
-                      placeholder="Votre nom"
-                      required
-                    />
-                  </label>
-
-                  <label className="shop-field">
-                    <span>Email ou telephone</span>
-                    <input
-                      name="contact"
-                      type="text"
-                      value={customerContact}
-                      onChange={(event) => setCustomerContact(event.target.value)}
-                      placeholder="Email ou telephone"
-                      required
-                    />
-                  </label>
-
-                  <label className="shop-field shop-field-wide">
-                    <span>Adresse</span>
-                    <input
-                      name="address"
-                      type="text"
-                      value={customerAddress}
-                      onChange={(event) => setCustomerAddress(event.target.value)}
-                      placeholder="Optionnel pour l'instant"
-                    />
-                  </label>
-
-                  <label className="shop-field shop-field-wide">
-                    <span>Message</span>
-                    <textarea
-                      name="message"
-                      value={customerMessage}
-                      onChange={(event) => setCustomerMessage(event.target.value)}
-                      placeholder="Precisions, quantite, delai souhaite..."
-                      rows={5}
-                    />
-                  </label>
+                <div className="shop-order-step-actions">
+                  {isGlobalStepConfirmed ? (
+                    <span className="shop-step-status">Confirmation terminee</span>
+                  ) : canAccessGlobalStep ? (
+                    <button className="shop-button shop-button-accent" type="button" onClick={() => setIsGlobalStepConfirmed(true)}>
+                      Je confirme l'ensemble
+                    </button>
+                  ) : (
+                    <span className="shop-step-hint">Validez d'abord vos informations</span>
+                  )}
                 </div>
+              </article>
 
-                <div className="shop-order-actions">
-                  <button className="shop-button shop-button-secondary" type="button" onClick={closeOrder}>
-                    Retour au modele
-                  </button>
-                  <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
-                    Envoyer les informations
-                  </button>
-                </div>
-
-                <p className="shop-form-note">
-                  {isOrderFormReady
-                    ? "Le paiement Stripe sera raccorde ensuite. Cette etape envoie deja les informations de commande."
-                    : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi."}
-                </p>
-              </form>
-            </div>
-
-            <aside className="shop-order-sidebar">
-              <div className="shop-order-sidebar-card">
-                <div className="shop-info-head shop-info-head-inline">
-                  <p className="shop-panel-title">Recapitulatif</p>
-                  <span className="shop-live-badge">Modele selectionne</span>
-                </div>
-
-                <div className="shop-order-summary">
-                  <div className="shop-stat">
-                    <span className="shop-stat-label">N° de vase</span>
-                    <strong>{selectedEntry.seed}</strong>
-                  </div>
-                  <div className="shop-stat">
-                    <span className="shop-stat-label">Version</span>
-                    <strong>{selectedEntry.version}</strong>
-                  </div>
-                  <div className="shop-stat">
-                    <span className="shop-stat-label">Hauteur</span>
-                    <strong>{selectedEntry.heightMm} mm</strong>
-                  </div>
-                  <div className="shop-stat">
-                    <span className="shop-stat-label">Diamètre max</span>
-                    <strong>{selectedEntry.maxDiameterMm} mm</strong>
-                  </div>
-                  <div className="shop-stat shop-stat-material">
-                    <span className="shop-stat-label">Matière</span>
-                    <strong>{selectedEntry.material}</strong>
-                    <p>Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.</p>
+              <article className={getOrderStepClassName(false, canAccessStripeStep)}>
+                <div className="shop-order-step-head">
+                  <span className="shop-order-step-index">05</span>
+                  <div>
+                    <p className="shop-panel-title">Paiement Stripe</p>
+                    <h3>Derniere etape du parcours</h3>
                   </div>
                 </div>
-
-                <div className="shop-color-block">
-                  <label htmlFor="shop-color">Couleur PLA</label>
-                  <select
-                    id="shop-color"
-                    value={selectedColorId}
-                    onChange={(event) => setSelectedColorId(event.target.value)}
-                  >
-                    {availableColors.map((color) => (
-                      <option key={color.id} value={color.id}>
-                        {color.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="shop-color-swatches" aria-hidden="true">
-                    {availableColors.map((color) => (
-                      <span
-                        key={color.id}
-                        className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
-                        style={{ backgroundColor: color.hex }}
-                        title={color.label}
-                      />
-                    ))}
-                  </div>
-
-                  <p className="shop-order-helper">
-                    Les couleurs suivent le stock atelier disponible au moment de la fabrication.
-                  </p>
-                </div>
-
-                <div className="shop-order-note-stack">
-                  <div className="shop-order-note">
-                    <strong>Fabrication a la demande</strong>
-                    <p>Le vase est imprime a l'atelier apres validation des informations.</p>
-                  </div>
-                  <div className="shop-order-note">
-                    <strong>Paiement a venir</strong>
-                    <p>Cette zone accueillera ensuite le paiement Stripe sans changer le reste de la page.</p>
+                <div className="shop-order-step-content">
+                  <div className="shop-order-note shop-order-note-highlight">
+                    <strong>Paiement a connecter</strong>
+                    <p>
+                      Cette zone accueillera le module Stripe. En attendant, vous pouvez deja
+                      transmettre la demande de commande avec toutes les informations valides.
+                    </p>
                   </div>
                 </div>
-              </div>
-            </aside>
+                <div className="shop-order-step-actions shop-order-step-actions-final">
+                  {canAccessStripeStep ? (
+                    <>
+                      <span className="shop-step-hint">Stripe sera branche ici ensuite</span>
+                      <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
+                        Envoyer la demande avant Stripe
+                      </button>
+                    </>
+                  ) : (
+                    <span className="shop-step-hint">Validez d'abord la confirmation globale</span>
+                  )}
+                </div>
+              </article>
+
+              <p className="shop-form-note">
+                {isOrderFormReady
+                  ? "La structure est prete pour Stripe. En attendant son branchement, cette page peut deja transmettre la demande."
+                  : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi avant l'integration de Stripe."}
+              </p>
+            </form>
           </section>
         )}
       </main>
