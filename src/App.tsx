@@ -17,6 +17,7 @@ const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
 
 const HERO_GALLERY_INTERVAL_MS = 6800;
 const HERO_GALLERY_FADE_MS = 2200;
+const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
 
 function App() {
   const setShowGrid = useUIStore((s) => s.setShowGrid);
@@ -213,7 +214,10 @@ function App() {
           <div className="shop-copy">
             <div className="shop-copy-top">
               <div className="shop-copy-main">
-                <p className="shop-kicker">VASO SHOP</p>
+                <p className="shop-kicker">
+                  <span>VASO SHOP</span>
+                  <span className="shop-kicker-version">{`v${APP_VERSION}`}</span>
+                </p>
                 <h1>Générez un vase et commandez-le en quelques secondes.</h1>
                 <p className="shop-lead">
                   Explorez des formes uniques, choisissez votre coloris PLA et passez commande à

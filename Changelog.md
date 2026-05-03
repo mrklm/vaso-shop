@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.20] - 2026-05-03
+
+### Modifié
+- Ajoute un repere de version tres discret a cote du surtitre du shop
+
 ## [1.1.19] - 2026-05-03
 
 ### Modifié
