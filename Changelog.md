@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.24] - 2026-05-05
+
+### Modifié
+- Allège le surtitre du hero et harmonise la carte Atelier Vaso
+
 ## [1.1.23] - 2026-05-05
 
 ### Modifié

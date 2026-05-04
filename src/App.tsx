@@ -216,11 +216,10 @@ function App() {
             <div className="shop-copy-top">
               <div className="shop-copy-main">
                 <p className="shop-kicker">
-                  <span className="shop-title-with-mark">
-                    <img className="shop-title-mark" src={vasoMark} alt="" aria-hidden="true" />
+                  <span className="shop-kicker-line">
                     <span>VASO SHOP</span>
+                    <span className="shop-kicker-version">{`v${APP_VERSION}`}</span>
                   </span>
-                  <span className="shop-kicker-version">{`v${APP_VERSION}`}</span>
                 </p>
                 <h1>Générez un vase et commandez-le en quelques secondes.</h1>
                 <p className="shop-lead">
@@ -352,9 +351,14 @@ function App() {
             </aside>
 
             <aside className="shop-info-card shop-workshop-card">
-              <div className="shop-info-head">
-                <p className="shop-panel-title shop-title-with-mark">
-                  <img className="shop-title-mark" src={vasoMark} alt="" aria-hidden="true" />
+              <div className="shop-info-head shop-workshop-head">
+                <p className="shop-panel-title shop-title-with-mark shop-workshop-title">
+                  <img
+                    className="shop-title-mark shop-title-mark-workshop"
+                    src={vasoMark}
+                    alt=""
+                    aria-hidden="true"
+                  />
                   <span>L'Atelier Vaso</span>
                 </p>
               </div>
