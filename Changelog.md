@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.21] - 2026-05-04
+
+### Modifié
+- Ajoute le sigle Vaso devant le surtitre du hero et le bloc atelier
+
 ## [1.1.20] - 2026-05-03
 
 ### Modifié

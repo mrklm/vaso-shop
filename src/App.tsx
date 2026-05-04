@@ -4,6 +4,7 @@ import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
 import { SHOP_ORDER_FORM_ACTION, SHOP_ORDER_FORM_METHOD } from "./shop/shop-config";
 import { useShopStore } from "./shop/shop-store";
+import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
 
 const HERO_GALLERY_IMAGE_MODULES = import.meta.glob(
@@ -215,7 +216,10 @@ function App() {
             <div className="shop-copy-top">
               <div className="shop-copy-main">
                 <p className="shop-kicker">
-                  <span>VASO SHOP</span>
+                  <span className="shop-title-with-mark">
+                    <img className="shop-title-mark" src={vasoMark} alt="" aria-hidden="true" />
+                    <span>VASO SHOP</span>
+                  </span>
                   <span className="shop-kicker-version">{`v${APP_VERSION}`}</span>
                 </p>
                 <h1>Générez un vase et commandez-le en quelques secondes.</h1>
@@ -259,7 +263,9 @@ function App() {
           <aside className="shop-hero-note shop-current-card">
             <div className="shop-info-head shop-info-head-inline">
               <p className="shop-panel-title">Modèle actuel</p>
-              <span className="shop-live-badge">Disponible à la commande</span>
+              <button className="shop-live-badge" type="button" onClick={handleOpenOrder}>
+                Disponible à la commande
+              </button>
             </div>
 
             <div className="shop-stats">
@@ -347,7 +353,10 @@ function App() {
 
             <aside className="shop-info-card shop-workshop-card">
               <div className="shop-info-head">
-                <p className="shop-panel-title">Atelier</p>
+                <p className="shop-panel-title shop-title-with-mark">
+                  <img className="shop-title-mark" src={vasoMark} alt="" aria-hidden="true" />
+                  <span>Atelier</span>
+                </p>
               </div>
 
               <p className="shop-sublead shop-workshop-note">

@@ -68,6 +68,21 @@
   letter-spacing: 0.18em;
 }
 
+.shop-title-with-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.shop-title-mark {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  opacity: 0.96;
+  flex: 0 0 auto;
+}
+
 .shop-kicker-version {
   color: rgb(143 83 49 / 28%);
   font-size: 0.68rem;
@@ -377,13 +392,24 @@
   justify-self: start;
   flex: 0 0 auto;
   padding: 7px 10px;
+  border: 0;
   border-radius: 999px;
   background: rgb(73 124 101 / 10%);
   color: #36644f;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
+  cursor: pointer;
   text-transform: uppercase;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.shop-live-badge:hover {
+  transform: translateY(-1px);
+  background: rgb(73 124 101 / 14%);
 }
 
 .shop-panel-title {
