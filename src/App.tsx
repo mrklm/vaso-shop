@@ -355,7 +355,7 @@ function App() {
               <div className="shop-info-head">
                 <p className="shop-panel-title shop-title-with-mark">
                   <img className="shop-title-mark" src={vasoMark} alt="" aria-hidden="true" />
-                  <span>Atelier</span>
+                  <span>Atelier Vaso</span>
                 </p>
               </div>
 

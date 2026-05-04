@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.22] - 2026-05-04
+
+### Modifié
+- Renomme l'atelier et rend le sigle Vaso plus visible
+
 ## [1.1.21] - 2026-05-04
 
 ### Modifié
