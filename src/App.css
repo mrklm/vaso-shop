@@ -59,8 +59,9 @@
 
 .shop-kicker {
   display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   margin-bottom: 8px;
   color: #8f5331;
   font-size: 0.74rem;
@@ -75,8 +76,8 @@
 }
 
 .shop-title-mark {
-  width: 24px;
-  height: 24px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   flex: 0 0 auto;
 }
@@ -86,6 +87,7 @@
   font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0.12em;
+  margin-left: 56px;
 }
 
 .shop-copy h1 {

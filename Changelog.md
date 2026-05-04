@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.23] - 2026-05-05
+
+### Modifié
+- Agrandit les sigles Vaso et replace le repere de version
+
 ## [1.1.22] - 2026-05-04
 
 ### Modifié
