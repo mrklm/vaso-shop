@@ -112,11 +112,10 @@ function normalizedAngularDistance(a: number, b: number): number {
   return Math.abs(diff);
 }
 
-function computeSeamTargetDistance(vertices: Float64Array, profile: Profile): number {
+export function computeSeamTargetEdgeIndex(vertices: Float64Array, profile: Profile): number {
   const n = vertices.length / 2;
-  let cumulativeDistance = 0;
   let bestScore = Number.POSITIVE_INFINITY;
-  let bestDistance = 0;
+  let bestEdgeIndex = 0;
 
   for (let i = 0; i < n; i++) {
     const ax = vertices[i * 2];
@@ -127,18 +126,80 @@ function computeSeamTargetDistance(vertices: Float64Array, profile: Profile): nu
     const sampleY = (ay + by) * 0.5;
     const angle = Math.atan2(sampleY - profile.offsetY, sampleX - profile.offsetX);
     const score = normalizedAngularDistance(angle, SEAM_BACK_ANGLE_RAD);
-    const edgeLength = Math.hypot(bx - ax, by - ay);
-    const midpointDistance = cumulativeDistance + edgeLength * 0.5;
 
     if (score < bestScore) {
       bestScore = score;
-      bestDistance = midpointDistance;
+      bestEdgeIndex = i;
+    }
+  }
+
+  return bestEdgeIndex;
+}
+
+export function computeSeamTargetVertexIndex(vertices: Float64Array, profile: Profile): number {
+  const n = vertices.length / 2;
+  let bestScore = Number.POSITIVE_INFINITY;
+  let bestVertexIndex = 0;
+
+  for (let i = 0; i < n; i++) {
+    const x = vertices[i * 2];
+    const y = vertices[i * 2 + 1];
+    const angle = Math.atan2(y - profile.offsetY, x - profile.offsetX);
+    const score = normalizedAngularDistance(angle, SEAM_BACK_ANGLE_RAD);
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestVertexIndex = i;
+    }
+  }
+
+  return bestVertexIndex;
+}
+
+function computeEdgeMidpointDistance(vertices: Float64Array, edgeIndex: number): number {
+  const n = vertices.length / 2;
+  const targetEdge = ((edgeIndex % n) + n) % n;
+  let cumulativeDistance = 0;
+
+  for (let i = 0; i < n; i++) {
+    const ax = vertices[i * 2];
+    const ay = vertices[i * 2 + 1];
+    const bx = vertices[((i + 1) % n) * 2];
+    const by = vertices[((i + 1) % n) * 2 + 1];
+    const edgeLength = Math.hypot(bx - ax, by - ay);
+
+    if (i === targetEdge) {
+      return cumulativeDistance + edgeLength * 0.5;
     }
 
     cumulativeDistance += edgeLength;
   }
 
-  return bestDistance;
+  return 0;
+}
+
+function computeVertexDistance(vertices: Float64Array, vertexIndex: number): number {
+  const n = vertices.length / 2;
+  const targetVertex = ((vertexIndex % n) + n) % n;
+  let cumulativeDistance = 0;
+
+  for (let i = 0; i < n; i++) {
+    if (i === targetVertex) {
+      return cumulativeDistance;
+    }
+
+    const ax = vertices[i * 2];
+    const ay = vertices[i * 2 + 1];
+    const bx = vertices[((i + 1) % n) * 2];
+    const by = vertices[((i + 1) % n) * 2 + 1];
+    cumulativeDistance += Math.hypot(bx - ax, by - ay);
+  }
+
+  return 0;
+}
+
+function computeSeamTargetDistance(vertices: Float64Array, profile: Profile): number {
+  return computeEdgeMidpointDistance(vertices, computeSeamTargetEdgeIndex(vertices, profile));
 }
 
 export function alignContourToPrevious(
@@ -157,7 +218,7 @@ export function alignContourToPrevious(
     for (let i = 0; i < n; i++) {
       const prevX = previousContour[i * 2];
       const prevY = previousContour[i * 2 + 1];
-      const src = ((shift + i) % n + n) % n;
+      const src = (((shift + i) % n) + n) % n;
       const dx = contour[src * 2] - prevX;
       const dy = contour[src * 2 + 1] - prevY;
       score += dx * dx + dy * dy;
@@ -188,7 +249,7 @@ export function alignContourToPrevious(
 
   const result = new Float64Array(contour.length);
   for (let i = 0; i < n; i++) {
-    const src = ((bestShift + i) % n + n) % n;
+    const src = (((bestShift + i) % n) + n) % n;
     result[i * 2] = contour[src * 2];
     result[i * 2 + 1] = contour[src * 2 + 1];
   }
@@ -216,6 +277,26 @@ export function rotateContour(contour: Float64Array, shift: number): Float64Arra
 export function buildProfileContour(profile: Profile, samples: number): Float64Array {
   const polygon = regularPolygonVertices(profile);
   const seamTargetDistance = computeSeamTargetDistance(polygon, profile);
+  return resampleClosedContourFromDistance(polygon, samples, seamTargetDistance);
+}
+
+export function buildProfileContourFromEdge(
+  profile: Profile,
+  samples: number,
+  edgeIndex: number,
+): Float64Array {
+  const polygon = regularPolygonVertices(profile);
+  const seamTargetDistance = computeEdgeMidpointDistance(polygon, edgeIndex);
+  return resampleClosedContourFromDistance(polygon, samples, seamTargetDistance);
+}
+
+export function buildProfileContourFromVertex(
+  profile: Profile,
+  samples: number,
+  vertexIndex: number,
+): Float64Array {
+  const polygon = regularPolygonVertices(profile);
+  const seamTargetDistance = computeVertexDistance(polygon, vertexIndex);
   return resampleClosedContourFromDistance(polygon, samples, seamTargetDistance);
 }
 

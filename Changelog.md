@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.27] - 2026-05-05
+
+### Modifié
+- Aligne le moteur STL sur vaso-web et restaure le diametre minimum du modele
+
 ## [1.1.26] - 2026-05-05
 
 ### Modifié

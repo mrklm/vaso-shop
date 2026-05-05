@@ -1,7 +1,13 @@
 import type { VaseParameters, MeshData } from "./types";
 import { appendPipelineTrace, dumpPipelineTrace, getPipelineTrace, resetPipelineTrace } from "./pipeline-trace";
 import { validateParams } from "./validation";
-import { alignContourToPrevious, buildProfileContour, interpolateContours, rotateContour } from "./geometry";
+import {
+  alignContourToPrevious,
+  buildProfileContour,
+  buildProfileContourFromVertex,
+  interpolateContours,
+  regularPolygonVertices,
+} from "./geometry";
 import { applyTexture } from "./textures";
 import {
   maxSupportlessRadialStep,
@@ -12,87 +18,46 @@ import { getMeshDifferenceDiagnostics, logMeshDiagnostics } from "./mesh-cleanup
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "test";
 const ENGRAVING_PIPELINE_MARKER = `Vaso Engraving ${APP_VERSION}`;
-const TEXTURED_SEAM_MAX_SHIFT = 6;
-const TEXTURED_SEAM_SWITCH_THRESHOLD = 0.03;
+const FACETED_SEAM_MAX_PROFILE_SIDES = 12;
+const SEAM_BACK_ANGLE_RAD = -Math.PI / 2;
 
-function wrapIndex(index: number, size: number): number {
-  return ((index % size) + size) % size;
-}
-
-function computeTexturedSeamShiftScore(
-  contour: Float64Array,
-  previousContour: Float64Array,
-  shift: number,
-): number {
-  const n = contour.length / 2;
-  const center = wrapIndex(shift, n);
-  const prev = wrapIndex(center - 1, n);
-  const next = wrapIndex(center + 1, n);
-
-  const centerX = contour[center * 2];
-  const centerY = contour[center * 2 + 1];
-  const prevX = contour[prev * 2];
-  const prevY = contour[prev * 2 + 1];
-  const nextX = contour[next * 2];
-  const nextY = contour[next * 2 + 1];
-
-  const seamDx = centerX - previousContour[0];
-  const seamDy = centerY - previousContour[1];
-  const continuityPenalty = seamDx * seamDx + seamDy * seamDy;
-
-  const prevSeamTx = previousContour[2] - previousContour[(n - 1) * 2];
-  const prevSeamTy = previousContour[3] - previousContour[(n - 1) * 2 + 1];
-  const seamTx = nextX - prevX;
-  const seamTy = nextY - prevY;
-  const tangentDx = seamTx - prevSeamTx;
-  const tangentDy = seamTy - prevSeamTy;
-  const tangentPenalty = 0.2 * (tangentDx * tangentDx + tangentDy * tangentDy);
-
-  const centerRadius = Math.hypot(centerX, centerY);
-  const prevRadius = Math.hypot(prevX, prevY);
-  const nextRadius = Math.hypot(nextX, nextY);
-  const localMeanRadius = (prevRadius + centerRadius + nextRadius) / 3;
-  const localMinRadius = Math.min(prevRadius, centerRadius, nextRadius);
-  const ridgePenalty = Math.max(0, centerRadius - localMeanRadius);
-  const valleyReward = Math.max(0, localMeanRadius - centerRadius);
-  const flatnessPenalty = Math.abs(nextRadius - prevRadius) * 0.2;
-  const shiftPenalty = Math.abs(shift) * 0.01;
-
+function shouldKeepFacetEdgeSeamIdentity(profiles: VaseParameters["profiles"]): boolean {
+  const sideCount = profiles[0]?.sides ?? 0;
   return (
-    continuityPenalty +
-    tangentPenalty +
-    ridgePenalty * ridgePenalty +
-    flatnessPenalty * flatnessPenalty +
-    shiftPenalty -
-    0.35 * valleyReward * valleyReward -
-    0.1 * Math.max(0, localMeanRadius - localMinRadius)
+    sideCount >= 3 &&
+    sideCount <= FACETED_SEAM_MAX_PROFILE_SIDES &&
+    profiles.every((profile) => profile.sides === sideCount)
   );
 }
 
-function alignTexturedContourSeam(contour: Float64Array, previousContour: Float64Array): Float64Array {
-  const n = contour.length / 2;
-  if (n === 0 || previousContour.length !== contour.length) return contour;
+function normalizedAngularDistance(a: number, b: number): number {
+  const diff = Math.atan2(Math.sin(a - b), Math.cos(a - b));
+  return Math.abs(diff);
+}
 
-  let bestShift = 0;
-  let bestScore = computeTexturedSeamShiftScore(contour, previousContour, 0);
+function computeSharedFacetSeamVertexIndex(profiles: VaseParameters["profiles"]): number {
+  const sideCount = profiles[0]?.sides ?? 0;
+  let bestIndex = 0;
+  let bestScore = Number.POSITIVE_INFINITY;
 
-  for (let shift = -TEXTURED_SEAM_MAX_SHIFT; shift <= TEXTURED_SEAM_MAX_SHIFT; shift++) {
-    if (shift === 0) continue;
-    const score = computeTexturedSeamShiftScore(contour, previousContour, shift);
+  for (let vertexIndex = 0; vertexIndex < sideCount; vertexIndex++) {
+    let score = 0;
+
+    for (const profile of profiles) {
+      const vertices = regularPolygonVertices(profile);
+      const x = vertices[vertexIndex * 2];
+      const y = vertices[vertexIndex * 2 + 1];
+      const angle = Math.atan2(y - profile.offsetY, x - profile.offsetX);
+      score += normalizedAngularDistance(angle, SEAM_BACK_ANGLE_RAD);
+    }
+
     if (score < bestScore) {
       bestScore = score;
-      bestShift = shift;
+      bestIndex = vertexIndex;
     }
   }
 
-  if (bestShift === 0) return contour;
-
-  const zeroScore = computeTexturedSeamShiftScore(contour, previousContour, 0);
-  if (zeroScore - bestScore < TEXTURED_SEAM_SWITCH_THRESHOLD) {
-    return contour;
-  }
-
-  return rotateContour(contour, bestShift);
+  return bestIndex;
 }
 
 function hasActiveTexture(params: VaseParameters): boolean {
@@ -128,7 +93,14 @@ function scaleMeshData(mesh: MeshData, scale: number): MeshData {
 function interpolatedOuterContour(params: VaseParameters, zMm: number): Float64Array {
   const profiles = [...params.profiles].sort((a, b) => a.zRatio - b.zRatio);
   const zPositions = profiles.map((p) => p.zRatio * params.heightMm);
-  const contours = profiles.map((p) => buildProfileContour(p, params.radialSamples));
+  const sharedFacetSeamVertex = shouldKeepFacetEdgeSeamIdentity(profiles)
+    ? computeSharedFacetSeamVertexIndex(profiles)
+    : null;
+  const contours = profiles.map((p) =>
+    sharedFacetSeamVertex === null
+      ? buildProfileContour(p, params.radialSamples)
+      : buildProfileContourFromVertex(p, params.radialSamples, sharedFacetSeamVertex),
+  );
 
   if (zMm <= zPositions[0]) {
     return applyTexture(new Float64Array(contours[0]), zMm, params);
@@ -165,9 +137,9 @@ function generateSupportSafeOuterContours(
     let contour = interpolatedOuterContour(params, zMm);
 
     if (previous !== null && previousZ !== null) {
-      contour = texturedSeam
-        ? alignTexturedContourSeam(contour, previous)
-        : alignContourToPrevious(contour, previous);
+      if (!texturedSeam) {
+        contour = alignContourToPrevious(contour, previous);
+      }
       const dz = Math.abs(zMm - previousZ);
       const maxStep = maxSupportlessRadialStep(dz);
       contour = limitContourStepFromPrevious(previous, contour, maxStep, params.wallThicknessMm);

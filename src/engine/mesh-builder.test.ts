@@ -103,6 +103,30 @@ describe("generateVaseMesh", () => {
       .filter(([z, count]) => z > params.bottomThicknessMm && z <= params.heightMm && count === params.radialSamples * 2);
     expect(sharedBodyLayers.length).toBe(params.verticalSamples - 1);
   });
+
+  it("keeps a single seam line on round textured vases", () => {
+    const params = defaultVaseParameters();
+    params.radialSamples = 96;
+    params.verticalSamples = 24;
+    params.textureMode = "Texture imposée";
+    params.textureType = "Vagues";
+    params.textureZoom = "Gros";
+    params.profiles = [
+      createProfile({ zRatio: 0, diameter: 80, sides: 48, rotationDeg: 0 }),
+      createProfile({ zRatio: 1, diameter: 80, sides: 48, rotationDeg: 0 }),
+    ];
+
+    const mesh = generateVaseMesh(params);
+    const seamAngles: number[] = [];
+    for (let layer = 0; layer < params.verticalSamples; layer++) {
+      const vertexOffset = layer * params.radialSamples * 3;
+      seamAngles.push(Math.atan2(mesh.vertices[vertexOffset + 1], mesh.vertices[vertexOffset]));
+    }
+
+    const minAngle = Math.min(...seamAngles);
+    const maxAngle = Math.max(...seamAngles);
+    expect(maxAngle - minAngle).toBeLessThan(0.05);
+  });
 });
 
 describe("generateOuterProfilePoints", () => {
@@ -153,5 +177,20 @@ describe("generateTopOuterContour", () => {
     params.verticalSamples = 8;
     const contour = generateTopOuterContour(params);
     expect(contour.length).toBe(48); // 24 × 2
+  });
+
+  it("keeps the faceted seam on the same back corner through profile rotation", () => {
+    const params = defaultVaseParameters();
+    params.radialSamples = 48;
+    params.verticalSamples = 2;
+    params.profiles = [
+      createProfile({ zRatio: 0, diameter: 80, sides: 6, rotationDeg: 0 }),
+      createProfile({ zRatio: 1, diameter: 60, sides: 6, rotationDeg: 30 }),
+    ];
+
+    const contour = generateTopOuterContour(params);
+    const seamAngleDeg = (Math.atan2(contour[1], contour[0]) * 180) / Math.PI;
+
+    expect(seamAngleDeg).toBeCloseTo(-90, 0);
   });
 });

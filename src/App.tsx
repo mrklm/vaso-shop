@@ -366,7 +366,11 @@ function App() {
                   <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
                 </div>
                 <div className="shop-stat">
-                  <span className="shop-stat-label">Diamètre max</span>
+                  <span className="shop-stat-label">Diamètre minimum</span>
+                  <strong>{currentEntry ? `${currentEntry.minDiameterMm} mm` : "-"}</strong>
+                </div>
+                <div className="shop-stat">
+                  <span className="shop-stat-label">Diamètre maximum</span>
                   <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
                 </div>
                 <div className="shop-stat shop-stat-material">
@@ -398,6 +402,7 @@ function App() {
               <input type="hidden" name="seed" value={selectedEntry.seed} />
               <input type="hidden" name="version" value={selectedEntry.version} />
               <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
+              <input type="hidden" name="minDiameterMm" value={selectedEntry.minDiameterMm} />
               <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
               <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
               <input type="hidden" name="material" value={selectedEntry.material} />
@@ -439,11 +444,11 @@ function App() {
                       <strong>{selectedEntry.heightMm} mm</strong>
                     </div>
                     <div className="shop-stat">
-                      <span className="shop-stat-label">Diamètre min</span>
+                      <span className="shop-stat-label">Diamètre minimum</span>
                       <strong>{selectedEntry.minDiameterMm} mm</strong>
                     </div>
                     <div className="shop-stat">
-                      <span className="shop-stat-label">Diamètre max</span>
+                      <span className="shop-stat-label">Diamètre maximum</span>
                       <strong>{selectedEntry.maxDiameterMm} mm</strong>
                     </div>
                   </div>
