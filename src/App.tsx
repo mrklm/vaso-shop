@@ -306,9 +306,9 @@ function App() {
                 demande, vérifié, protégé puis expédié avec soin.
               </p>
               <div className="shop-story-contact">
-                <span>Vous avez des questions ? Contactez-nous.</span>
+                <span>Vous avez des questions ?</span>
                 <button className="shop-contact-button" type="button">
-                  Contact
+                  Contactez nous
                 </button>
               </div>
             </div>

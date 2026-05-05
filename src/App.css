@@ -484,6 +484,8 @@
 }
 
 .shop-story-head {
+  display: flex;
+  justify-content: center;
   margin-bottom: 8px;
 }
 
@@ -515,6 +517,10 @@
   gap: 12px;
   color: rgb(38 29 22 / 72%);
   font-size: 0.82rem;
+}
+
+.shop-story-contact span {
+  text-align: center;
 }
 
 .shop-contact-button {

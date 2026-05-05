@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.28] - 2026-05-05
+
+### Modifié
+- Centre le bloc Atelier Vaso et reformule l'appel au contact
+
 ## [1.1.27] - 2026-05-05
 
 ### Modifié
