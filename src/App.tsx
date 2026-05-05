@@ -17,8 +17,8 @@ const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
   .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
   .map(([, source]) => source);
 
-const HERO_GALLERY_INTERVAL_MS = 6800;
-const HERO_GALLERY_FADE_MS = 2200;
+const HERO_GALLERY_INTERVAL_MS = 8200;
+const HERO_GALLERY_FADE_MS = 3200;
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
 
 function App() {
