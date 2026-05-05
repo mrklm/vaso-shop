@@ -515,12 +515,13 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  padding-left: 42px;
   color: rgb(38 29 22 / 72%);
   font-size: 0.82rem;
 }
 
 .shop-story-contact span {
-  text-align: center;
+  text-align: left;
 }
 
 .shop-contact-button {

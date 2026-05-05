@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.29] - 2026-05-05
+
+### Modifié
+- Aligne le contact atelier et relance le scroll vers les coordonnees
+
 ## [1.1.28] - 2026-05-05
 
 ### Modifié

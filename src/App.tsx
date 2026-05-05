@@ -54,6 +54,7 @@ function App() {
   const [isClientStepConfirmed, setIsClientStepConfirmed] = useState(false);
   const [isGlobalStepConfirmed, setIsGlobalStepConfirmed] = useState(false);
   const orderSectionRef = useRef<HTMLElement | null>(null);
+  const clientStepRef = useRef<HTMLElement | null>(null);
 
   const currentEntry = entries[currentIndex] ?? null;
   const selectedEntry = useMemo(
@@ -166,6 +167,18 @@ function App() {
 
     return () => window.clearTimeout(scrollTimeoutId);
   }, [selectedEntry]);
+
+  useEffect(() => {
+    if (!selectedEntry || !isColorStepConfirmed) {
+      return;
+    }
+
+    const scrollTimeoutId = window.setTimeout(() => {
+      clientStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+
+    return () => window.clearTimeout(scrollTimeoutId);
+  }, [isColorStepConfirmed, selectedEntry]);
 
   useEffect(() => {
     if (!selectedEntry) {
@@ -543,7 +556,10 @@ function App() {
                 </div>
               </article>
 
-              <article className={getOrderStepClassName(isClientStepConfirmed, canAccessClientStep)}>
+              <article
+                ref={clientStepRef}
+                className={getOrderStepClassName(isClientStepConfirmed, canAccessClientStep)}
+              >
                 <div className="shop-order-step-head">
                   <span className="shop-order-step-index">03</span>
                   <div>
