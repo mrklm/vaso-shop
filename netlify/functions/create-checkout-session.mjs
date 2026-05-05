@@ -1,12 +1,51 @@
 const DEFAULT_NETLIFY_ORIGIN = "https://vaso-shop.netlify.app";
 const DEFAULT_GITHUB_PAGES_ORIGIN = "https://mrklm.github.io";
-const DEFAULT_PRICE_CENTS = 2500;
+const DEFAULT_PRODUCT_PRICE_CENTS = 2500;
 const DEFAULT_ALLOWED_ORIGINS = [
   DEFAULT_NETLIFY_ORIGIN,
   DEFAULT_GITHUB_PAGES_ORIGIN,
   "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
+const SHIPPING_BY_COUNTRY = {
+  France: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 410 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 749 },
+  },
+  Belgique: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 460 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1250 },
+  },
+  Luxembourg: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 460 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1250 },
+  },
+  "Pays-Bas": {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 660 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1250 },
+  },
+  Espagne: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 660 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1270 },
+  },
+  Portugal: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 660 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1270 },
+  },
+  Italie: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 660 },
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1270 },
+  },
+  Pologne: {
+    relay: { label: "Point relais", provider: "Mondial Relay", priceCents: 720 },
+  },
+  Allemagne: {
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1250 },
+  },
+  Autriche: {
+    home: { label: "Livraison à domicile", provider: "Mondial Relay Domicile", priceCents: 1600 },
+  },
+};
 
 function readEnv(name) {
   if (globalThis.Netlify?.env?.get) {
@@ -92,16 +131,9 @@ function appendMetadata(params, scope, metadata) {
   });
 }
 
-function buildLineItems(params, payload) {
-  const priceId = readEnv("STRIPE_PRICE_ID")?.trim();
-  if (priceId) {
-    params.set("line_items[0][price]", priceId);
-    params.set("line_items[0][quantity]", "1");
-    return;
-  }
-
+function getProductPriceCents() {
   const priceCents = Number.parseInt(
-    readEnv("STRIPE_PRICE_CENTS") ?? `${DEFAULT_PRICE_CENTS}`,
+    readEnv("STRIPE_PRICE_CENTS") ?? `${DEFAULT_PRODUCT_PRICE_CENTS}`,
     10,
   );
   if (!Number.isFinite(priceCents) || priceCents <= 0) {
@@ -110,9 +142,30 @@ function buildLineItems(params, payload) {
     );
   }
 
+  return priceCents;
+}
+
+function getShippingOption(country, modeId) {
+  const countryOptions = SHIPPING_BY_COUNTRY[country?.trim()];
+  if (!countryOptions) {
+    throw new Error(
+      "La livraison pour ce pays doit être validée manuellement avant le paiement.",
+    );
+  }
+
+  const option = countryOptions[modeId?.trim()];
+  if (!option) {
+    throw new Error("Le mode de livraison sélectionné n'est pas disponible pour ce pays.");
+  }
+
+  return option;
+}
+
+function buildLineItems(params, payload, shippingOption, productPriceCents) {
+  const priceId = readEnv("STRIPE_PRICE_ID")?.trim();
   const currency = (readEnv("STRIPE_CURRENCY") ?? "eur").trim().toLowerCase();
   const productName = (readEnv("STRIPE_PRODUCT_NAME") ?? "Vase Vaso").trim();
-  const description = [
+  const productDescription = [
     `Vase N° ${payload.seed}`,
     payload.colorLabel,
     `${payload.heightMm} mm`,
@@ -120,11 +173,25 @@ function buildLineItems(params, payload) {
     .filter(Boolean)
     .join(" · ");
 
-  params.set("line_items[0][quantity]", "1");
-  params.set("line_items[0][price_data][currency]", currency);
-  params.set("line_items[0][price_data][unit_amount]", `${priceCents}`);
-  params.set("line_items[0][price_data][product_data][name]", productName);
-  params.set("line_items[0][price_data][product_data][description]", description);
+  if (priceId) {
+    params.set("line_items[0][price]", priceId);
+    params.set("line_items[0][quantity]", "1");
+  } else {
+    params.set("line_items[0][quantity]", "1");
+    params.set("line_items[0][price_data][currency]", currency);
+    params.set("line_items[0][price_data][unit_amount]", `${productPriceCents}`);
+    params.set("line_items[0][price_data][product_data][name]", productName);
+    params.set("line_items[0][price_data][product_data][description]", productDescription);
+  }
+
+  params.set("line_items[1][quantity]", "1");
+  params.set("line_items[1][price_data][currency]", currency);
+  params.set("line_items[1][price_data][unit_amount]", `${shippingOption.priceCents}`);
+  params.set("line_items[1][price_data][product_data][name]", shippingOption.label);
+  params.set(
+    "line_items[1][price_data][product_data][description]",
+    `${shippingOption.provider} · ${payload.customerCountry}`,
+  );
 }
 
 function validatePayload(payload) {
@@ -147,6 +214,7 @@ function validatePayload(payload) {
     "customerCity",
     "customerPostalCode",
     "customerCountry",
+    "shippingModeId",
   ];
 
   for (const field of requiredFields) {
@@ -197,6 +265,21 @@ export default async (request) => {
     return jsonResponse({ error: validationError }, 400, corsHeaders);
   }
 
+  let shippingOption;
+  let productPriceCents;
+  let orderTotalCents;
+  try {
+    shippingOption = getShippingOption(payload.customerCountry, payload.shippingModeId);
+    productPriceCents = getProductPriceCents();
+    orderTotalCents = productPriceCents + shippingOption.priceCents;
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "La livraison sélectionnée n'a pas pu être validée.";
+    return jsonResponse({ error: message }, 400, corsHeaders);
+  }
+
   const orderReference = buildOrderReference(payload.seed);
   const successUrl = new URL("/checkout-success.html", requestOrigin);
   successUrl.searchParams.set("order_ref", orderReference);
@@ -227,6 +310,10 @@ export default async (request) => {
     customer_city: normalizeMetadataValue(payload.customerCity, 120),
     customer_postal_code: normalizeMetadataValue(payload.customerPostalCode, 40),
     customer_country: normalizeMetadataValue(payload.customerCountry, 120),
+    shipping_mode: normalizeMetadataValue(shippingOption.label, 80),
+    shipping_provider: normalizeMetadataValue(shippingOption.provider, 120),
+    shipping_price_cents: normalizeMetadataValue(shippingOption.priceCents, 40),
+    order_total_cents: normalizeMetadataValue(orderTotalCents, 40),
     customer_message: normalizeMetadataValue(payload.customerMessage, 500),
   };
 
@@ -242,7 +329,7 @@ export default async (request) => {
     params.set("payment_intent_data[description]", `Commande Vaso ${orderReference}`);
     appendMetadata(params, "metadata", metadata);
     appendMetadata(params, "payment_intent_data[metadata]", metadata);
-    buildLineItems(params, payload);
+    buildLineItems(params, payload, shippingOption, productPriceCents);
 
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",

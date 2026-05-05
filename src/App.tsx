@@ -6,10 +6,13 @@ import { SHOP_COUNTRIES } from "./shop/shop-countries";
 import {
   formatShopPriceFromCents,
   getShopStripeCheckoutEndpoint,
-  SHOP_SHIPPING_PLACEHOLDER_LABEL,
   SHOP_VASE_PRICE_CENTS,
-  SHOP_VASE_PRICE_LABEL,
 } from "./shop/shop-config";
+import {
+  getShopShippingOption,
+  getShopShippingOptions,
+  SHOP_UNSUPPORTED_SHIPPING_MESSAGE,
+} from "./shop/shop-shipping";
 import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
@@ -53,6 +56,7 @@ function App() {
   const [customerCity, setCustomerCity] = useState("");
   const [customerPostalCode, setCustomerPostalCode] = useState("");
   const [customerCountry, setCustomerCountry] = useState("");
+  const [shippingModeId, setShippingModeId] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
@@ -95,6 +99,22 @@ function App() {
   ]
     .filter(Boolean)
     .join(" · ");
+  const shippingOptions = useMemo(
+    () => getShopShippingOptions(customerCountry),
+    [customerCountry],
+  );
+  const selectedShippingOption = useMemo(
+    () => getShopShippingOption(customerCountry, shippingModeId),
+    [customerCountry, shippingModeId],
+  );
+  const isUnsupportedShippingCountry =
+    customerCountry.trim().length > 0 && shippingOptions.length === 0;
+  const shippingPriceCents = selectedShippingOption?.priceCents ?? 0;
+  const shippingPriceLabel = selectedShippingOption
+    ? formatShopPriceFromCents(shippingPriceCents)
+    : null;
+  const orderTotalCents = SHOP_VASE_PRICE_CENTS + shippingPriceCents;
+  const orderTotalLabel = formatShopPriceFromCents(orderTotalCents);
   const isClientInfoComplete =
     customerLastName.trim().length > 0 &&
     customerFirstName.trim().length > 0 &&
@@ -103,9 +123,12 @@ function App() {
     customerCity.trim().length > 0 &&
     customerPostalCode.trim().length > 0 &&
     customerCountry.trim().length > 0;
+  const isShippingSelectionComplete = selectedShippingOption !== null;
+  const canValidateClientStep =
+    isClientInfoComplete && isShippingSelectionComplete && !isUnsupportedShippingCountry;
   const canAccessColorStep = isModelStepConfirmed;
   const canAccessClientStep = isColorStepConfirmed;
-  const canAccessGlobalStep = isClientStepConfirmed && isClientInfoComplete;
+  const canAccessGlobalStep = isClientStepConfirmed && canValidateClientStep;
   const canAccessStripeStep = isGlobalStepConfirmed;
   const orderBasePriceLabel = formatShopPriceFromCents(SHOP_VASE_PRICE_CENTS);
 
@@ -218,8 +241,23 @@ function App() {
     customerPostalCode,
     customerPhone,
     customerCountry,
+    shippingModeId,
     selectedEntry,
   ]);
+
+  useEffect(() => {
+    if (!customerCountry.trim()) {
+      setShippingModeId("");
+      return;
+    }
+
+    const isCurrentModeStillAvailable = shippingOptions.some(
+      (option) => option.id === shippingModeId,
+    );
+    if (!isCurrentModeStillAvailable) {
+      setShippingModeId("");
+    }
+  }, [customerCountry, shippingModeId, shippingOptions]);
 
   const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
     `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
@@ -257,7 +295,12 @@ function App() {
           customerCity,
           customerPostalCode,
           customerCountry,
+          shippingModeId,
+          shippingModeLabel: selectedShippingOption?.label ?? "",
+          shippingProvider: selectedShippingOption?.provider ?? "",
+          shippingPriceCents,
           customerMessage,
+          orderTotalCents,
         }),
       });
 
@@ -484,6 +527,10 @@ function App() {
               <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
               <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
               <input type="hidden" name="material" value={selectedEntry.material} />
+              <input type="hidden" name="shippingMode" value={selectedShippingOption?.label ?? ""} />
+              <input type="hidden" name="shippingProvider" value={selectedShippingOption?.provider ?? ""} />
+              <input type="hidden" name="shippingPriceCents" value={shippingPriceCents} />
+              <input type="hidden" name="orderTotalCents" value={orderTotalCents} />
 
               <div className="shop-order-copy shop-order-journey-head">
                 <div>
@@ -690,13 +737,53 @@ function App() {
                     </label>
 
                     <label className="shop-field shop-field-wide">
-                      <span>Adresse</span>
+                      <span>Pays</span>
+                      <select
+                        name="country"
+                        value={customerCountry}
+                        onChange={(event) => setCustomerCountry(event.target.value)}
+                        disabled={!canAccessClientStep}
+                        required
+                      >
+                        <option value="">Sélectionnez un pays</option>
+                        {SHOP_COUNTRIES.map((country) => (
+                          <option key={country} value={country}>
+                            {country}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="shop-field shop-field-wide">
+                      <span>Mode de livraison</span>
+                      <select
+                        name="shippingMode"
+                        value={shippingModeId}
+                        onChange={(event) => setShippingModeId(event.target.value)}
+                        disabled={!canAccessClientStep || !customerCountry.trim() || isUnsupportedShippingCountry}
+                        required
+                      >
+                        <option value="">
+                          {customerCountry.trim().length === 0
+                            ? "Choisissez d'abord un pays"
+                            : "Sélectionnez un mode de livraison"}
+                        </option>
+                        {shippingOptions.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.label} · {option.provider} · {formatShopPriceFromCents(option.priceCents)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="shop-field shop-field-wide">
+                      <span>Adresse de facturation</span>
                       <input
                         name="address"
                         type="text"
                         value={customerAddress}
                         onChange={(event) => setCustomerAddress(event.target.value)}
-                        placeholder="Votre adresse de livraison"
+                        placeholder="Votre adresse"
                         disabled={!canAccessClientStep}
                         required
                         autoComplete="street-address"
@@ -732,24 +819,6 @@ function App() {
                     </label>
 
                     <label className="shop-field shop-field-wide">
-                      <span>Pays</span>
-                      <select
-                        name="country"
-                        value={customerCountry}
-                        onChange={(event) => setCustomerCountry(event.target.value)}
-                        disabled={!canAccessClientStep}
-                        required
-                      >
-                        <option value="">Sélectionnez un pays</option>
-                        {SHOP_COUNTRIES.map((country) => (
-                          <option key={country} value={country}>
-                            {country}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="shop-field shop-field-wide">
                       <span>Message</span>
                       <textarea
                         name="message"
@@ -761,6 +830,27 @@ function App() {
                       />
                     </label>
                   </div>
+                  {selectedShippingOption ? (
+                    <div className="shop-order-note">
+                      <strong>Livraison sélectionnée</strong>
+                      <p>
+                        {selectedShippingOption.label} · {selectedShippingOption.provider} ·{" "}
+                        {shippingPriceLabel}
+                      </p>
+                      {selectedShippingOption.id === "relay" ? (
+                        <p>
+                          Le choix précis du point relais sera branché juste après l'intégration du
+                          widget Mondial Relay.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {isUnsupportedShippingCountry ? (
+                    <div className="shop-order-note shop-order-note-error">
+                      <strong>Livraison à confirmer</strong>
+                      <p>{SHOP_UNSUPPORTED_SHIPPING_MESSAGE}</p>
+                    </div>
+                  ) : null}
                   <div className="shop-order-note shop-legal-note">
                     <strong>Mentions et donnees personnelles</strong>
                     <p>
@@ -778,7 +868,7 @@ function App() {
                       className="shop-button shop-button-accent"
                       type="button"
                       onClick={() => setIsClientStepConfirmed(true)}
-                      disabled={!isClientInfoComplete}
+                      disabled={!canValidateClientStep}
                     >
                       Je valide mes informations
                     </button>
@@ -818,16 +908,29 @@ function App() {
                       <p>{customerAddressSummary || "Adresse complète à renseigner"}</p>
                     </div>
                     <div className="shop-order-note">
+                      <strong>Livraison</strong>
+                      {selectedShippingOption ? (
+                        <>
+                          <p>
+                            {selectedShippingOption.label} · {selectedShippingOption.provider}
+                          </p>
+                          <p>{shippingPriceLabel}</p>
+                        </>
+                      ) : (
+                        <p>{SHOP_UNSUPPORTED_SHIPPING_MESSAGE}</p>
+                      )}
+                    </div>
+                    <div className="shop-order-note">
                       <strong>Montant</strong>
-                      <p>Vase : {SHOP_VASE_PRICE_LABEL}</p>
-                      <p>Livraison : {SHOP_SHIPPING_PLACEHOLDER_LABEL}</p>
-                      <p>Total provisoire : {orderBasePriceLabel}</p>
+                      <p>Vase : {orderBasePriceLabel}</p>
+                      <p>Livraison : {shippingPriceLabel ?? "À confirmer"}</p>
+                      <p>Total TTC : {shippingPriceLabel ? orderTotalLabel : "Nous contacter"}</p>
                     </div>
                   </div>
                   <p>
                     Cette validation verrouille votre commande avant l'étape de paiement. Le
-                    règlement Stripe portera pour l'instant sur {SHOP_VASE_PRICE_LABEL.toLowerCase()}
-                    , hors frais de livraison.
+                    règlement Stripe portera sur {orderTotalLabel} TTC dès que vous validerez le
+                    récapitulatif.
                   </p>
                 </div>
                 <div className="shop-order-step-actions">
@@ -856,8 +959,8 @@ function App() {
                     <strong>Paiement sécurisé Stripe</strong>
                     <p>
                       Une page de paiement Stripe sécurisée s'ouvrira avec le modèle, la couleur,
-                      vos coordonnées et le montant de {SHOP_VASE_PRICE_LABEL.toLowerCase()} déjà
-                      rattachés à la commande.
+                      vos coordonnées et le montant total de {orderTotalLabel} déjà rattachés à la
+                      commande.
                     </p>
                   </div>
                   {checkoutError ? (
@@ -873,7 +976,7 @@ function App() {
                       <span className="shop-step-hint">
                         {isStartingCheckout
                           ? "Redirection vers Stripe..."
-                          : `Vous allez être redirigé vers Stripe pour régler ${SHOP_VASE_PRICE_LABEL.toLowerCase()}.`}
+                          : `Vous allez être redirigé vers Stripe pour régler ${orderTotalLabel}.`}
                       </span>
                       <button className="shop-button shop-button-primary" type="submit" disabled={isStartingCheckout}>
                         {isStartingCheckout ? "Ouverture de Stripe..." : "Accéder au paiement sécurisé"}
@@ -886,8 +989,8 @@ function App() {
               </article>
 
               <p className="shop-form-note">
-                Le règlement s'effectue sur une page Stripe sécurisée. Les frais de livraison
-                seront ajoutés dans une prochaine étape du parcours.
+                Le règlement s'effectue sur une page Stripe sécurisée avec le montant de livraison
+                correspondant au pays et au mode sélectionnés.
               </p>
             </form>
           </section>

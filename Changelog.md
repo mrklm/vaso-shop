@@ -7,11 +7,15 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.35] - 2026-05-05
+
+### Modifié
+- Ajoute les modes de livraison, calcule les frais selon le pays et envoie le total à Stripe
+
 ## [1.1.34] - 2026-05-05
 
 ### Modifié
 - Clarifie le récapitulatif de commande avec prix affiché avant le paiement Stripe
-
 ## [1.1.33] - 2026-05-05
 
 ### Modifié
