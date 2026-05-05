@@ -1,5 +1,6 @@
 const DEFAULT_NETLIFY_ORIGIN = "https://vaso-shop.netlify.app";
 const DEFAULT_GITHUB_PAGES_ORIGIN = "https://mrklm.github.io";
+const DEFAULT_PRICE_CENTS = 2500;
 const DEFAULT_ALLOWED_ORIGINS = [
   DEFAULT_NETLIFY_ORIGIN,
   DEFAULT_GITHUB_PAGES_ORIGIN,
@@ -99,7 +100,10 @@ function buildLineItems(params, payload) {
     return;
   }
 
-  const priceCents = Number.parseInt(readEnv("STRIPE_PRICE_CENTS") ?? "", 10);
+  const priceCents = Number.parseInt(
+    readEnv("STRIPE_PRICE_CENTS") ?? `${DEFAULT_PRICE_CENTS}`,
+    10,
+  );
   if (!Number.isFinite(priceCents) || priceCents <= 0) {
     throw new Error(
       "Configuration Stripe incomplète : ajoute STRIPE_PRICE_ID ou STRIPE_PRICE_CENTS dans Netlify.",

@@ -3,7 +3,13 @@ import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
-import { getShopStripeCheckoutEndpoint } from "./shop/shop-config";
+import {
+  formatShopPriceFromCents,
+  getShopStripeCheckoutEndpoint,
+  SHOP_SHIPPING_PLACEHOLDER_LABEL,
+  SHOP_VASE_PRICE_CENTS,
+  SHOP_VASE_PRICE_LABEL,
+} from "./shop/shop-config";
 import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
@@ -101,6 +107,7 @@ function App() {
   const canAccessClientStep = isColorStepConfirmed;
   const canAccessGlobalStep = isClientStepConfirmed && isClientInfoComplete;
   const canAccessStripeStep = isGlobalStepConfirmed;
+  const orderBasePriceLabel = formatShopPriceFromCents(SHOP_VASE_PRICE_CENTS);
 
   useEffect(() => {
     setShowGrid(false);
@@ -785,15 +792,18 @@ function App() {
                 <div className="shop-order-step-head">
                   <span className="shop-order-step-index">04</span>
                   <div>
-                    <p className="shop-panel-title">Confirmation globale</p>
-                    <h3>Verifiez une derniere fois l'ensemble</h3>
+                    <p className="shop-panel-title">Récapitulatif et montant</p>
+                    <h3>Vérifiez la commande avant le paiement</h3>
                   </div>
                 </div>
                 <div className="shop-order-step-content">
                   <div className="shop-order-confirm-grid">
                     <div className="shop-order-note">
-                      <strong>Modele</strong>
-                      <p>Vase N° {selectedEntry.seed} · {selectedEntry.heightMm} mm · {selectedEntry.maxDiameterMm} mm max</p>
+                      <strong>Modèle</strong>
+                      <p>
+                        Vase N° {selectedEntry.seed} · {selectedEntry.heightMm} mm ·{" "}
+                        {selectedEntry.minDiameterMm} à {selectedEntry.maxDiameterMm} mm
+                      </p>
                     </div>
                     <div className="shop-order-note">
                       <strong>Couleur</strong>
@@ -801,21 +811,31 @@ function App() {
                     </div>
                     <div className="shop-order-note">
                       <strong>Client</strong>
-                      <p>{customerFullName || "Nom et prénom à renseigner"} · {customerContactSummary || "E-mail à renseigner"}</p>
+                      <p>
+                        {customerFullName || "Nom et prénom à renseigner"} ·{" "}
+                        {customerContactSummary || "E-mail à renseigner"}
+                      </p>
                       <p>{customerAddressSummary || "Adresse complète à renseigner"}</p>
+                    </div>
+                    <div className="shop-order-note">
+                      <strong>Montant</strong>
+                      <p>Vase : {SHOP_VASE_PRICE_LABEL}</p>
+                      <p>Livraison : {SHOP_SHIPPING_PLACEHOLDER_LABEL}</p>
+                      <p>Total provisoire : {orderBasePriceLabel}</p>
                     </div>
                   </div>
                   <p>
-                    Cette validation verrouille votre parcours avant l'etape de paiement. Stripe
-                    prendra ensuite place juste apres cette confirmation.
+                    Cette validation verrouille votre commande avant l'étape de paiement. Le
+                    règlement Stripe portera pour l'instant sur {SHOP_VASE_PRICE_LABEL.toLowerCase()}
+                    , hors frais de livraison.
                   </p>
                 </div>
                 <div className="shop-order-step-actions">
                   {isGlobalStepConfirmed ? (
-                    <span className="shop-step-status">Confirmation terminee</span>
+                    <span className="shop-step-status">Récapitulatif validé</span>
                   ) : canAccessGlobalStep ? (
                     <button className="shop-button shop-button-accent" type="button" onClick={() => setIsGlobalStepConfirmed(true)}>
-                      Je confirme l'ensemble
+                      Je valide le récapitulatif
                     </button>
                   ) : (
                     <span className="shop-step-hint">Validez d'abord vos informations</span>
@@ -827,16 +847,17 @@ function App() {
                 <div className="shop-order-step-head">
                   <span className="shop-order-step-index">05</span>
                   <div>
-                    <p className="shop-panel-title">Paiement Stripe</p>
-                    <h3>Derniere etape du parcours</h3>
+                    <p className="shop-panel-title">Paiement sécurisé</p>
+                    <h3>Finalisez le règlement Stripe</h3>
                   </div>
                 </div>
                 <div className="shop-order-step-content">
                   <div className="shop-order-note shop-order-note-highlight">
                     <strong>Paiement sécurisé Stripe</strong>
                     <p>
-                      Une page de paiement Stripe sécurisée s'ouvrira avec le modèle, la couleur et
-                      vos coordonnées déjà rattachés à la commande.
+                      Une page de paiement Stripe sécurisée s'ouvrira avec le modèle, la couleur,
+                      vos coordonnées et le montant de {SHOP_VASE_PRICE_LABEL.toLowerCase()} déjà
+                      rattachés à la commande.
                     </p>
                   </div>
                   {checkoutError ? (
@@ -852,7 +873,7 @@ function App() {
                       <span className="shop-step-hint">
                         {isStartingCheckout
                           ? "Redirection vers Stripe..."
-                          : "Vous allez être redirigé vers Stripe pour finaliser le paiement."}
+                          : `Vous allez être redirigé vers Stripe pour régler ${SHOP_VASE_PRICE_LABEL.toLowerCase()}.`}
                       </span>
                       <button className="shop-button shop-button-primary" type="submit" disabled={isStartingCheckout}>
                         {isStartingCheckout ? "Ouverture de Stripe..." : "Accéder au paiement sécurisé"}
@@ -865,8 +886,8 @@ function App() {
               </article>
 
               <p className="shop-form-note">
-                Le règlement s'effectue sur une page Stripe sécurisée. Si le paiement est
-                interrompu, vous pourrez revenir au shop pour relancer la commande.
+                Le règlement s'effectue sur une page Stripe sécurisée. Les frais de livraison
+                seront ajoutés dans une prochaine étape du parcours.
               </p>
             </form>
           </section>
