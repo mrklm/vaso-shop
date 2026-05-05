@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
-import { SHOP_ORDER_FORM_ACTION, SHOP_ORDER_FORM_METHOD } from "./shop/shop-config";
+import { getShopStripeCheckoutEndpoint } from "./shop/shop-config";
 import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
@@ -54,6 +54,8 @@ function App() {
   const [isColorStepConfirmed, setIsColorStepConfirmed] = useState(false);
   const [isClientStepConfirmed, setIsClientStepConfirmed] = useState(false);
   const [isGlobalStepConfirmed, setIsGlobalStepConfirmed] = useState(false);
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const orderSectionRef = useRef<HTMLElement | null>(null);
   const clientStepRef = useRef<HTMLElement | null>(null);
 
@@ -95,9 +97,6 @@ function App() {
     customerCity.trim().length > 0 &&
     customerPostalCode.trim().length > 0 &&
     customerCountry.trim().length > 0;
-  const isOrderFormReady =
-    SHOP_ORDER_FORM_ACTION.trim().length > 0 &&
-    !SHOP_ORDER_FORM_ACTION.includes("REPLACE_WITH_YOUR_FORM_ID");
   const canAccessColorStep = isModelStepConfirmed;
   const canAccessClientStep = isColorStepConfirmed;
   const canAccessGlobalStep = isClientStepConfirmed && isClientInfoComplete;
@@ -161,6 +160,8 @@ function App() {
     setIsColorStepConfirmed(false);
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
+    setCheckoutError("");
+    setIsStartingCheckout(false);
 
     const scrollTimeoutId = window.setTimeout(() => {
       orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -189,6 +190,7 @@ function App() {
     setIsColorStepConfirmed(false);
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
+    setCheckoutError("");
   }, [selectedColorId, selectedEntry]);
 
   useEffect(() => {
@@ -198,6 +200,7 @@ function App() {
 
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
+    setCheckoutError("");
   }, [
     customerAddress,
     customerCity,
@@ -213,6 +216,69 @@ function App() {
 
   const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
     `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
+
+  const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedEntry || !canAccessStripeStep || isStartingCheckout) {
+      return;
+    }
+
+    setCheckoutError("");
+    setIsStartingCheckout(true);
+
+    try {
+      const response = await fetch(getShopStripeCheckoutEndpoint(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          seed: selectedEntry.seed,
+          version: selectedEntry.version,
+          heightMm: selectedEntry.heightMm,
+          minDiameterMm: selectedEntry.minDiameterMm,
+          maxDiameterMm: selectedEntry.maxDiameterMm,
+          material: selectedEntry.material,
+          colorId: selectedColorId,
+          colorLabel: selectedColorLabel,
+          customerFirstName,
+          customerLastName,
+          customerEmail,
+          customerPhone,
+          customerAddress,
+          customerCity,
+          customerPostalCode,
+          customerCountry,
+          customerMessage,
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | { error?: string; url?: string }
+        | null;
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ??
+            "Le paiement sécurisé n'a pas pu être initialisé pour le moment. Réessayez dans un instant.",
+        );
+      }
+
+      if (!result?.url) {
+        throw new Error("Stripe n'a pas renvoyé de page de paiement exploitable.");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Le paiement sécurisé n'a pas pu être initialisé pour le moment.";
+      setCheckoutError(message);
+      setIsStartingCheckout(false);
+    }
+  };
 
   const handleOpenOrder = () => {
     if (selectedEntry?.id === currentEntry?.id) {
@@ -403,16 +469,7 @@ function App() {
 
         {selectedEntry && (
           <section ref={orderSectionRef} className="shop-order-card">
-            <form
-              className="shop-order-journey"
-              action={isOrderFormReady ? SHOP_ORDER_FORM_ACTION : undefined}
-              method={SHOP_ORDER_FORM_METHOD}
-              onSubmit={(event) => {
-                if (!canAccessStripeStep || !isOrderFormReady) {
-                  event.preventDefault();
-                }
-              }}
-            >
+            <form className="shop-order-journey" onSubmit={handleCheckoutSubmit}>
               <input type="hidden" name="seed" value={selectedEntry.seed} />
               <input type="hidden" name="version" value={selectedEntry.version} />
               <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
@@ -427,7 +484,7 @@ function App() {
                   <h2>Un parcours clair avant le paiement.</h2>
                   <p>
                     La page descend automatiquement jusqu'ici pour valider le modele, choisir la
-                    couleur, renseigner vos informations puis preparer l'etape Stripe.
+                    couleur, renseigner vos informations puis ouvrir le paiement sécurisé Stripe.
                   </p>
                 </div>
                 <button className="shop-button shop-button-secondary" type="button" onClick={closeOrder}>
@@ -776,19 +833,29 @@ function App() {
                 </div>
                 <div className="shop-order-step-content">
                   <div className="shop-order-note shop-order-note-highlight">
-                    <strong>Paiement a connecter</strong>
+                    <strong>Paiement sécurisé Stripe</strong>
                     <p>
-                      Cette zone accueillera le module Stripe. En attendant, vous pouvez deja
-                      transmettre la demande de commande avec toutes les informations valides.
+                      Une page de paiement Stripe sécurisée s'ouvrira avec le modèle, la couleur et
+                      vos coordonnées déjà rattachés à la commande.
                     </p>
                   </div>
+                  {checkoutError ? (
+                    <div className="shop-order-note shop-order-note-error">
+                      <strong>Le paiement n'a pas pu démarrer</strong>
+                      <p>{checkoutError}</p>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="shop-order-step-actions shop-order-step-actions-final">
                   {canAccessStripeStep ? (
                     <>
-                      <span className="shop-step-hint">Stripe sera branche ici ensuite</span>
-                      <button className="shop-button shop-button-primary" type="submit" disabled={!isOrderFormReady}>
-                        Envoyer la demande avant Stripe
+                      <span className="shop-step-hint">
+                        {isStartingCheckout
+                          ? "Redirection vers Stripe..."
+                          : "Vous allez être redirigé vers Stripe pour finaliser le paiement."}
+                      </span>
+                      <button className="shop-button shop-button-primary" type="submit" disabled={isStartingCheckout}>
+                        {isStartingCheckout ? "Ouverture de Stripe..." : "Accéder au paiement sécurisé"}
                       </button>
                     </>
                   ) : (
@@ -798,9 +865,8 @@ function App() {
               </article>
 
               <p className="shop-form-note">
-                {isOrderFormReady
-                  ? "La structure est prete pour Stripe. En attendant son branchement, cette page peut deja transmettre la demande."
-                  : "Ajoute l'URL Formspree dans src/shop/shop-config.ts pour activer l'envoi avant l'integration de Stripe."}
+                Le règlement s'effectue sur une page Stripe sécurisée. Si le paiement est
+                interrompu, vous pourrez revenir au shop pour relancer la commande.
               </p>
             </form>
           </section>

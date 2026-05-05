@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.31] - 2026-05-05
+
+### Modifié
+- Branche Stripe Checkout via Netlify et ajoute les pages de retour paiement
+
 ## [1.1.30] - 2026-05-05
 
 ### Modifié

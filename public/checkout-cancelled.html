@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paiement interrompu · Vaso Shop</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4efe6;
+        --panel: rgb(255 250 242 / 90%);
+        --line: rgb(93 58 37 / 14%);
+        --text: #261d16;
+        --muted: rgb(38 29 22 / 68%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: var(--text);
+        font-family: "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgb(188 120 79 / 18%), transparent 32%),
+          radial-gradient(circle at 85% 12%, rgb(121 157 132 / 18%), transparent 26%),
+          linear-gradient(180deg, #f7f1e8 0%, #eee5d8 100%);
+      }
+
+      main {
+        width: min(720px, 100%);
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 30px;
+        background: var(--panel);
+        box-shadow:
+          0 24px 80px rgb(83 54 28 / 10%),
+          inset 0 1px 0 rgb(255 255 255 / 40%);
+        backdrop-filter: blur(18px) saturate(1.1);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: #8f5331;
+        font-size: 0.74rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0 0 14px;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 0.98;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .panel {
+        margin-top: 20px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgb(252 246 238 / 96%), rgb(244 234 220 / 96%));
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 22px;
+      }
+
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 14px;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .primary {
+        color: #fff9f1;
+        background: linear-gradient(135deg, #a14b28, #c97244);
+      }
+
+      .secondary {
+        color: #8f5331;
+        border: 1px solid rgb(93 58 37 / 14%);
+        background: rgb(255 255 255 / 54%);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Vaso Shop · Stripe</p>
+      <h1>Paiement interrompu.</h1>
+      <p>
+        Aucun règlement n'a été confirmé. Votre sélection de vase peut être reprise quand vous le
+        souhaitez.
+      </p>
+
+      <section class="panel">
+        <p id="cancelled-seed-copy">
+          Revenez au shop pour vérifier le modèle, la couleur ou vos coordonnées avant une nouvelle
+          tentative.
+        </p>
+      </section>
+
+      <div class="actions">
+        <a class="primary" href="/">Revenir au shop</a>
+        <a class="secondary" href="/">Choisir un autre modèle</a>
+      </div>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const seed = params.get("seed");
+
+      if (seed) {
+        document.getElementById("cancelled-seed-copy").textContent =
+          `Le paiement du vase n° ${seed} a été interrompu avant validation. Vous pouvez revenir au shop et relancer la commande quand vous le souhaitez.`;
+      }
+    </script>
+  </body>
+</html>
