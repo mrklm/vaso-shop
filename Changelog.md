@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.32] - 2026-05-05
+
+### Modifié
+- Prépare le webhook Stripe et allège la galerie photo du hero
+
 ## [1.1.31] - 2026-05-05
 
 ### Modifié
