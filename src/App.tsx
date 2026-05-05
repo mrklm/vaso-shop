@@ -278,6 +278,40 @@ function App() {
                 l'historique, retenir un vase puis commander exactement ce modèle.
               </p>
             </div>
+            <div className="shop-story shop-story-workshop">
+              <div className="shop-story-head">
+                <p className="shop-panel-title shop-title-with-mark shop-workshop-title">
+                  <img
+                    className="shop-title-mark shop-title-mark-story"
+                    src={vasoMark}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span>L'Atelier Vaso</span>
+                </p>
+              </div>
+              <p className="shop-sublead shop-workshop-note">
+                <span className="shop-breton-flag" aria-hidden="true">
+                  <span className="shop-breton-flag-stripes" />
+                  <span className="shop-breton-flag-canton">
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                </span>
+                L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la
+                demande, vérifié, protégé puis expédié avec soin.
+              </p>
+              <div className="shop-story-contact">
+                <span>Vous avez des questions ? Contactez-nous.</span>
+                <button className="shop-contact-button" type="button">
+                  Contact
+                </button>
+              </div>
+            </div>
           </aside>
         </section>
 
@@ -344,36 +378,6 @@ function App() {
 
               <p className="shop-history">
                 Vase {currentIndex + 1} sur {entries.length}
-              </p>
-            </aside>
-
-            <aside className="shop-info-card shop-workshop-card">
-              <div className="shop-info-head shop-workshop-head">
-                <p className="shop-panel-title shop-title-with-mark shop-workshop-title">
-                  <img
-                    className="shop-title-mark shop-title-mark-workshop"
-                    src={vasoMark}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <span>L'Atelier Vaso</span>
-                </p>
-              </div>
-
-              <p className="shop-sublead shop-workshop-note">
-                <span className="shop-breton-flag" aria-hidden="true">
-                  <span className="shop-breton-flag-stripes" />
-                  <span className="shop-breton-flag-canton">
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                </span>
-                L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la
-                demande, vérifié, protégé puis expédié avec soin.
               </p>
             </aside>
           </div>
@@ -511,12 +515,12 @@ function App() {
                     <div className="shop-order-warning-copy">
                       <strong>Attention</strong>
                       <p>
-                        Nous attirons votre attention sur le fait que le vase produit en PLA n'est
+                        Nous attirons votre attention sur le fait qu'un vase imprimé en PLA n'est
                         pas prévu pour contenir de l'eau. En effet, la matière étant biosourcée à
                         base d'amidon de maïs, il s'agit d'un matériau biodégradable : le mettre en
-                        contact avec de l'eau dégraderait rapidement le vase. En vérifiant les
-                        dimensions du vase, vous pouvez toutefois prévoir l'ajout d'un contenant en
-                        verre à l'intérieur.
+                        contact avec de l'eau dégraderait rapidement le vase. Toutefois, en prenant
+                        en compte les dimensions du vase (diamètre minimum et maximum), vous pouvez
+                        anticiper l'ajout d'un contenant en verre à l'intérieur.
                       </p>
                     </div>
                   </div>

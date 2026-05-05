@@ -91,6 +91,11 @@
   height: 38px;
 }
 
+.shop-title-mark-story {
+  width: 30px;
+  height: 30px;
+}
+
 .shop-kicker-version {
   color: rgb(143 83 49 / 28%);
   font-size: 0.68rem;
@@ -478,6 +483,15 @@
   line-height: 1.48;
 }
 
+.shop-story-head {
+  margin-bottom: 8px;
+}
+
+.shop-story-workshop {
+  display: grid;
+  gap: 10px;
+}
+
 .shop-history {
   color: rgb(38 29 22 / 60%);
   font-size: 0.8rem;
@@ -487,9 +501,43 @@
 .shop-workshop-note {
   max-width: none;
   margin-top: 0;
+  margin-bottom: 0;
   gap: 12px;
   font-size: 0.83rem;
   line-height: 1.46;
+}
+
+.shop-story-contact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: rgb(38 29 22 / 72%);
+  font-size: 0.82rem;
+}
+
+.shop-contact-button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgb(93 58 37 / 14%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 54%);
+  color: #8f5331;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.shop-contact-button:hover {
+  transform: translateY(-1px);
+  background: rgb(255 255 255 / 74%);
+  border-color: rgb(93 58 37 / 24%);
 }
 
 .shop-order-card {

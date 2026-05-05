@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.26] - 2026-05-05
+
+### Modifié
+- Integre l'atelier au bloc live et clarifie l'avertissement PLA
+
 ## [1.1.25] - 2026-05-05
 
 ### Modifié
