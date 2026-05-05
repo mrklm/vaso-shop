@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.25] - 2026-05-05
+
+### Modifié
+- Echange les cartes du modele actuel et des modeles generes en direct
+
 ## [1.1.24] - 2026-05-05
 
 ### Modifié

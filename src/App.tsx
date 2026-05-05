@@ -260,36 +260,24 @@ function App() {
           </div>
 
           <aside className="shop-hero-note shop-current-card">
-            <div className="shop-info-head shop-info-head-inline">
-              <p className="shop-panel-title">Modèle actuel</p>
-              <button className="shop-live-badge" type="button" onClick={handleOpenOrder}>
-                Disponible à la commande
-              </button>
+            <div className="shop-info-head">
+              <p className="shop-panel-title">Des modèles générés en direct</p>
             </div>
 
-            <div className="shop-stats">
-              <div className="shop-stat">
-                <span className="shop-stat-label">N° de vase</span>
-                <strong>{currentEntry?.seed ?? "-"}</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Hauteur</span>
-                <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
-              </div>
-              <div className="shop-stat">
-                <span className="shop-stat-label">Diamètre max</span>
-                <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
-              </div>
-              <div className="shop-stat shop-stat-material">
-                <span className="shop-stat-label">Matière</span>
-                <strong>{currentEntry?.material ?? "PLA"}</strong>
-                <p>Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.</p>
-              </div>
+            <div className="shop-story">
+              <p>
+                La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
+                affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
+                la commande.
+              </p>
             </div>
 
-            <p className="shop-history">
-              Vase {currentIndex + 1} sur {entries.length}
-            </p>
+            <div className="shop-story">
+              <p>
+                Chaque génération produit une silhouette différente. Vous pouvez parcourir
+                l'historique, retenir un vase puis commander exactement ce modèle.
+              </p>
+            </div>
           </aside>
         </section>
 
@@ -331,23 +319,32 @@ function App() {
           <div className="shop-side-column">
             <aside className="shop-info-card">
               <div className="shop-info-head">
-                <p className="shop-panel-title">Modèles générés en direct</p>
+                <p className="shop-panel-title">Modèle actuel</p>
               </div>
 
-              <div className="shop-story">
-                <p>
-                  La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
-                  affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
-                  la commande.
-                </p>
+              <div className="shop-stats">
+                <div className="shop-stat">
+                  <span className="shop-stat-label">N° de vase</span>
+                  <strong>{currentEntry?.seed ?? "-"}</strong>
+                </div>
+                <div className="shop-stat">
+                  <span className="shop-stat-label">Hauteur</span>
+                  <strong>{currentEntry ? `${currentEntry.heightMm} mm` : "-"}</strong>
+                </div>
+                <div className="shop-stat">
+                  <span className="shop-stat-label">Diamètre max</span>
+                  <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
+                </div>
+                <div className="shop-stat shop-stat-material">
+                  <span className="shop-stat-label">Matière</span>
+                  <strong>{currentEntry?.material ?? "PLA"}</strong>
+                  <p>Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.</p>
+                </div>
               </div>
 
-              <div className="shop-story">
-                <p>
-                  Chaque génération produit une silhouette différente. Vous pouvez parcourir
-                  l'historique, retenir un vase puis commander exactement ce modèle.
-                </p>
-              </div>
+              <p className="shop-history">
+                Vase {currentIndex + 1} sur {entries.length}
+              </p>
             </aside>
 
             <aside className="shop-info-card shop-workshop-card">
