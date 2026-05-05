@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import { PLA_COLORS } from "./shop/shop-colors";
+import { SHOP_COUNTRIES } from "./shop/shop-countries";
 import { SHOP_ORDER_FORM_ACTION, SHOP_ORDER_FORM_METHOD } from "./shop/shop-config";
 import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
@@ -482,7 +483,7 @@ function App() {
                   <span className="shop-order-step-index">02</span>
                   <div>
                     <p className="shop-panel-title">Selection de la couleur</p>
-                    <h3>Choisissez la teinte atelier</h3>
+                    <h3>Choisissez la couleur de votre vase</h3>
                   </div>
                 </div>
                 <div className="shop-order-step-content">
@@ -563,7 +564,7 @@ function App() {
                 <div className="shop-order-step-head">
                   <span className="shop-order-step-index">03</span>
                   <div>
-                    <p className="shop-panel-title">Informations client</p>
+                    <p className="shop-panel-title">Informations commande</p>
                     <h3>Renseignez vos coordonnees</h3>
                   </div>
                 </div>
@@ -668,16 +669,20 @@ function App() {
 
                     <label className="shop-field shop-field-wide">
                       <span>Pays</span>
-                      <input
+                      <select
                         name="country"
-                        type="text"
                         value={customerCountry}
                         onChange={(event) => setCustomerCountry(event.target.value)}
-                        placeholder="Votre pays"
                         disabled={!canAccessClientStep}
                         required
-                        autoComplete="country-name"
-                      />
+                      >
+                        <option value="">Sélectionnez un pays</option>
+                        {SHOP_COUNTRIES.map((country) => (
+                          <option key={country} value={country}>
+                            {country}
+                          </option>
+                        ))}
+                      </select>
                     </label>
 
                     <label className="shop-field shop-field-wide">

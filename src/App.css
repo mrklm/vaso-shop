@@ -872,6 +872,7 @@
 }
 
 .shop-field input,
+.shop-field select,
 .shop-field textarea {
   width: 100%;
   padding: 14px 16px;
@@ -893,6 +894,7 @@
 }
 
 .shop-field input:focus,
+.shop-field select:focus,
 .shop-field textarea:focus,
 .shop-color-block select:focus {
   outline: 2px solid rgb(165 79 43 / 28%);

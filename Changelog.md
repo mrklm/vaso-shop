@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.30] - 2026-05-05
+
+### Modifié
+- Clarifie les titres de commande et ajoute une liste de pays
+
 ## [1.1.29] - 2026-05-05
 
 ### Modifié
