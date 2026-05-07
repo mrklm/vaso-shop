@@ -48,10 +48,10 @@ describe("shopStore", () => {
     });
   });
 
-  it("restores the modified-seed flag when browsing shop history", () => {
+  it("keeps shop entries on the canonical seed label when browsing history", () => {
     useShopStore.getState().goNext();
     expect(useVaseStore.getState().seed).toBe(22222222);
-    expect(useVaseStore.getState().isSeedModified).toBe(true);
+    expect(useVaseStore.getState().isSeedModified).toBe(false);
 
     useShopStore.getState().goPrevious();
     expect(useVaseStore.getState().seed).toBe(11111111);

@@ -55,7 +55,6 @@ export function Toolbar() {
   const randomize = useVaseStore((s) => s.randomize);
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
-  const isSeedModified = useVaseStore((s) => s.isSeedModified);
   const autoRotate = useUIStore((s) => s.autoRotate);
   const setAutoRotate = useUIStore((s) => s.setAutoRotate);
   const printerProfiles = useUIStore((s) => s.printerProfiles);
@@ -63,7 +62,8 @@ export function Toolbar() {
   const enforcePrinterVolume = useUIStore((s) => s.enforcePrinterVolume);
   const captureViewerImage = useUIStore((s) => s.captureViewerImage);
   const { undo, redo, pastStates, futureStates } = useVaseStore.temporal.getState();
-  const showSeedModified = isSeedModified || enforcePrinterVolume;
+  // vaso-shop never exposes editable generation controls, so engraved seed labels stay canonical.
+  const showSeedModified = false;
 
   const handleExport = async () => {
     try {

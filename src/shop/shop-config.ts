@@ -1,5 +1,6 @@
 export const SHOP_NETLIFY_SITE_URL = "https://vaso-shop.netlify.app";
 export const SHOP_VASE_PRICE_CENTS = 2500;
+export const SHOP_MONDIAL_RELAY_BRAND = "";
 
 export function formatShopPriceFromCents(valueInCents: number): string {
   return new Intl.NumberFormat("fr-FR", {

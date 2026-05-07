@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.36] - 2026-05-07
+
+### Modifié
+- Supprime le suffixe M de la seed gravee dans le shop
+
+
 ## [1.1.35] - 2026-05-05
 
 ### Modifié

@@ -324,20 +324,19 @@ function ScreenshotBridge() {
 export function VaseViewer3D() {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
-  const isSeedModified = useVaseStore((s) => s.isSeedModified);
   const randomize = useVaseStore((s) => s.randomize);
   const shading = useUIStore((s) => s.shading);
   const showGrid = useUIStore((s) => s.showGrid);
   const vaseColor = useUIStore((s) => s.vaseColor);
   const wireframe = useUIStore((s) => s.wireframe);
   const flatShading = useUIStore((s) => s.flatShading);
-  const enforcePrinterVolume = useUIStore((s) => s.enforcePrinterVolume);
   const showClipping = useUIStore((s) => s.showClipping);
   const clippingHeight = useUIStore((s) => s.clippingHeight);
   const rotationMode = useUIStore((s) => s.rotationMode);
   const rotationSpeed = useUIStore((s) => s.rotationSpeed);
   const meshData = useVaseMesh(params, seed);
-  const showSeedModified = isSeedModified || enforcePrinterVolume;
+  // vaso-shop never exposes editable generation controls, so engraved seed labels stay canonical.
+  const showSeedModified = false;
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const lastTapRef = useRef(0);
   const paramsKey = JSON.stringify(params);

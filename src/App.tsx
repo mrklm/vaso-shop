@@ -6,6 +6,7 @@ import { SHOP_COUNTRIES } from "./shop/shop-countries";
 import {
   formatShopPriceFromCents,
   getShopStripeCheckoutEndpoint,
+  SHOP_MONDIAL_RELAY_BRAND,
   SHOP_VASE_PRICE_CENTS,
 } from "./shop/shop-config";
 import {
@@ -29,6 +30,16 @@ const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
 const HERO_GALLERY_INTERVAL_MS = 8200;
 const HERO_GALLERY_FADE_MS = 3200;
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
+const isMondialRelayWidgetReady = SHOP_MONDIAL_RELAY_BRAND.trim().length > 0;
+
+interface ShopRelaySelection {
+  id: string;
+  name: string;
+  address: string;
+  postalCode: string;
+  city: string;
+  country: string;
+}
 
 function App() {
   const setShowGrid = useUIStore((s) => s.setShowGrid);
@@ -57,6 +68,8 @@ function App() {
   const [customerPostalCode, setCustomerPostalCode] = useState("");
   const [customerCountry, setCustomerCountry] = useState("");
   const [shippingModeId, setShippingModeId] = useState("");
+  const [relaySelection, setRelaySelection] = useState<ShopRelaySelection | null>(null);
+  const [relaySelectionError, setRelaySelectionError] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
@@ -109,6 +122,7 @@ function App() {
   );
   const isUnsupportedShippingCountry =
     customerCountry.trim().length > 0 && shippingOptions.length === 0;
+  const isRelayShippingMode = selectedShippingOption?.id === "relay";
   const shippingPriceCents = selectedShippingOption?.priceCents ?? 0;
   const shippingPriceLabel = selectedShippingOption
     ? formatShopPriceFromCents(shippingPriceCents)
@@ -124,8 +138,12 @@ function App() {
     customerPostalCode.trim().length > 0 &&
     customerCountry.trim().length > 0;
   const isShippingSelectionComplete = selectedShippingOption !== null;
+  const isRelaySelectionComplete = !isRelayShippingMode || relaySelection !== null;
   const canValidateClientStep =
-    isClientInfoComplete && isShippingSelectionComplete && !isUnsupportedShippingCountry;
+    isClientInfoComplete &&
+    isShippingSelectionComplete &&
+    isRelaySelectionComplete &&
+    !isUnsupportedShippingCountry;
   const canAccessColorStep = isModelStepConfirmed;
   const canAccessClientStep = isColorStepConfirmed;
   const canAccessGlobalStep = isClientStepConfirmed && canValidateClientStep;
@@ -192,6 +210,8 @@ function App() {
     setIsGlobalStepConfirmed(false);
     setCheckoutError("");
     setIsStartingCheckout(false);
+    setRelaySelection(null);
+    setRelaySelectionError("");
 
     const scrollTimeoutId = window.setTimeout(() => {
       orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -221,6 +241,8 @@ function App() {
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
     setCheckoutError("");
+    setRelaySelection(null);
+    setRelaySelectionError("");
   }, [selectedColorId, selectedEntry]);
 
   useEffect(() => {
@@ -231,6 +253,7 @@ function App() {
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
     setCheckoutError("");
+    setRelaySelectionError("");
   }, [
     customerAddress,
     customerCity,
@@ -248,6 +271,8 @@ function App() {
   useEffect(() => {
     if (!customerCountry.trim()) {
       setShippingModeId("");
+      setRelaySelection(null);
+      setRelaySelectionError("");
       return;
     }
 
@@ -256,8 +281,17 @@ function App() {
     );
     if (!isCurrentModeStillAvailable) {
       setShippingModeId("");
+      setRelaySelection(null);
+      setRelaySelectionError("");
     }
   }, [customerCountry, shippingModeId, shippingOptions]);
+
+  useEffect(() => {
+    if (!isRelayShippingMode) {
+      setRelaySelection(null);
+      setRelaySelectionError("");
+    }
+  }, [isRelayShippingMode]);
 
   const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
     `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
@@ -299,6 +333,12 @@ function App() {
           shippingModeLabel: selectedShippingOption?.label ?? "",
           shippingProvider: selectedShippingOption?.provider ?? "",
           shippingPriceCents,
+          relayId: relaySelection?.id ?? "",
+          relayName: relaySelection?.name ?? "",
+          relayAddress: relaySelection?.address ?? "",
+          relayPostalCode: relaySelection?.postalCode ?? "",
+          relayCity: relaySelection?.city ?? "",
+          relayCountry: relaySelection?.country ?? "",
           customerMessage,
           orderTotalCents,
         }),
@@ -336,6 +376,19 @@ function App() {
     }
 
     openOrderForCurrent();
+  };
+
+  const handleOpenRelaySelector = () => {
+    if (!isMondialRelayWidgetReady) {
+      setRelaySelectionError(
+        "Ajoute d'abord votre identifiant Brand Mondial Relay dans src/shop/shop-config.ts pour activer le widget.",
+      );
+      return;
+    }
+
+    setRelaySelectionError(
+      "Le bouton est prêt, mais le branchement du widget Mondial Relay reste à finaliser dans cette étape.",
+    );
   };
 
   return (
@@ -531,6 +584,12 @@ function App() {
               <input type="hidden" name="shippingProvider" value={selectedShippingOption?.provider ?? ""} />
               <input type="hidden" name="shippingPriceCents" value={shippingPriceCents} />
               <input type="hidden" name="orderTotalCents" value={orderTotalCents} />
+              <input type="hidden" name="relayId" value={relaySelection?.id ?? ""} />
+              <input type="hidden" name="relayName" value={relaySelection?.name ?? ""} />
+              <input type="hidden" name="relayAddress" value={relaySelection?.address ?? ""} />
+              <input type="hidden" name="relayPostalCode" value={relaySelection?.postalCode ?? ""} />
+              <input type="hidden" name="relayCity" value={relaySelection?.city ?? ""} />
+              <input type="hidden" name="relayCountry" value={relaySelection?.country ?? ""} />
 
               <div className="shop-order-copy shop-order-journey-head">
                 <div>
@@ -838,10 +897,37 @@ function App() {
                         {shippingPriceLabel}
                       </p>
                       {selectedShippingOption.id === "relay" ? (
-                        <p>
-                          Le choix précis du point relais sera branché juste après l'intégration du
-                          widget Mondial Relay.
-                        </p>
+                        <div className="shop-relay-selector">
+                          <p>
+                            Choisissez ensuite le point relais exact avant de valider cette étape.
+                          </p>
+                          <button
+                            className="shop-button shop-button-secondary shop-relay-button"
+                            type="button"
+                            onClick={handleOpenRelaySelector}
+                            disabled={!canAccessClientStep}
+                          >
+                            Sélectionner mon point relais
+                          </button>
+                          {relaySelection ? (
+                            <div className="shop-order-note shop-relay-summary">
+                              <strong>Point relais sélectionné</strong>
+                              <p>{relaySelection.name}</p>
+                              <p>
+                                {relaySelection.address} · {relaySelection.postalCode}{" "}
+                                {relaySelection.city}
+                              </p>
+                              <p>{relaySelection.country}</p>
+                            </div>
+                          ) : (
+                            <p className="shop-relay-hint">
+                              Aucun point relais sélectionné pour le moment.
+                            </p>
+                          )}
+                          {relaySelectionError ? (
+                            <p className="shop-relay-error">{relaySelectionError}</p>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                   ) : null}
@@ -875,6 +961,11 @@ function App() {
                   ) : (
                     <span className="shop-step-hint">Validez d'abord la couleur</span>
                   )}
+                  {isRelayShippingMode && !relaySelection ? (
+                    <span className="shop-step-hint">
+                      Sélectionnez un point relais avant de valider cette étape.
+                    </span>
+                  ) : null}
                 </div>
               </article>
 

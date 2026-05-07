@@ -313,6 +313,12 @@ export default async (request) => {
     shipping_mode: normalizeMetadataValue(shippingOption.label, 80),
     shipping_provider: normalizeMetadataValue(shippingOption.provider, 120),
     shipping_price_cents: normalizeMetadataValue(shippingOption.priceCents, 40),
+    relay_id: normalizeMetadataValue(payload.relayId, 80),
+    relay_name: normalizeMetadataValue(payload.relayName, 160),
+    relay_address: normalizeMetadataValue(payload.relayAddress, 240),
+    relay_postal_code: normalizeMetadataValue(payload.relayPostalCode, 40),
+    relay_city: normalizeMetadataValue(payload.relayCity, 120),
+    relay_country: normalizeMetadataValue(payload.relayCountry, 120),
     order_total_cents: normalizeMetadataValue(orderTotalCents, 40),
     customer_message: normalizeMetadataValue(payload.customerMessage, 500),
   };

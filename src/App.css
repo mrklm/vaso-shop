@@ -858,6 +858,40 @@
     linear-gradient(180deg, rgb(248 245 239 / 96%), rgb(240 236 228 / 96%));
 }
 
+.shop-relay-selector {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.shop-relay-button {
+  width: fit-content;
+  min-width: 220px;
+}
+
+.shop-relay-summary {
+  margin-top: 2px;
+  border: 1px solid rgb(73 124 101 / 10%);
+  background:
+    radial-gradient(circle at top left, rgb(73 124 101 / 7%), transparent 40%),
+    linear-gradient(180deg, rgb(248 245 239 / 96%), rgb(240 236 228 / 96%));
+}
+
+.shop-relay-hint,
+.shop-relay-error {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.shop-relay-hint {
+  color: rgb(38 29 22 / 62%);
+}
+
+.shop-relay-error {
+  color: #a13d30;
+}
+
 .shop-order-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

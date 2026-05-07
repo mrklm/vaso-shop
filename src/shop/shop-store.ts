@@ -13,7 +13,7 @@ function cloneParams(params: VaseParameters): VaseParameters {
 }
 
 function createEntryFromCurrentVase(): ShopVaseEntry {
-  const { params, seed, isSeedModified } = useVaseStore.getState();
+  const { params, seed } = useVaseStore.getState();
   const clonedParams = cloneParams(params);
   const envelope = computeVaseEnvelopeMm(clonedParams);
   const { diameterValues } = generateOuterProfilePoints(clonedParams);
@@ -25,7 +25,7 @@ function createEntryFromCurrentVase(): ShopVaseEntry {
   return {
     id: `${APP_VERSION}-${seed}-${Date.now()}`,
     seed,
-    isSeedModified,
+    isSeedModified: false,
     version: APP_VERSION,
     heightMm: clonedParams.heightMm,
     minDiameterMm: Number.isFinite(minDiameterMm) ? Math.round(minDiameterMm) : 0,
@@ -40,7 +40,7 @@ function applyEntryToVaseStore(entry: ShopVaseEntry) {
     ...state,
     seed: entry.seed,
     params: cloneParams(entry.params),
-    isSeedModified: entry.isSeedModified,
+    isSeedModified: false,
   }));
 }
 
