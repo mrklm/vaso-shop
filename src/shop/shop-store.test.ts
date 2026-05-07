@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { PLA_COLORS } from "./shop-colors";
 import { useShopStore } from "./shop-store";
 import type { ShopVaseEntry } from "./shop-types";
 import { useUIStore } from "../store/ui-store";
@@ -36,7 +35,6 @@ describe("shopStore", () => {
       ...useVaseStore.getInitialState(),
     });
 
-    const defaultColorId = PLA_COLORS.find((color) => color.available)?.id ?? "";
     useShopStore.setState({
       entries: [
         createEntry("entry-1", 11111111, false),
@@ -44,7 +42,7 @@ describe("shopStore", () => {
       ],
       currentIndex: 0,
       selectedEntryId: null,
-      selectedColorId: defaultColorId,
+      selectedColorId: "",
     });
   });
 

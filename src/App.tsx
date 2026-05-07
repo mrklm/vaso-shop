@@ -1,31 +1,25 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
-import { PLA_COLORS } from "./shop/shop-colors";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
 import {
+  fetchShopConfig,
   formatShopPriceFromCents,
+  getShopBasePriceCents,
+  getShopEffectiveShippingPriceCents,
   getShopStripeCheckoutEndpoint,
+  isShopCheckoutAllowed,
   SHOP_MONDIAL_RELAY_BRAND,
-  SHOP_VASE_PRICE_CENTS,
+  resolveShopConfigAssetPath,
+  type ShopPublicConfig,
 } from "./shop/shop-config";
 import {
   getShopShippingOption,
   getShopShippingOptions,
-  SHOP_UNSUPPORTED_SHIPPING_MESSAGE,
 } from "./shop/shop-shipping";
 import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
-
-const HERO_GALLERY_IMAGE_MODULES = import.meta.glob(
-  "./assets/shop/hero-gallery/*.{png,jpg,jpeg,webp,avif}",
-  { eager: true, import: "default" },
-) as Record<string, string>;
-
-const HERO_GALLERY_IMAGES = Object.entries(HERO_GALLERY_IMAGE_MODULES)
-  .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
-  .map(([, source]) => source);
 
 const HERO_GALLERY_INTERVAL_MS = 8200;
 const HERO_GALLERY_FADE_MS = 3200;
@@ -39,6 +33,14 @@ interface ShopRelaySelection {
   postalCode: string;
   city: string;
   country: string;
+}
+
+function formatShippingOptionDisplay(optionLabel: string, optionProvider: string): string {
+  if (!optionProvider || optionProvider === "Mondial Relay Domicile") {
+    return optionLabel;
+  }
+
+  return `${optionLabel} · ${optionProvider}`;
 }
 
 function App() {
@@ -79,6 +81,8 @@ function App() {
   const [isGlobalStepConfirmed, setIsGlobalStepConfirmed] = useState(false);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
+  const [shopConfig, setShopConfig] = useState<ShopPublicConfig | null>(null);
+  const [shopConfigError, setShopConfigError] = useState("");
   const orderSectionRef = useRef<HTMLElement | null>(null);
   const clientStepRef = useRef<HTMLElement | null>(null);
 
@@ -87,18 +91,27 @@ function App() {
     () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
     [entries, selectedEntryId],
   );
+  const canOrder = shopConfig ? isShopCheckoutAllowed(shopConfig) : false;
   const availableColors = useMemo(
-    () => PLA_COLORS.filter((color) => color.available),
-    [],
+    () => shopConfig?.colors.filter((color) => color.available) ?? [],
+    [shopConfig],
   );
   const selectedColor = useMemo(
     () => availableColors.find((color) => color.id === selectedColorId) ?? null,
     [availableColors, selectedColorId],
   );
-  const currentHeroGalleryImage = HERO_GALLERY_IMAGES[heroGalleryIndex] ?? null;
+  const heroGalleryImages = useMemo(
+    () =>
+      (shopConfig?.heroImages ?? [])
+        .filter((image) => image.enabled)
+        .map((image) => resolveShopConfigAssetPath(image.path)),
+    [shopConfig],
+  );
+  const currentHeroGalleryImage = heroGalleryImages[heroGalleryIndex] ?? null;
   const previousHeroGalleryImage =
-    heroGalleryPreviousIndex === null ? null : HERO_GALLERY_IMAGES[heroGalleryPreviousIndex] ?? null;
+    heroGalleryPreviousIndex === null ? null : heroGalleryImages[heroGalleryPreviousIndex] ?? null;
   const selectedColorLabel = selectedColor?.label ?? "A choisir";
+  const productPriceCents = shopConfig ? getShopBasePriceCents(shopConfig) : 0;
   const customerFullName = [customerFirstName.trim(), customerLastName.trim()]
     .filter(Boolean)
     .join(" ");
@@ -113,21 +126,26 @@ function App() {
     .filter(Boolean)
     .join(" · ");
   const shippingOptions = useMemo(
-    () => getShopShippingOptions(customerCountry),
-    [customerCountry],
+    () => (shopConfig ? getShopShippingOptions(shopConfig, customerCountry) : []),
+    [customerCountry, shopConfig],
   );
   const selectedShippingOption = useMemo(
-    () => getShopShippingOption(customerCountry, shippingModeId),
-    [customerCountry, shippingModeId],
+    () => (shopConfig ? getShopShippingOption(shopConfig, customerCountry, shippingModeId) : null),
+    [customerCountry, shippingModeId, shopConfig],
   );
   const isUnsupportedShippingCountry =
-    customerCountry.trim().length > 0 && shippingOptions.length === 0;
+    Boolean(shopConfig) && customerCountry.trim().length > 0 && shippingOptions.length === 0;
   const isRelayShippingMode = selectedShippingOption?.id === "relay";
-  const shippingPriceCents = selectedShippingOption?.priceCents ?? 0;
+  const shippingPriceCents =
+    shopConfig && selectedShippingOption
+      ? getShopEffectiveShippingPriceCents(shopConfig, productPriceCents, selectedShippingOption.priceCents)
+      : 0;
   const shippingPriceLabel = selectedShippingOption
-    ? formatShopPriceFromCents(shippingPriceCents)
+    ? shippingPriceCents === 0
+      ? "Offerte"
+      : formatShopPriceFromCents(shippingPriceCents)
     : null;
-  const orderTotalCents = SHOP_VASE_PRICE_CENTS + shippingPriceCents;
+  const orderTotalCents = productPriceCents + shippingPriceCents;
   const orderTotalLabel = formatShopPriceFromCents(orderTotalCents);
   const isClientInfoComplete =
     customerLastName.trim().length > 0 &&
@@ -144,11 +162,11 @@ function App() {
     isShippingSelectionComplete &&
     isRelaySelectionComplete &&
     !isUnsupportedShippingCountry;
-  const canAccessColorStep = isModelStepConfirmed;
+  const canAccessColorStep = isModelStepConfirmed && availableColors.length > 0;
   const canAccessClientStep = isColorStepConfirmed;
   const canAccessGlobalStep = isClientStepConfirmed && canValidateClientStep;
-  const canAccessStripeStep = isGlobalStepConfirmed;
-  const orderBasePriceLabel = formatShopPriceFromCents(SHOP_VASE_PRICE_CENTS);
+  const canAccessStripeStep = isGlobalStepConfirmed && canOrder;
+  const orderBasePriceLabel = formatShopPriceFromCents(productPriceCents);
 
   useEffect(() => {
     setShowGrid(false);
@@ -169,7 +187,50 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (HERO_GALLERY_IMAGES.length <= 1) {
+    let isCancelled = false;
+
+    void fetchShopConfig()
+      .then((config) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setShopConfig(config);
+        setShopConfigError("");
+      })
+      .catch((error) => {
+        if (isCancelled) {
+          return;
+        }
+
+        setShopConfigError(
+          error instanceof Error
+            ? error.message
+            : "La configuration boutique n'a pas pu être chargée.",
+        );
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (availableColors.length === 0) {
+      if (selectedColorId) {
+        setSelectedColorId("");
+      }
+      return;
+    }
+
+    const isCurrentColorStillAvailable = availableColors.some((color) => color.id === selectedColorId);
+    if (!isCurrentColorStillAvailable) {
+      setSelectedColorId(availableColors[0]?.id ?? "");
+    }
+  }, [availableColors, selectedColorId, setSelectedColorId]);
+
+  useEffect(() => {
+    if (heroGalleryImages.length <= 1) {
       setHeroGalleryIndex(0);
       setHeroGalleryPreviousIndex(null);
       return undefined;
@@ -183,7 +244,7 @@ function App() {
 
       setHeroGalleryIndex((currentIndex) => {
         setHeroGalleryPreviousIndex(currentIndex);
-        return (currentIndex + 1) % HERO_GALLERY_IMAGES.length;
+        return (currentIndex + 1) % heroGalleryImages.length;
       });
 
       clearPreviousTimeoutId = window.setTimeout(() => {
@@ -197,7 +258,7 @@ function App() {
         window.clearTimeout(clearPreviousTimeoutId);
       }
     };
-  }, []);
+  }, [heroGalleryImages]);
 
   useEffect(() => {
     if (!selectedEntry) {
@@ -299,7 +360,7 @@ function App() {
   const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!selectedEntry || !canAccessStripeStep || isStartingCheckout) {
+    if (!selectedEntry || !shopConfig || !canAccessStripeStep || isStartingCheckout) {
       return;
     }
 
@@ -319,6 +380,8 @@ function App() {
           minDiameterMm: selectedEntry.minDiameterMm,
           maxDiameterMm: selectedEntry.maxDiameterMm,
           material: selectedEntry.material,
+          productSize: shopConfig.pricing.defaultSize,
+          productPriceCents,
           colorId: selectedColorId,
           colorLabel: selectedColorLabel,
           customerFirstName,
@@ -371,6 +434,10 @@ function App() {
   };
 
   const handleOpenOrder = () => {
+    if (!canOrder) {
+      return;
+    }
+
     if (selectedEntry?.id === currentEntry?.id) {
       orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -391,6 +458,28 @@ function App() {
     );
   };
 
+  if (!shopConfig) {
+    return (
+      <div className="shop-app">
+        <main className="shop-shell">
+          <section className="shop-config-state">
+            <p className="shop-panel-title">VASO SHOP</p>
+            <h1>Chargement de la boutique</h1>
+            <p>
+              {shopConfigError ||
+                "La configuration dynamique est en cours de lecture depuis public/config/shop-config.json."}
+            </p>
+            {shopConfigError ? (
+              <button className="shop-button shop-button-accent" type="button" onClick={() => window.location.reload()}>
+                Recharger la boutique
+              </button>
+            ) : null}
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="shop-app">
       <main className="shop-shell">
@@ -409,6 +498,20 @@ function App() {
                   Explorez des formes uniques, choisissez votre coloris PLA et passez commande à
                   partir du modèle affiché.
                 </p>
+                <div className="shop-status-banner">
+                  <span className={`shop-status-badge shop-status-${shopConfig.shopStatus.state}`}>
+                    {shopConfig.shopStatus.label}
+                  </span>
+                  {shopConfig.messages.shippingLeadTime ? (
+                    <p className="shop-status-note">{shopConfig.messages.shippingLeadTime}</p>
+                  ) : null}
+                  {shopConfig.shopStatus.message ? (
+                    <p className="shop-status-note">{shopConfig.shopStatus.message}</p>
+                  ) : null}
+                  {shopConfig.messages.temporaryNotice ? (
+                    <p className="shop-status-note">{shopConfig.messages.temporaryNotice}</p>
+                  ) : null}
+                </div>
               </div>
 
               <div className="shop-hero-media">
@@ -433,7 +536,7 @@ function App() {
                     ) : (
                       <div className="shop-hero-gallery-placeholder">
                         <span>Ajoutez vos photos</span>
-                        <small>src/assets/shop/hero-gallery/</small>
+                        <small>public/images/hero/</small>
                       </div>
                     )}
                   </div>
@@ -485,13 +588,12 @@ function App() {
                     <i />
                   </span>
                 </span>
-                L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la
-                demande, vérifié, protégé puis expédié avec soin.
+                {shopConfig.messages.atelierNote}
               </p>
               <div className="shop-story-contact">
-                <span>Vous avez des questions ?</span>
+                <span>{shopConfig.messages.contactPrompt}</span>
                 <button className="shop-contact-button" type="button">
-                  Contactez nous
+                  {shopConfig.messages.contactButtonLabel}
                 </button>
               </div>
             </div>
@@ -524,8 +626,8 @@ function App() {
                   Suivant
                 </button>
               </div>
-              <button className="shop-button shop-button-accent" onClick={handleOpenOrder}>
-                Commander ce modèle
+              <button className="shop-button shop-button-accent" onClick={handleOpenOrder} disabled={!canOrder}>
+                {canOrder ? "Commander ce modèle" : "Commande indisponible"}
               </button>
             </div>
             <div className="shop-viewer-frame">
@@ -703,14 +805,7 @@ function App() {
                     </span>
                     <div className="shop-order-warning-copy">
                       <strong>Attention</strong>
-                      <p>
-                        Nous attirons votre attention sur le fait qu'un vase imprimé en PLA n'est
-                        pas prévu pour contenir de l'eau. En effet, la matière étant biosourcée à
-                        base d'amidon de maïs, il s'agit d'un matériau biodégradable : le mettre en
-                        contact avec de l'eau dégraderait rapidement le vase. Toutefois, en prenant
-                        en compte les dimensions du vase (diamètre minimum et maximum), vous pouvez
-                        anticiper l'ajout d'un contenant en verre à l'intérieur.
-                      </p>
+                      <p>{shopConfig.messages.warningPla}</p>
                     </div>
                   </div>
                 </div>
@@ -829,7 +924,10 @@ function App() {
                         </option>
                         {shippingOptions.map((option) => (
                           <option key={option.id} value={option.id}>
-                            {option.label} · {option.provider} · {formatShopPriceFromCents(option.priceCents)}
+                            {formatShippingOptionDisplay(option.label, option.provider)} ·{" "}
+                            {formatShopPriceFromCents(
+                              getShopEffectiveShippingPriceCents(shopConfig, productPriceCents, option.priceCents),
+                            )}
                           </option>
                         ))}
                       </select>
@@ -893,8 +991,11 @@ function App() {
                     <div className="shop-order-note">
                       <strong>Livraison sélectionnée</strong>
                       <p>
-                        {selectedShippingOption.label} · {selectedShippingOption.provider} ·{" "}
-                        {shippingPriceLabel}
+                        {formatShippingOptionDisplay(
+                          selectedShippingOption.label,
+                          selectedShippingOption.provider,
+                        )}{" "}
+                        · {shippingPriceLabel}
                       </p>
                       {selectedShippingOption.id === "relay" ? (
                         <div className="shop-relay-selector">
@@ -934,7 +1035,7 @@ function App() {
                   {isUnsupportedShippingCountry ? (
                     <div className="shop-order-note shop-order-note-error">
                       <strong>Livraison à confirmer</strong>
-                      <p>{SHOP_UNSUPPORTED_SHIPPING_MESSAGE}</p>
+                      <p>{shopConfig.shipping.unsupportedMessage}</p>
                     </div>
                   ) : null}
                   <div className="shop-order-note shop-legal-note">
@@ -1003,12 +1104,15 @@ function App() {
                       {selectedShippingOption ? (
                         <>
                           <p>
-                            {selectedShippingOption.label} · {selectedShippingOption.provider}
+                            {formatShippingOptionDisplay(
+                              selectedShippingOption.label,
+                              selectedShippingOption.provider,
+                            )}
                           </p>
                           <p>{shippingPriceLabel}</p>
                         </>
                       ) : (
-                        <p>{SHOP_UNSUPPORTED_SHIPPING_MESSAGE}</p>
+                        <p>{shopConfig.shipping.unsupportedMessage}</p>
                       )}
                     </div>
                     <div className="shop-order-note">
@@ -1073,6 +1177,10 @@ function App() {
                         {isStartingCheckout ? "Ouverture de Stripe..." : "Accéder au paiement sécurisé"}
                       </button>
                     </>
+                  ) : !canOrder ? (
+                    <span className="shop-step-hint">
+                      Le paiement est momentanément indisponible : {shopConfig.shopStatus.label}.
+                    </span>
                   ) : (
                     <span className="shop-step-hint">Validez d'abord la confirmation globale</span>
                   )}

@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.37] - 2026-05-08
+
+### Modifié
+- Ajoute une base VASO-Admin et rend la boutique pilotable par JSON
+
 ## [1.1.36] - 2026-05-07
 
 ### Modifié

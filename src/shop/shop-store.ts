@@ -3,7 +3,6 @@ import { computeVaseEnvelopeMm } from "../engine/printer-volume";
 import { generateOuterProfilePoints } from "../engine/mesh-builder";
 import type { VaseParameters } from "../engine/types";
 import { useVaseStore } from "../store/vase-store";
-import { PLA_COLORS } from "./shop-colors";
 import type { ShopVaseEntry } from "./shop-types";
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
@@ -44,10 +43,6 @@ function applyEntryToVaseStore(entry: ShopVaseEntry) {
   }));
 }
 
-function getDefaultColorId(): string {
-  return PLA_COLORS.find((color) => color.available)?.id ?? "";
-}
-
 interface ShopState {
   entries: ShopVaseEntry[];
   currentIndex: number;
@@ -67,7 +62,7 @@ export const useShopStore = create<ShopState>((set, get) => ({
   entries: [initialEntry],
   currentIndex: 0,
   selectedEntryId: null,
-  selectedColorId: getDefaultColorId(),
+  selectedColorId: "",
 
   generateNext: () => {
     useVaseStore.getState().randomize();
@@ -104,7 +99,7 @@ export const useShopStore = create<ShopState>((set, get) => ({
     const { currentIndex, entries } = get();
     set({
       selectedEntryId: entries[currentIndex]?.id ?? null,
-      selectedColorId: getDefaultColorId(),
+      selectedColorId: "",
     });
   },
 

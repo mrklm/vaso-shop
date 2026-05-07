@@ -21,6 +21,20 @@
   padding: 16px 0 24px;
 }
 
+.shop-config-state {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 28px 30px;
+  border: 1px solid var(--color-line);
+  border-radius: 30px;
+  background: var(--color-panel);
+  box-shadow:
+    0 24px 80px rgb(83 54 28 / 10%),
+    inset 0 1px 0 rgb(255 255 255 / 40%);
+  backdrop-filter: blur(18px) saturate(1.1);
+}
+
 .shop-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(240px, 0.72fr);
@@ -117,6 +131,48 @@
   color: rgb(38 29 22 / 72%);
   font-size: 0.88rem;
   line-height: 1.42;
+}
+
+.shop-status-banner {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.shop-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.shop-status-open {
+  color: #285a40;
+  background: rgb(111 159 126 / 16%);
+}
+
+.shop-status-slowed {
+  color: #8a5a17;
+  background: rgb(199 157 66 / 18%);
+}
+
+.shop-status-holiday,
+.shop-status-closed {
+  color: #8a3a28;
+  background: rgb(189 101 82 / 16%);
+}
+
+.shop-status-note {
+  max-width: 48ch;
+  margin: 0;
+  color: rgb(38 29 22 / 68%);
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .shop-sublead {
