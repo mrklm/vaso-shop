@@ -1,4 +1,5 @@
 export const SHOP_NETLIFY_SITE_URL = "https://vaso-shop.netlify.app";
+export const SHOP_PUBLIC_SITE_URL = "https://mrklm.github.io/vaso-shop/";
 export const SHOP_MONDIAL_RELAY_BRAND = "";
 
 const SHOP_PUBLIC_CONFIG_URL = `${import.meta.env.BASE_URL}config/shop-config.json`;

@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.38] - 2026-05-08
+
+### Modifié
+- Oriente le shop vers GitHub Pages en public et Netlify pour le paiement
+
+
 ## [1.1.37] - 2026-05-08
 
 ### Modifié

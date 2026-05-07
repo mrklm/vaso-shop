@@ -7,6 +7,7 @@ import {
 
 const DEFAULT_NETLIFY_ORIGIN = "https://vaso-shop.netlify.app";
 const DEFAULT_GITHUB_PAGES_ORIGIN = "https://mrklm.github.io";
+const DEFAULT_GITHUB_PAGES_SITE_URL = "https://mrklm.github.io/vaso-shop/";
 const DEFAULT_ALLOWED_ORIGINS = [
   DEFAULT_NETLIFY_ORIGIN,
   DEFAULT_GITHUB_PAGES_ORIGIN,
@@ -34,6 +35,36 @@ function normalizeMetadataValue(value, maxLength = 500) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+function normalizeSiteUrl(value) {
+  const trimmedValue = `${value ?? ""}`.trim();
+  if (!trimmedValue) {
+    return "";
+  }
+
+  return trimmedValue.endsWith("/") ? trimmedValue : `${trimmedValue}/`;
+}
+
+function getPublicSiteUrl(origin) {
+  const configuredPublicSiteUrl = normalizeSiteUrl(readEnv("SHOP_PUBLIC_SITE_URL"));
+  if (configuredPublicSiteUrl) {
+    return configuredPublicSiteUrl;
+  }
+
+  if (origin === DEFAULT_GITHUB_PAGES_ORIGIN) {
+    return DEFAULT_GITHUB_PAGES_SITE_URL;
+  }
+
+  if (origin === DEFAULT_NETLIFY_ORIGIN) {
+    return normalizeSiteUrl(DEFAULT_NETLIFY_ORIGIN);
+  }
+
+  if (origin === "http://localhost:5173" || origin === "http://127.0.0.1:5173") {
+    return normalizeSiteUrl(origin);
+  }
+
+  return DEFAULT_GITHUB_PAGES_SITE_URL;
 }
 
 function buildAllowedOrigins(requestOrigin) {
@@ -233,12 +264,13 @@ export default async (request) => {
   }
 
   const orderReference = buildOrderReference(payload.seed);
-  const successUrl = new URL("/checkout-success.html", requestOrigin);
+  const publicSiteUrl = getPublicSiteUrl(origin);
+  const successUrl = new URL("checkout-success.html", publicSiteUrl);
   successUrl.searchParams.set("order_ref", orderReference);
   successUrl.searchParams.set("seed", `${payload.seed}`);
   successUrl.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
 
-  const cancelUrl = new URL("/checkout-cancelled.html", requestOrigin);
+  const cancelUrl = new URL("checkout-cancelled.html", publicSiteUrl);
   cancelUrl.searchParams.set("order_ref", orderReference);
   cancelUrl.searchParams.set("seed", `${payload.seed}`);
 
