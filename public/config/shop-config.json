@@ -106,14 +106,16 @@
       "id": "snow-white",
       "label": "Blanc neige",
       "hex": "#ffffff",
-      "previewHex": "#f4efe6",
-      "previewEmissiveIntensity": 0.3,
+      "previewHex": "#ffffff",
+      "previewEmissiveIntensity": 0.34,
       "available": true
     },
     {
       "id": "matte-black",
       "label": "Noir mat",
       "hex": "#161616",
+      "previewHex": "#2c2c2c",
+      "previewEmissiveIntensity": 0.04,
       "available": true
     },
     {
@@ -127,20 +129,21 @@
       "id": "ral-1016",
       "label": "Jaune RAL 1016",
       "hex": "#f5f328",
-      "previewHex": "#fff200",
+      "previewHex": "#fff86a",
       "available": true
     },
     {
       "id": "fluorescent-orange",
       "label": "Orange fluo",
       "hex": "#ff6500",
+      "previewHex": "#ff8e1f",
       "available": true
     },
     {
       "id": "gold-orange",
       "label": "Orange OR",
       "hex": "#d88b20",
-      "previewHex": "#ff9a24",
+      "previewHex": "#ffb347",
       "available": true
     },
     {

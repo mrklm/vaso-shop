@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.56] - 2026-05-09
+
+### Modifié
+- Affine plusieurs teintes du mini aperçu couleur sans toucher aux pastilles PLA
+
 ## [1.1.55] - 2026-05-09
 
 ### Modifié
