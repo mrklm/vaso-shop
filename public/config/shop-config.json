@@ -114,8 +114,9 @@
       "id": "matte-black",
       "label": "Noir mat",
       "hex": "#161616",
-      "previewHex": "#2c2c2c",
-      "previewEmissiveIntensity": 0.04,
+      "previewHex": "#363636",
+      "previewEmissiveIntensity": 0.03,
+      "previewShading": 82,
       "available": true
     },
     {
@@ -129,14 +130,16 @@
       "id": "ral-1016",
       "label": "Jaune RAL 1016",
       "hex": "#f5f328",
-      "previewHex": "#fff86a",
+      "previewHex": "#f7ff00",
+      "previewEmissiveIntensity": 0.05,
       "available": true
     },
     {
       "id": "fluorescent-orange",
       "label": "Orange fluo",
       "hex": "#ff6500",
-      "previewHex": "#ff8e1f",
+      "previewHex": "#ff5f00",
+      "previewEmissiveIntensity": 0.04,
       "available": true
     },
     {

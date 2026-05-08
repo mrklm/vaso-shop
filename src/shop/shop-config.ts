@@ -17,6 +17,7 @@ export interface ShopColor {
   previewHex?: string;
   opacity?: number;
   previewEmissiveIntensity?: number;
+  previewShading?: number;
   available: boolean;
 }
 
@@ -166,6 +167,7 @@ function normalizeColor(value: unknown, index: number): ShopColor | null {
   const previewHex = normalizeString(value.previewHex).trim();
   const opacity = Math.min(1, Math.max(0.08, normalizeNumber(value.opacity, 1)));
   const previewEmissiveIntensity = Math.min(0.5, Math.max(0, normalizeNumber(value.previewEmissiveIntensity, 0)));
+  const previewShading = Math.min(100, Math.max(0, normalizeNumber(value.previewShading, 50)));
   if (!label) {
     return null;
   }
@@ -177,6 +179,7 @@ function normalizeColor(value: unknown, index: number): ShopColor | null {
     previewHex: previewHex || undefined,
     opacity,
     previewEmissiveIntensity,
+    previewShading,
     available: normalizeBoolean(value.available, true),
   };
 }

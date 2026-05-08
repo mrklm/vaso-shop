@@ -927,6 +927,7 @@ function App() {
                           colorOverride={selectedColor?.previewHex ?? selectedColor?.hex ?? "#d9d2c7"}
                           colorOpacity={selectedColor?.opacity ?? 1}
                           colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
+                          shadingOverride={selectedColor?.previewShading}
                         />
                       </div>
                       <div className="shop-color-preview-note">{shopConfig.messages.colorPreviewNote}</div>

@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.58] - 2026-05-09
+
+### Modifié
+- Affine encore le rendu du noir, du jaune RAL 1016 et de l'orange fluo dans le mini aperçu couleur
+
 ## [1.1.57] - 2026-05-09
 
 ### Modifié

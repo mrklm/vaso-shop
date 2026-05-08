@@ -326,6 +326,7 @@ interface VaseViewer3DProps {
   colorOverride?: string;
   colorOpacity?: number;
   colorEmissiveIntensity?: number;
+  shadingOverride?: number;
 }
 
 export function VaseViewer3D({
@@ -333,6 +334,7 @@ export function VaseViewer3D({
   colorOverride,
   colorOpacity = 1,
   colorEmissiveIntensity = 0,
+  shadingOverride,
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
@@ -356,6 +358,7 @@ export function VaseViewer3D({
   const resolvedColor = colorOverride ?? vaseColor;
   const resolvedOpacity = Math.min(1, Math.max(0.08, colorOpacity));
   const resolvedEmissiveIntensity = Math.min(0.5, Math.max(0, colorEmissiveIntensity));
+  const resolvedShading = Math.min(100, Math.max(0, shadingOverride ?? shading));
   const resolvedWireframe = isPreview ? false : wireframe;
   const resolvedFlatShading = isPreview ? false : flatShading;
   const resolvedRotationMode = isPreview ? "vase" : rotationMode;
@@ -411,7 +414,7 @@ export function VaseViewer3D({
         {meshData && (
           <VaseMesh
             meshData={meshData}
-            shading={shading}
+            shading={resolvedShading}
             color={resolvedColor}
             opacity={resolvedOpacity}
             emissiveIntensity={resolvedEmissiveIntensity}
