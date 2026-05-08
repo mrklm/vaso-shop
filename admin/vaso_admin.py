@@ -27,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
+PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "admin"]
 DEFAULT_HERO_TRANSITION_MS = 8200
 DEFAULT_HERO_FADE_IN_MS = 3200
 DEFAULT_HERO_FADE_OUT_MS = 3200
@@ -1395,19 +1396,73 @@ class VasoAdminApp(tk.Tk):
     def git_status(self) -> None:
         self.run_git_command(["status", "--short"])
 
-    def git_commit(self) -> None:
-        self.save_config()
+    def git_commit(self) -> bool:
+        try:
+            self.save_config()
+        except (OSError, ValueError) as error:
+            messagebox.showerror("VASO-Admin", str(error))
+            self.log(f"Erreur de sauvegarde : {error}")
+            return False
+
         commit_message = self.commit_message_var.get().strip() or self.build_default_commit_message()
         self.commit_message_var.set(commit_message)
-        self.run_git_command(["add", "-A", "public/config/shop-config.json", "public/images/hero", "admin"])
-        self.run_git_command(["commit", "-m", commit_message])
+        add_process = self.run_git_command(["add", "-A", *PUBLISH_PATHS])
+        if add_process.returncode != 0:
+            messagebox.showerror(
+                "VASO-Admin",
+                "Git n'a pas pu preparer les fichiers a publier. Consulte le journal.",
+            )
+            return False
+
+        diff_process = self.run_git_command(["diff", "--cached", "--name-only", "--", *PUBLISH_PATHS])
+        if diff_process.returncode != 0:
+            messagebox.showerror(
+                "VASO-Admin",
+                "Git n'a pas pu verifier les changements a publier. Consulte le journal.",
+            )
+            return False
+
+        changed_files = [line.strip() for line in diff_process.stdout.splitlines() if line.strip()]
+        if not changed_files:
+            messagebox.showinfo(
+                "VASO-Admin",
+                "Aucun changement a publier pour la boutique.",
+            )
+            self.log("Aucun changement detecte dans la configuration boutique.")
+            return False
+
+        self.log(f"Fichiers a publier : {', '.join(changed_files)}")
+
+        commit_process = self.run_git_command(["commit", "-m", commit_message])
+        if commit_process.returncode != 0:
+            messagebox.showerror(
+                "VASO-Admin",
+                "Le commit Git a echoue. Consulte le journal pour le detail.",
+            )
+            return False
+
+        self.log("Commit local cree.")
+        return True
 
     def git_commit_and_push(self) -> None:
-        self.git_commit()
-        self.run_git_command(["push", "origin", "main"])
-        self.commit_message_var.set(self.build_default_commit_message())
+        if not self.git_commit():
+            return
 
-    def run_git_command(self, args: list[str]) -> None:
+        push_process = self.run_git_command(["push", "origin", "main"])
+        if push_process.returncode != 0:
+            messagebox.showerror(
+                "VASO-Admin",
+                "Le commit local a bien ete cree, mais le push vers GitHub a echoue. Consulte le journal.",
+            )
+            return
+
+        self.commit_message_var.set(self.build_default_commit_message())
+        messagebox.showinfo(
+            "VASO-Admin",
+            "Configuration boutique sauvegardee et publiee sur GitHub.",
+        )
+
+    def run_git_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
         process = subprocess.run(
             ["git", *args],
             cwd=REPO_ROOT,
@@ -1420,6 +1475,7 @@ class VasoAdminApp(tk.Tk):
             self.log(process.stdout.strip())
         if process.stderr.strip():
             self.log(process.stderr.strip())
+        return process
 
     def write_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", "end")
