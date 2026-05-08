@@ -52,6 +52,7 @@ function App() {
   const setRotationMode = useUIStore((s) => s.setRotationMode);
   const setAutoRotate = useUIStore((s) => s.setAutoRotate);
   const setVaseColor = useUIStore((s) => s.setVaseColor);
+  const applyPrinterVolumeConfig = useUIStore((s) => s.applyPrinterVolumeConfig);
   const generateNext = useShopStore((s) => s.generateNext);
   const goPrevious = useShopStore((s) => s.goPrevious);
   const goNext = useShopStore((s) => s.goNext);
@@ -210,6 +211,7 @@ function App() {
         }
 
         setShopConfig(config);
+        applyPrinterVolumeConfig(config.printerVolume);
         setShopConfigError("");
       })
       .catch((error) => {
@@ -227,7 +229,7 @@ function App() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [applyPrinterVolumeConfig]);
 
   useEffect(() => {
     if (availableColors.length === 0) {

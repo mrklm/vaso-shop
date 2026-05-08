@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { THEMES, applyThemeToCSS, type Theme } from "../themes";
 
-interface PrinterProfile {
+export interface PrinterProfile {
   name: string;
   width: number;
   depth: number;
@@ -50,12 +50,18 @@ interface UIState {
   addPrinterProfile: (profile: PrinterProfile) => void;
   updatePrinterProfile: (name: string, profile: PrinterProfile) => void;
   deletePrinterProfile: (name: string) => void;
+  applyPrinterVolumeConfig: (config: {
+    profiles: PrinterProfile[];
+    activeProfile: string;
+    enforce: boolean;
+  }) => void;
   resetVasoSettings: () => void;
 }
 
 const DEFAULT_PRINTER_PROFILES: PrinterProfile[] = [
   { name: "Alfawise U30", width: 220, depth: 220, height: 250 },
   { name: "Ender 5 Pro", width: 220, depth: 220, height: 300 },
+  { name: "Ender 5-S1", width: 220, depth: 220, height: 280 },
   { name: "Creality CR-10S", width: 300, depth: 300, height: 400 },
   { name: "Bambu Lab A1 Mini", width: 180, depth: 180, height: 180 },
   { name: "Bambu Lab A1", width: 256, depth: 256, height: 256 },
@@ -214,6 +220,18 @@ export const useUIStore = create<UIState>((set, get) => ({
     const active = get().activePrinterProfile === name ? profiles[0].name : get().activePrinterProfile;
     set({ printerProfiles: profiles, activePrinterProfile: active });
     savePrinterProfiles(profiles, active, get().enforcePrinterVolume);
+  },
+  applyPrinterVolumeConfig: (config) => {
+    const profiles = config.profiles.length > 0 ? config.profiles : DEFAULT_PRINTER_PROFILES;
+    const active = profiles.some((profile) => profile.name === config.activeProfile)
+      ? config.activeProfile
+      : profiles[0].name;
+    set({
+      printerProfiles: profiles,
+      activePrinterProfile: active,
+      enforcePrinterVolume: config.enforce,
+    });
+    savePrinterProfiles(profiles, active, config.enforce);
   },
   resetVasoSettings: () => {
     try {

@@ -8,6 +8,26 @@
     },
     "freeShippingThresholdCents": 0
   },
+  "printerVolume": {
+    "enforce": false,
+    "activeProfile": "Alfawise U30",
+    "profiles": [
+      { "name": "Alfawise U30", "width": 220, "depth": 220, "height": 250 },
+      { "name": "Ender 5 Pro", "width": 220, "depth": 220, "height": 300 },
+      { "name": "Ender 5-S1", "width": 220, "depth": 220, "height": 280 },
+      { "name": "Creality CR-10S", "width": 300, "depth": 300, "height": 400 },
+      { "name": "Bambu Lab A1 Mini", "width": 180, "depth": 180, "height": 180 },
+      { "name": "Bambu Lab A1", "width": 256, "depth": 256, "height": 256 },
+      { "name": "Bambu Lab P1S", "width": 256, "depth": 256, "height": 256 },
+      { "name": "Prusa MINI+", "width": 180, "depth": 180, "height": 180 },
+      { "name": "Prusa MK4S", "width": 250, "depth": 210, "height": 220 },
+      { "name": "Prusa CORE One", "width": 250, "depth": 220, "height": 270 },
+      { "name": "Creality Ender-3 V3 SE", "width": 220, "depth": 220, "height": 250 },
+      { "name": "Creality Ender-3 V3 KE", "width": 220, "depth": 220, "height": 240 },
+      { "name": "Creality K1C", "width": 220, "depth": 220, "height": 250 },
+      { "name": "ELEGOO Neptune 4 Pro", "width": 225, "depth": 225, "height": 265 }
+    ]
+  },
   "colors": [
     {
       "id": "natural-translucent",

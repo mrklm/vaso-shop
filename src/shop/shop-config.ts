@@ -44,6 +44,19 @@ export interface ShopPricingConfig {
   freeShippingThresholdCents: number;
 }
 
+export interface ShopPrinterProfile {
+  name: string;
+  width: number;
+  depth: number;
+  height: number;
+}
+
+export interface ShopPrinterVolumeConfig {
+  enforce: boolean;
+  activeProfile: string;
+  profiles: ShopPrinterProfile[];
+}
+
 export interface ShopStatusConfig {
   state: ShopStatusState;
   label: string;
@@ -70,6 +83,7 @@ export interface ShopShippingConfig {
 
 export interface ShopPublicConfig {
   pricing: ShopPricingConfig;
+  printerVolume: ShopPrinterVolumeConfig;
   colors: ShopColor[];
   heroImages: ShopHeroImage[];
   heroGallery: ShopHeroGalleryConfig;
@@ -229,14 +243,43 @@ function normalizeShippingCountry(value: unknown): ShopShippingCountryConfig | n
   };
 }
 
+function normalizePrinterProfile(value: unknown): ShopPrinterProfile | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const name = normalizeString(value.name).trim();
+  if (!name) {
+    return null;
+  }
+
+  return {
+    name,
+    width: Math.max(1, normalizeNumber(value.width, 220)),
+    depth: Math.max(1, normalizeNumber(value.depth, 220)),
+    height: Math.max(1, normalizeNumber(value.height, 250)),
+  };
+}
+
 function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
   const rawConfig = isRecord(rawValue) ? rawValue : {};
   const rawPricing = isRecord(rawConfig.pricing) ? rawConfig.pricing : {};
+  const rawPrinterVolume = isRecord(rawConfig.printerVolume) ? rawConfig.printerVolume : {};
   const rawMessages = isRecord(rawConfig.messages) ? rawConfig.messages : {};
   const rawStatus = isRecord(rawConfig.shopStatus) ? rawConfig.shopStatus : {};
   const rawShipping = isRecord(rawConfig.shipping) ? rawConfig.shipping : {};
   const rawHeroGallery = isRecord(rawConfig.heroGallery) ? rawConfig.heroGallery : {};
   const statusState = normalizeStatusState(rawStatus.state);
+  const printerProfiles = Array.isArray(rawPrinterVolume.profiles)
+    ? rawPrinterVolume.profiles
+        .map((profile) => normalizePrinterProfile(profile))
+        .filter((profile): profile is ShopPrinterProfile => profile !== null)
+    : [];
+  const activePrinterProfile = normalizeString(rawPrinterVolume.activeProfile).trim();
+  const safePrinterProfiles = printerProfiles.length > 0 ? printerProfiles : [{ name: "Alfawise U30", width: 220, depth: 220, height: 250 }];
+  const safeActivePrinterProfile = safePrinterProfiles.some((profile) => profile.name === activePrinterProfile)
+    ? activePrinterProfile
+    : safePrinterProfiles[0].name;
 
   return {
     pricing: {
@@ -247,6 +290,11 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
         L: Math.max(0, normalizeNumber(rawPricing.pricesCents && isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents.L : undefined, 0)),
       },
       freeShippingThresholdCents: Math.max(0, normalizeNumber(rawPricing.freeShippingThresholdCents, 0)),
+    },
+    printerVolume: {
+      enforce: normalizeBoolean(rawPrinterVolume.enforce, false),
+      activeProfile: safeActivePrinterProfile,
+      profiles: safePrinterProfiles,
     },
     colors: Array.isArray(rawConfig.colors)
       ? rawConfig.colors

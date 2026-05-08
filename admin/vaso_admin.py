@@ -25,6 +25,22 @@ DEFAULT_HERO_TRANSITION_MS = 8200
 DEFAULT_HERO_FADE_IN_MS = 3200
 DEFAULT_HERO_FADE_OUT_MS = 3200
 HERO_PREVIEW_SIZE = (280, 280)
+DEFAULT_PRINTER_PROFILES = [
+    {"name": "Alfawise U30", "width": 220, "depth": 220, "height": 250},
+    {"name": "Ender 5 Pro", "width": 220, "depth": 220, "height": 300},
+    {"name": "Ender 5-S1", "width": 220, "depth": 220, "height": 280},
+    {"name": "Creality CR-10S", "width": 300, "depth": 300, "height": 400},
+    {"name": "Bambu Lab A1 Mini", "width": 180, "depth": 180, "height": 180},
+    {"name": "Bambu Lab A1", "width": 256, "depth": 256, "height": 256},
+    {"name": "Bambu Lab P1S", "width": 256, "depth": 256, "height": 256},
+    {"name": "Prusa MINI+", "width": 180, "depth": 180, "height": 180},
+    {"name": "Prusa MK4S", "width": 250, "depth": 210, "height": 220},
+    {"name": "Prusa CORE One", "width": 250, "depth": 220, "height": 270},
+    {"name": "Creality Ender-3 V3 SE", "width": 220, "depth": 220, "height": 250},
+    {"name": "Creality Ender-3 V3 KE", "width": 220, "depth": 220, "height": 240},
+    {"name": "Creality K1C", "width": 220, "depth": 220, "height": 250},
+    {"name": "ELEGOO Neptune 4 Pro", "width": 225, "depth": 225, "height": 265},
+]
 
 THEMES = {
     "[Sombre] Midnight Garage": dict(
@@ -121,6 +137,12 @@ class VasoAdminApp(tk.Tk):
         self.price_m_var = tk.StringVar()
         self.price_l_var = tk.StringVar()
         self.free_shipping_threshold_var = tk.StringVar()
+        self.printer_enforce_var = tk.BooleanVar()
+        self.printer_active_profile_var = tk.StringVar()
+        self.printer_name_var = tk.StringVar()
+        self.printer_width_var = tk.StringVar()
+        self.printer_depth_var = tk.StringVar()
+        self.printer_height_var = tk.StringVar()
 
         self.color_id_var = tk.StringVar()
         self.color_label_var = tk.StringVar()
@@ -199,18 +221,21 @@ class VasoAdminApp(tk.Tk):
 
         self.general_frame = ttk.Frame(notebook, padding=8)
         self.pricing_frame = ttk.Frame(notebook, padding=8)
+        self.printer_frame = ttk.Frame(notebook, padding=8)
         self.colors_frame = ttk.Frame(notebook, padding=8)
         self.hero_frame = ttk.Frame(notebook, padding=8)
         self.publish_frame = ttk.Frame(notebook, padding=8)
 
         notebook.add(self.general_frame, text="Boutique")
         notebook.add(self.pricing_frame, text="Tarifs")
+        notebook.add(self.printer_frame, text="Imprimante")
         notebook.add(self.colors_frame, text="Couleurs")
         notebook.add(self.hero_frame, text="Hero")
         notebook.add(self.publish_frame, text="Publication")
 
         self.build_general_tab()
         self.build_pricing_tab()
+        self.build_printer_tab()
         self.build_colors_tab()
         self.build_hero_tab()
         self.build_publish_tab()
@@ -346,6 +371,56 @@ class VasoAdminApp(tk.Tk):
             row=4, column=1, sticky="e", pady=8
         )
 
+    def build_printer_tab(self) -> None:
+        frame = self.printer_frame
+        frame.columnconfigure(1, weight=1)
+
+        ttk.Checkbutton(
+            frame,
+            text="Volume imprimante",
+            variable=self.printer_enforce_var,
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 8))
+
+        ttk.Label(frame, text="Profil actif").grid(row=1, column=0, sticky="w")
+        self.printer_profile_selector = ttk.Combobox(
+            frame,
+            textvariable=self.printer_active_profile_var,
+            state="readonly",
+        )
+        self.printer_profile_selector.grid(row=1, column=1, sticky="ew", pady=4)
+        self.printer_profile_selector.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: self.load_selected_printer_profile(),
+        )
+
+        ttk.Label(frame, text="Nom du profil").grid(row=2, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.printer_name_var).grid(row=2, column=1, sticky="ew", pady=4)
+
+        dims = ttk.Frame(frame)
+        dims.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        dims.columnconfigure(1, weight=1)
+        dims.columnconfigure(3, weight=1)
+        dims.columnconfigure(5, weight=1)
+
+        ttk.Label(dims, text="Largeur max (mm)").grid(row=0, column=0, sticky="w")
+        ttk.Entry(dims, textvariable=self.printer_width_var, width=12).grid(row=0, column=1, sticky="ew", padx=(8, 10))
+        ttk.Label(dims, text="Profondeur max (mm)").grid(row=0, column=2, sticky="w")
+        ttk.Entry(dims, textvariable=self.printer_depth_var, width=12).grid(row=0, column=3, sticky="ew", padx=(8, 10))
+        ttk.Label(dims, text="Hauteur max (mm)").grid(row=0, column=4, sticky="w")
+        ttk.Entry(dims, textvariable=self.printer_height_var, width=12).grid(row=0, column=5, sticky="ew", padx=(8, 0))
+
+        actions = ttk.Frame(frame)
+        actions.grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        ttk.Button(actions, text="Nouveau", command=self.add_printer_profile).pack(side="left")
+        ttk.Button(actions, text="Supprimer", command=self.remove_printer_profile).pack(side="left", padx=4)
+        ttk.Button(actions, text="Appliquer le profil", command=self.apply_printer_profile_changes).pack(side="left", padx=4)
+
+        help_text = (
+            "Le shop reprendra ce profil actif pour limiter le volume imprimable.\n"
+            "Les valeurs sont synchronisées dans la configuration JSON de la boutique."
+        )
+        ttk.Label(frame, text=help_text, justify="left").grid(row=5, column=0, columnspan=2, sticky="w", pady=(12, 0))
+
     def build_hero_tab(self) -> None:
         frame = self.hero_frame
         frame.columnconfigure(1, weight=1)
@@ -466,6 +541,7 @@ class VasoAdminApp(tk.Tk):
         messages = self.config_data.get("messages", {})
         shipping = self.config_data.get("shipping", {})
         hero_gallery = self.config_data.get("heroGallery", {})
+        printer_volume = self.ensure_printer_volume_config()
 
         self.status_state_var.set(shop_status.get("state", "open"))
         self.status_label_var.set(shop_status.get("label", ""))
@@ -492,6 +568,8 @@ class VasoAdminApp(tk.Tk):
         self.price_m_var.set(str(prices_cents.get("M", 2500)))
         self.price_l_var.set(str(prices_cents.get("L", 0)))
         self.free_shipping_threshold_var.set(str(pricing.get("freeShippingThresholdCents", 0)))
+        self.printer_enforce_var.set(bool(printer_volume.get("enforce", False)))
+        self.refresh_printer_profile_selector()
         self.hero_transition_ms_var.set(str(hero_gallery.get("transitionMs", DEFAULT_HERO_TRANSITION_MS)))
         self.hero_fade_in_ms_var.set(str(hero_gallery.get("fadeInMs", DEFAULT_HERO_FADE_IN_MS)))
         self.hero_fade_out_ms_var.set(str(hero_gallery.get("fadeOutMs", DEFAULT_HERO_FADE_OUT_MS)))
@@ -526,6 +604,7 @@ class VasoAdminApp(tk.Tk):
                 "seuil livraison offerte",
             ),
         }
+        self.config_data["printerVolume"] = self.collect_printer_volume_config()
         self.config_data["shipping"] = {
             "unsupportedMessage": self.shipping_unsupported_text.get("1.0", "end").strip(),
             "countries": self.parse_shipping_countries(),
@@ -553,6 +632,151 @@ class VasoAdminApp(tk.Tk):
             raise ValueError("La grille livraison doit etre une liste JSON.")
 
         return parsed
+
+    def ensure_printer_volume_config(self) -> dict:
+        printer_volume = self.config_data.get("printerVolume")
+        if not isinstance(printer_volume, dict):
+            printer_volume = {}
+
+        profiles = printer_volume.get("profiles")
+        if not isinstance(profiles, list) or not profiles:
+            profiles = [profile.copy() for profile in DEFAULT_PRINTER_PROFILES]
+        else:
+            profiles = [
+                {
+                    "name": str(profile.get("name", "")).strip() or f"Imprimante {index + 1}",
+                    "width": int(profile.get("width", 220)),
+                    "depth": int(profile.get("depth", 220)),
+                    "height": int(profile.get("height", 250)),
+                }
+                for index, profile in enumerate(profiles)
+                if isinstance(profile, dict)
+            ] or [profile.copy() for profile in DEFAULT_PRINTER_PROFILES]
+
+        active_profile = str(printer_volume.get("activeProfile", profiles[0]["name"])).strip()
+        if not any(profile["name"] == active_profile for profile in profiles):
+            active_profile = profiles[0]["name"]
+
+        normalized = {
+            "enforce": bool(printer_volume.get("enforce", False)),
+            "activeProfile": active_profile,
+            "profiles": profiles,
+        }
+        self.config_data["printerVolume"] = normalized
+        return normalized
+
+    def collect_printer_volume_config(self) -> dict:
+        printer_volume = self.ensure_printer_volume_config()
+        active_profile = self.printer_active_profile_var.get().strip() or printer_volume["activeProfile"]
+        if not any(profile["name"] == active_profile for profile in printer_volume["profiles"]):
+            active_profile = printer_volume["profiles"][0]["name"]
+
+        return {
+            "enforce": bool(self.printer_enforce_var.get()),
+            "activeProfile": active_profile,
+            "profiles": printer_volume["profiles"],
+        }
+
+    def refresh_printer_profile_selector(self) -> None:
+        printer_volume = self.ensure_printer_volume_config()
+        profile_names = [profile["name"] for profile in printer_volume["profiles"]]
+        self.printer_profile_selector.configure(values=profile_names)
+
+        active_profile = printer_volume["activeProfile"] if profile_names else ""
+        self.printer_active_profile_var.set(active_profile)
+        self.load_selected_printer_profile()
+
+    def load_selected_printer_profile(self) -> None:
+        printer_volume = self.ensure_printer_volume_config()
+        profile_name = self.printer_active_profile_var.get().strip()
+        profile = next(
+            (candidate for candidate in printer_volume["profiles"] if candidate["name"] == profile_name),
+            printer_volume["profiles"][0] if printer_volume["profiles"] else None,
+        )
+        if profile is None:
+            self.printer_name_var.set("")
+            self.printer_width_var.set("")
+            self.printer_depth_var.set("")
+            self.printer_height_var.set("")
+            return
+
+        self.printer_active_profile_var.set(profile["name"])
+        printer_volume["activeProfile"] = profile["name"]
+        self.printer_name_var.set(profile["name"])
+        self.printer_width_var.set(str(profile["width"]))
+        self.printer_depth_var.set(str(profile["depth"]))
+        self.printer_height_var.set(str(profile["height"]))
+
+    def apply_printer_profile_changes(self) -> None:
+        try:
+            printer_volume = self.ensure_printer_volume_config()
+            current_name = self.printer_active_profile_var.get().strip()
+            profile = next(
+                (candidate for candidate in printer_volume["profiles"] if candidate["name"] == current_name),
+                None,
+            )
+            if profile is None:
+                return
+
+            new_name = self.printer_name_var.get().strip() or current_name
+            width = self.parse_int(self.printer_width_var.get(), "largeur imprimante")
+            depth = self.parse_int(self.printer_depth_var.get(), "profondeur imprimante")
+            height = self.parse_int(self.printer_height_var.get(), "hauteur imprimante")
+
+            if any(candidate["name"] == new_name and candidate is not profile for candidate in printer_volume["profiles"]):
+                raise ValueError(f"Un profil imprimante existe deja : {new_name}")
+
+            profile.update({
+                "name": new_name,
+                "width": max(1, width),
+                "depth": max(1, depth),
+                "height": max(1, height),
+            })
+            printer_volume["activeProfile"] = new_name
+            self.refresh_printer_profile_selector()
+            self.printer_active_profile_var.set(new_name)
+            self.load_selected_printer_profile()
+            self.log(f"Profil imprimante mis a jour : {new_name}")
+        except ValueError as error:
+            messagebox.showerror("VASO-Admin", str(error))
+
+    def add_printer_profile(self) -> None:
+        printer_volume = self.ensure_printer_volume_config()
+        existing_names = {profile["name"] for profile in printer_volume["profiles"]}
+        base_name = "Nouvelle imprimante"
+        counter = 1
+        candidate = base_name
+        while candidate in existing_names:
+            counter += 1
+            candidate = f"{base_name} {counter}"
+
+        printer_volume["profiles"].append(
+            {
+                "name": candidate,
+                "width": 220,
+                "depth": 220,
+                "height": 250,
+            }
+        )
+        printer_volume["activeProfile"] = candidate
+        self.refresh_printer_profile_selector()
+        self.printer_active_profile_var.set(candidate)
+        self.load_selected_printer_profile()
+        self.log(f"Profil imprimante ajoute : {candidate}")
+
+    def remove_printer_profile(self) -> None:
+        printer_volume = self.ensure_printer_volume_config()
+        if len(printer_volume["profiles"]) <= 1:
+            self.log("Le dernier profil imprimante ne peut pas etre supprime.")
+            return
+
+        current_name = self.printer_active_profile_var.get().strip()
+        printer_volume["profiles"] = [
+            profile for profile in printer_volume["profiles"] if profile["name"] != current_name
+        ]
+        printer_volume["activeProfile"] = printer_volume["profiles"][0]["name"]
+        self.refresh_printer_profile_selector()
+        self.log(f"Profil imprimante supprime : {current_name}")
 
     def refresh_colors_listbox(self) -> None:
         self.colors_listbox.delete(0, "end")
@@ -767,6 +991,14 @@ class VasoAdminApp(tk.Tk):
         if self.hero_preview_is_animating:
             return
 
+        if Image is None or ImageOps is None or ImageTk is None:
+            self.display_preview_image(
+                None,
+                "Pillow n'est pas installe. Lancez : python3 -m pip install -r admin/requirements.txt",
+                title="Pillow requis",
+            )
+            return
+
         image_path = self.get_selected_hero_path()
         if image_path is None:
             self.display_preview_image(None, "Selectionnez une image hero pour afficher son apercu.")
@@ -811,7 +1043,11 @@ class VasoAdminApp(tk.Tk):
 
     def start_hero_preview_animation(self) -> None:
         if Image is None or ImageOps is None or ImageTk is None:
-            self.display_preview_image(None, "Pillow est requis pour l'aperçu hero anime.")
+            self.display_preview_image(
+                None,
+                "Pillow n'est pas installe. Lancez : python3 -m pip install -r admin/requirements.txt",
+                title="Pillow requis",
+            )
             return
 
         enabled_paths = self.get_enabled_hero_paths()

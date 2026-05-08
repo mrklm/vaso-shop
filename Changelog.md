@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.41] - 2026-05-08
+
+### Modifié
+- Ajoute la gestion des imprimantes et prepare Pillow pour l'aperçu hero de VASO-Admin
+
 ## [1.1.40] - 2026-05-08
 
 ### Modifié
