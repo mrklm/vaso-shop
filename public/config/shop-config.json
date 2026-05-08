@@ -96,8 +96,8 @@
     {
       "id": "natural-translucent",
       "label": "Naturel (translucide)",
-      "hex": "#f7edd5",
-      "opacity": 0.24,
+      "hex": "#f7f4ee",
+      "opacity": 1,
       "available": true
     },
     {
@@ -115,25 +115,25 @@
     {
       "id": "pastel-yellow",
       "label": "Jaune Pastel",
-      "hex": "#ffe97a",
+      "hex": "#fff4b3",
       "available": true
     },
     {
       "id": "ral-1016",
       "label": "Jaune RAL 1016",
-      "hex": "#f5f328",
+      "hex": "#fff200",
       "available": true
     },
     {
       "id": "fluorescent-orange",
       "label": "Orange fluo",
-      "hex": "#f7ff00",
+      "hex": "#ff6500",
       "available": true
     },
     {
       "id": "gold-orange",
       "label": "Orange OR",
-      "hex": "#ff7a00",
+      "hex": "#ff9a24",
       "available": true
     },
     {
@@ -151,7 +151,7 @@
     {
       "id": "ral-4008",
       "label": "Violet RAL 4008",
-      "hex": "#b05f8b",
+      "hex": "#c47caf",
       "available": true
     },
     {
