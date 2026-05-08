@@ -35,6 +35,9 @@ export interface ShopMessagesConfig {
   warningPla: string;
   contactPrompt: string;
   contactButtonLabel: string;
+  contactEmail: string;
+  contactEmailSubject: string;
+  contactEmailBody: string;
 }
 
 export interface ShopPricingConfig {
@@ -312,6 +315,11 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
       warningPla: normalizeString(rawMessages.warningPla).trim(),
       contactPrompt: normalizeString(rawMessages.contactPrompt).trim() || "Vous avez des questions ?",
       contactButtonLabel: normalizeString(rawMessages.contactButtonLabel).trim() || "Contactez nous",
+      contactEmail: normalizeString(rawMessages.contactEmail).trim(),
+      contactEmailSubject: normalizeString(rawMessages.contactEmailSubject).trim() || "Contact VASO SHOP",
+      contactEmailBody:
+        normalizeString(rawMessages.contactEmailBody) ||
+        "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :\n",
     },
     shopStatus: {
       state: statusState,

@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.47] - 2026-05-08
+
+### Modifié
+- Ajoute un contact mailto configurable avec sujet, corps et reprise automatique du vase
+
 ## [1.1.46] - 2026-05-08
 
 ### Modifié

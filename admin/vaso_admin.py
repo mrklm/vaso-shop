@@ -136,6 +136,8 @@ class VasoAdminApp(tk.Tk):
         self.temporary_notice_var = tk.StringVar()
         self.contact_prompt_var = tk.StringVar()
         self.contact_button_label_var = tk.StringVar()
+        self.contact_email_var = tk.StringVar()
+        self.contact_email_subject_var = tk.StringVar()
 
         self.price_euros_var = tk.StringVar()
         self.price_cents_var = tk.StringVar()
@@ -252,6 +254,7 @@ class VasoAdminApp(tk.Tk):
             self.temporary_notice_text,
             self.atelier_note_text,
             self.warning_text,
+            self.contact_email_body_text,
             self.shipping_unsupported_text,
             self.output_text,
         ]
@@ -290,12 +293,12 @@ class VasoAdminApp(tk.Tk):
         self.temporary_notice_text.grid(row=5, column=1, sticky="nsew", pady=4)
 
         ttk.Label(frame, text="Texte atelier").grid(row=6, column=0, sticky="nw")
-        self.atelier_note_text = tk.Text(frame, height=4, wrap="word")
-        self.atelier_note_text.grid(row=6, column=1, sticky="nsew", pady=4)
+        self.atelier_note_text = tk.Text(frame, height=1, wrap="word")
+        self.atelier_note_text.grid(row=6, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Avertissement PLA").grid(row=7, column=0, sticky="nw")
-        self.warning_text = tk.Text(frame, height=6, wrap="word")
-        self.warning_text.grid(row=7, column=1, sticky="nsew", pady=4)
+        self.warning_text = tk.Text(frame, height=1, wrap="word")
+        self.warning_text.grid(row=7, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Question contact").grid(row=8, column=0, sticky="w")
         ttk.Entry(frame, textvariable=self.contact_prompt_var).grid(row=8, column=1, sticky="ew", pady=4)
@@ -303,10 +306,20 @@ class VasoAdminApp(tk.Tk):
         ttk.Label(frame, text="Libelle bouton contact").grid(row=9, column=0, sticky="w")
         ttk.Entry(frame, textvariable=self.contact_button_label_var).grid(row=9, column=1, sticky="ew", pady=4)
 
+        ttk.Label(frame, text="E-mail contact").grid(row=10, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.contact_email_var).grid(row=10, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="Sujet contact").grid(row=11, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.contact_email_subject_var).grid(row=11, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="Corps contact").grid(row=12, column=0, sticky="nw")
+        self.contact_email_body_text = tk.Text(frame, height=5, wrap="word")
+        self.contact_email_body_text.grid(row=12, column=1, sticky="ew", pady=4)
+
         frame.rowconfigure(2, weight=0)
         frame.rowconfigure(5, weight=0)
-        frame.rowconfigure(6, weight=1)
-        frame.rowconfigure(7, weight=1)
+        frame.rowconfigure(6, weight=0)
+        frame.rowconfigure(7, weight=0)
 
     def build_pricing_tab(self) -> None:
         frame = self.pricing_frame
@@ -584,11 +597,20 @@ class VasoAdminApp(tk.Tk):
         self.temporary_notice_var.set(messages.get("temporaryNotice", ""))
         self.contact_prompt_var.set(messages.get("contactPrompt", "Vous avez des questions ?"))
         self.contact_button_label_var.set(messages.get("contactButtonLabel", "Contactez nous"))
+        self.contact_email_var.set(messages.get("contactEmail", ""))
+        self.contact_email_subject_var.set(messages.get("contactEmailSubject", "Contact VASO SHOP"))
 
         self.write_text(self.status_message_text, shop_status.get("message", ""))
         self.write_text(self.temporary_notice_text, messages.get("temporaryNotice", ""))
         self.write_text(self.atelier_note_text, messages.get("atelierNote", ""))
         self.write_text(self.warning_text, messages.get("warningPla", ""))
+        self.write_text(
+            self.contact_email_body_text,
+            messages.get(
+                "contactEmailBody",
+                "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :\n",
+            ),
+        )
         self.write_text(self.shipping_unsupported_text, shipping.get("unsupportedMessage", ""))
 
         legacy_prices_cents = pricing.get("pricesCents", {})
@@ -626,6 +648,9 @@ class VasoAdminApp(tk.Tk):
             "warningPla": self.warning_text.get("1.0", "end").strip(),
             "contactPrompt": self.contact_prompt_var.get().strip(),
             "contactButtonLabel": self.contact_button_label_var.get().strip(),
+            "contactEmail": self.contact_email_var.get().strip(),
+            "contactEmailSubject": self.contact_email_subject_var.get().strip(),
+            "contactEmailBody": self.contact_email_body_text.get("1.0", "end").strip(),
         }
         self.config_data["pricing"] = {
             "priceCents": self.parse_price_cents(),

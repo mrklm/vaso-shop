@@ -44,6 +44,45 @@ function formatShippingOptionDisplay(optionLabel: string, optionProvider: string
   return `${optionLabel} · ${optionProvider}`;
 }
 
+function createShopContactMailto(email: string, subject: string, body: string): string {
+  const normalizedEmail = email.trim();
+  const encodedSubject = encodeURIComponent(subject.trim() || "Contact VASO SHOP");
+  const encodedBody = encodeURIComponent(body);
+  return `mailto:${normalizedEmail}?subject=${encodedSubject}&body=${encodedBody}`;
+}
+
+function buildShopContactBody(
+  bodyTemplate: string,
+  vaseDetails: {
+    seed: string;
+    heightMm: number;
+    minDiameterMm: number;
+    maxDiameterMm: number;
+    colorLabel: string;
+  } | null,
+): string {
+  const normalizedTemplate =
+    bodyTemplate.trim().length > 0
+      ? bodyTemplate.trimEnd()
+      : "Bonjour,\n\nJe vous contacte depuis VASO SHOP.\n\nMessage :";
+
+  if (!vaseDetails) {
+    return `${normalizedTemplate}\n`;
+  }
+
+  return [
+    normalizedTemplate,
+    "",
+    "Vase selectionne automatiquement :",
+    `N° de vase : ${vaseDetails.seed}`,
+    `Couleur : ${vaseDetails.colorLabel}`,
+    `Hauteur : ${vaseDetails.heightMm} mm`,
+    `Diamètre minimum : ${vaseDetails.minDiameterMm} mm`,
+    `Diamètre maximum : ${vaseDetails.maxDiameterMm} mm`,
+    "",
+  ].join("\n");
+}
+
 function App() {
   const setShowGrid = useUIStore((s) => s.setShowGrid);
   const setWireframe = useUIStore((s) => s.setWireframe);
@@ -93,6 +132,7 @@ function App() {
     () => entries.find((entry) => entry.id === selectedEntryId) ?? null,
     [entries, selectedEntryId],
   );
+  const contactEntry = selectedEntry ?? currentEntry;
   const canOrder = shopConfig ? isShopCheckoutAllowed(shopConfig) : false;
   const availableColors = useMemo(
     () => shopConfig?.colors.filter((color) => color.available) ?? [],
@@ -162,6 +202,21 @@ function App() {
     : null;
   const orderTotalCents = productPriceCents + shippingPriceCents;
   const orderTotalLabel = formatShopPriceFromCents(orderTotalCents);
+  const contactEmail = shopConfig?.messages.contactEmail?.trim() ?? "";
+  const contactEmailSubject = shopConfig?.messages.contactEmailSubject?.trim() || "Contact VASO SHOP";
+  const contactEmailBody =
+    shopConfig?.messages.contactEmailBody ||
+    "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :\n";
+  const contactBodyWithModel = buildShopContactBody(contactEmailBody, contactEntry
+    ? {
+        seed: String(contactEntry.seed),
+        heightMm: contactEntry.heightMm,
+        minDiameterMm: contactEntry.minDiameterMm,
+        maxDiameterMm: contactEntry.maxDiameterMm,
+        colorLabel: selectedColor?.label ?? "A choisir",
+      }
+    : null);
+  const canContactShop = contactEmail.length > 0;
   const isClientInfoComplete =
     customerLastName.trim().length > 0 &&
     customerFirstName.trim().length > 0 &&
@@ -615,7 +670,23 @@ function App() {
               </p>
               <div className="shop-story-contact">
                 <span>{shopConfig.messages.contactPrompt}</span>
-                <button className="shop-contact-button" type="button">
+                <button
+                  className="shop-contact-button"
+                  type="button"
+                  disabled={!canContactShop}
+                  onClick={() => {
+                    if (!canContactShop) {
+                      return;
+                    }
+
+                    window.location.href = createShopContactMailto(
+                      contactEmail,
+                      contactEmailSubject,
+                      contactBodyWithModel,
+                    );
+                  }}
+                  title={canContactShop ? contactEmail : "Adresse mail de contact non renseignee"}
+                >
                   {shopConfig.messages.contactButtonLabel}
                 </button>
               </div>
