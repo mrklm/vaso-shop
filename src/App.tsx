@@ -926,6 +926,7 @@ function App() {
                           mode="preview"
                           colorOverride={selectedColor?.previewHex ?? selectedColor?.hex ?? "#d9d2c7"}
                           colorOpacity={selectedColor?.opacity ?? 1}
+                          colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
                         />
                       </div>
                     </div>

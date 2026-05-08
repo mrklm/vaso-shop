@@ -97,15 +97,17 @@
       "id": "natural-translucent",
       "label": "Naturel (translucide)",
       "hex": "#efe4cc",
-      "previewHex": "#e7ddd0",
-      "opacity": 1,
+      "previewHex": "#fffaf2",
+      "opacity": 0.85,
+      "previewEmissiveIntensity": 0.22,
       "available": true
     },
     {
       "id": "snow-white",
       "label": "Blanc neige",
       "hex": "#ffffff",
-      "previewHex": "#e7ddd0",
+      "previewHex": "#fffaf2",
+      "previewEmissiveIntensity": 0.18,
       "available": true
     },
     {

@@ -8,6 +8,7 @@ interface VaseMeshProps {
   shading: number;
   color: string;
   opacity: number;
+  emissiveIntensity?: number;
   wireframe: boolean;
   flatShading: boolean;
   rotationMode: "camera" | "vase";
@@ -19,6 +20,7 @@ export function VaseMesh({
   shading,
   color,
   opacity,
+  emissiveIntensity = 0,
   wireframe,
   flatShading,
   rotationMode,
@@ -69,6 +71,8 @@ export function VaseMesh({
       <meshStandardMaterial
         ref={materialRef}
         color={color}
+        emissive={color}
+        emissiveIntensity={emissiveIntensity}
         roughness={roughness}
         metalness={metalness}
         transparent={opacity < 0.999}

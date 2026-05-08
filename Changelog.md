@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.54] - 2026-05-08
+
+### Modifié
+- Blanchit encore les aperçus Naturel et Blanc neige du mini viewer couleur
+
 ## [1.1.53] - 2026-05-08
 
 ### Modifié
