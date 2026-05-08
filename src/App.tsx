@@ -729,7 +729,7 @@ function App() {
               </button>
             </div>
             <div className="shop-viewer-frame">
-              <VaseViewer3D colorOpacity={selectedColor?.opacity ?? 1} />
+              <VaseViewer3D />
             </div>
           </div>
 

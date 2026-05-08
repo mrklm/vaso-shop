@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.51] - 2026-05-08
+
+### Modifié
+- Repare les beises de codex pour le rendu translucide au seul apercu couleur sans affecter le viewer principal
+
 ## [1.1.50] - 2026-05-08
 
 ### Modifié
