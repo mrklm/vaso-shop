@@ -1,7 +1,7 @@
 {
   "name": "vaso-shop",
   "private": true,
-  "version": "1.1.56",
+  "version": "1.1.57",
   "description": "Catalogue boutique de vases générés pour précommande",
   "author": {
     "name": "mrklm",

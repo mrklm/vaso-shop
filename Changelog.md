@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.57] - 2026-05-09
+
+### Modifié
+- Separe les reglages mailto dans VASO-Admin et rend editable la note sous l'aperçu couleur
+
 ## [1.1.56] - 2026-05-09
 
 ### Modifié

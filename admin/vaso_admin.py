@@ -244,6 +244,7 @@ class VasoAdminApp(tk.Tk):
 
         self.general_frame = ttk.Frame(notebook, padding=8)
         self.pricing_frame = ttk.Frame(notebook, padding=8)
+        self.contact_frame = ttk.Frame(notebook, padding=8)
         self.printer_frame = ttk.Frame(notebook, padding=8)
         self.colors_frame = ttk.Frame(notebook, padding=8)
         self.hero_frame = ttk.Frame(notebook, padding=8)
@@ -251,6 +252,7 @@ class VasoAdminApp(tk.Tk):
 
         notebook.add(self.general_frame, text="Boutique")
         notebook.add(self.pricing_frame, text="Tarifs")
+        notebook.add(self.contact_frame, text="Contact courriel")
         notebook.add(self.printer_frame, text="Imprimante")
         notebook.add(self.colors_frame, text="Couleurs")
         notebook.add(self.hero_frame, text="Hero")
@@ -258,6 +260,7 @@ class VasoAdminApp(tk.Tk):
 
         self.build_general_tab()
         self.build_pricing_tab()
+        self.build_contact_tab()
         self.build_printer_tab()
         self.build_colors_tab()
         self.build_hero_tab()
@@ -268,6 +271,7 @@ class VasoAdminApp(tk.Tk):
             self.temporary_notice_text,
             self.atelier_note_text,
             self.warning_text,
+            self.color_preview_note_text,
             self.contact_email_body_text,
             self.shipping_unsupported_text,
             self.output_text,
@@ -328,26 +332,46 @@ class VasoAdminApp(tk.Tk):
         self.warning_scrollbar.grid(row=0, column=1, sticky="ns")
         self.warning_text.configure(yscrollcommand=self.warning_scrollbar.set)
 
-        ttk.Label(frame, text="Question contact").grid(row=8, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.contact_prompt_var).grid(row=8, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Libelle bouton contact").grid(row=9, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.contact_button_label_var).grid(row=9, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="E-mail contact").grid(row=10, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.contact_email_var).grid(row=10, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Sujet contact").grid(row=11, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.contact_email_subject_var).grid(row=11, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Corps contact").grid(row=12, column=0, sticky="nw")
-        self.contact_email_body_text = tk.Text(frame, height=5, wrap="word")
-        self.contact_email_body_text.grid(row=12, column=1, sticky="ew", pady=4)
+        ttk.Label(frame, text="Avertissement couleur").grid(row=8, column=0, sticky="nw")
+        color_note_frame = ttk.Frame(frame)
+        color_note_frame.grid(row=8, column=1, sticky="ew", pady=4)
+        color_note_frame.columnconfigure(0, weight=1)
+        color_note_frame.rowconfigure(0, weight=1)
+        self.color_preview_note_text = tk.Text(color_note_frame, height=3, wrap="word")
+        self.color_preview_note_text.grid(row=0, column=0, sticky="ew")
+        self.color_preview_note_scrollbar = ttk.Scrollbar(
+            color_note_frame,
+            orient="vertical",
+            command=self.color_preview_note_text.yview,
+        )
+        self.color_preview_note_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.color_preview_note_text.configure(yscrollcommand=self.color_preview_note_scrollbar.set)
 
         frame.rowconfigure(2, weight=0)
         frame.rowconfigure(5, weight=0)
         frame.rowconfigure(6, weight=0)
         frame.rowconfigure(7, weight=0)
+        frame.rowconfigure(8, weight=0)
+
+    def build_contact_tab(self) -> None:
+        frame = self.contact_frame
+        frame.columnconfigure(1, weight=1)
+
+        ttk.Label(frame, text="Question contact").grid(row=0, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.contact_prompt_var).grid(row=0, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="Libelle bouton contact").grid(row=1, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.contact_button_label_var).grid(row=1, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="E-mail contact").grid(row=2, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.contact_email_var).grid(row=2, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="Sujet contact").grid(row=3, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.contact_email_subject_var).grid(row=3, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="Corps contact").grid(row=4, column=0, sticky="nw")
+        self.contact_email_body_text = tk.Text(frame, height=5, wrap="word")
+        self.contact_email_body_text.grid(row=4, column=1, sticky="ew", pady=4)
 
     def build_pricing_tab(self) -> None:
         frame = self.pricing_frame
@@ -646,6 +670,13 @@ class VasoAdminApp(tk.Tk):
         self.write_text(self.atelier_note_text, messages.get("atelierNote", ""))
         self.write_text(self.warning_text, messages.get("warningPla", ""))
         self.write_text(
+            self.color_preview_note_text,
+            messages.get(
+                "colorPreviewNote",
+                "Les aperçus 3D vous donnent une belle idée de la teinte, avec de légères nuances possibles selon la lumière, la matière et l'impression finale.",
+            ),
+        )
+        self.write_text(
             self.contact_email_body_text,
             messages.get(
                 "contactEmailBody",
@@ -690,6 +721,7 @@ class VasoAdminApp(tk.Tk):
             "temporaryNotice": self.temporary_notice_text.get("1.0", "end").strip(),
             "atelierNote": self.atelier_note_text.get("1.0", "end").strip(),
             "warningPla": self.warning_text.get("1.0", "end").strip(),
+            "colorPreviewNote": self.color_preview_note_text.get("1.0", "end").strip(),
             "contactPrompt": self.contact_prompt_var.get().strip(),
             "contactButtonLabel": self.contact_button_label_var.get().strip(),
             "contactEmail": self.contact_email_var.get().strip(),

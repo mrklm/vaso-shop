@@ -36,6 +36,7 @@ export interface ShopMessagesConfig {
   temporaryNotice: string;
   atelierNote: string;
   warningPla: string;
+  colorPreviewNote: string;
   contactPrompt: string;
   contactButtonLabel: string;
   contactEmail: string;
@@ -322,6 +323,9 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
       temporaryNotice: normalizeString(rawMessages.temporaryNotice).trim(),
       atelierNote: normalizeString(rawMessages.atelierNote).trim(),
       warningPla: normalizeString(rawMessages.warningPla).trim(),
+      colorPreviewNote:
+        normalizeString(rawMessages.colorPreviewNote).trim() ||
+        "Les aperçus 3D vous donnent une belle idée de la teinte, avec de légères nuances possibles selon la lumière, la matière et l'impression finale.",
       contactPrompt: normalizeString(rawMessages.contactPrompt).trim() || "Vous avez des questions ?",
       contactButtonLabel: normalizeString(rawMessages.contactButtonLabel).trim() || "Contactez nous",
       contactEmail: normalizeString(rawMessages.contactEmail).trim(),
