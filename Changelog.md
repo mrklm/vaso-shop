@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.49] - 2026-05-08
+
+### Modifié
+- Ajoute un aperçu 3D tournant de la couleur sélectionnée dans la commande
+
 ## [1.1.48] - 2026-05-08
 
 ### Modifié

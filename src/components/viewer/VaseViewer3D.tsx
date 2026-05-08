@@ -321,7 +321,12 @@ function ScreenshotBridge() {
   return null;
 }
 
-export function VaseViewer3D() {
+interface VaseViewer3DProps {
+  mode?: "main" | "preview";
+  colorOverride?: string;
+}
+
+export function VaseViewer3D({ mode = "main", colorOverride }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
   const randomize = useVaseStore((s) => s.randomize);
@@ -340,6 +345,12 @@ export function VaseViewer3D() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const lastTapRef = useRef(0);
   const paramsKey = JSON.stringify(params);
+  const isPreview = mode === "preview";
+  const resolvedColor = colorOverride ?? vaseColor;
+  const resolvedWireframe = isPreview ? false : wireframe;
+  const resolvedFlatShading = isPreview ? false : flatShading;
+  const resolvedRotationMode = isPreview ? "vase" : rotationMode;
+  const resolvedRotationSpeed = isPreview ? 0.35 : rotationSpeed;
 
   const handleDoubleTap = useCallback(
     (e: React.TouchEvent) => {
@@ -354,9 +365,17 @@ export function VaseViewer3D() {
   );
 
   return (
-    <div className="viewer-3d" onTouchEnd={handleDoubleTap}>
+    <div
+      className={`viewer-3d${isPreview ? " viewer-3d-preview" : ""}`}
+      onTouchEnd={isPreview ? undefined : handleDoubleTap}
+    >
       <Canvas
-        camera={{ position: [220, 160, 220], fov: 45, near: 0.1, far: 2000 }}
+        camera={{
+          position: isPreview ? [175, 130, 175] : [220, 160, 220],
+          fov: 45,
+          near: 0.1,
+          far: 2000,
+        }}
         style={{ background: "var(--color-bg)" }}
         gl={{ preserveDrawingBuffer: true }}
         shadows
@@ -384,11 +403,11 @@ export function VaseViewer3D() {
           <VaseMesh
             meshData={meshData}
             shading={shading}
-            color={vaseColor}
-            wireframe={wireframe}
-            flatShading={flatShading}
-            rotationMode={rotationMode}
-            rotationSpeed={rotationSpeed}
+            color={resolvedColor}
+            wireframe={resolvedWireframe}
+            flatShading={resolvedFlatShading}
+            rotationMode={resolvedRotationMode}
+            rotationSpeed={resolvedRotationSpeed}
           />
         )}
 
@@ -405,19 +424,23 @@ export function VaseViewer3D() {
 
         {/* <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={300} blur={2} far={200} /> */}
 
-        <OrbitControls
-          ref={controlsRef}
-          enableDamping
-          dampingFactor={0.1}
-          minDistance={50}
-          maxDistance={500}
-        />
-        <ScreenshotBridge />
-        <KeyboardControls controlsRef={controlsRef} />
-        <Autoplay controlsRef={controlsRef} paramsKey={paramsKey} rotationMode={rotationMode} />
+        {!isPreview && (
+          <>
+            <OrbitControls
+              ref={controlsRef}
+              enableDamping
+              dampingFactor={0.1}
+              minDistance={50}
+              maxDistance={500}
+            />
+            <ScreenshotBridge />
+            <KeyboardControls controlsRef={controlsRef} />
+            <Autoplay controlsRef={controlsRef} paramsKey={paramsKey} rotationMode={rotationMode} />
+          </>
+        )}
 
-        {showClipping && <ClippingPlane heightPercent={clippingHeight} maxHeight={params.heightMm} />}
-        {showGrid && (
+        {!isPreview && showClipping && <ClippingPlane heightPercent={clippingHeight} maxHeight={params.heightMm} />}
+        {!isPreview && showGrid && (
           <gridHelper
             args={[300, 30, "#333333", "#333333"]}
             position={[0, -params.heightMm / 2, 0]}

@@ -301,6 +301,10 @@ function App() {
   }, [availableColors, selectedColorId, setSelectedColorId]);
 
   useEffect(() => {
+    setVaseColor(selectedColor?.hex ?? "#d9d2c7");
+  }, [selectedColor?.hex, setVaseColor]);
+
+  useEffect(() => {
     if (heroGalleryImages.length <= 1) {
       setHeroGalleryIndex(0);
       setHeroGalleryPreviousIndex(null);
@@ -912,6 +916,18 @@ function App() {
                     </button>
                   ) : (
                     <span className="shop-step-hint">Validez d'abord le modele</span>
+                  )}
+                  {canAccessColorStep && (
+                    <div className="shop-color-preview-card">
+                      <span className="shop-panel-title">Aperçu 3D couleur</span>
+                      <strong>{selectedColorLabel}</strong>
+                      <div className="shop-color-preview-viewer">
+                        <VaseViewer3D
+                          mode="preview"
+                          colorOverride={selectedColor?.hex ?? "#d9d2c7"}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               </article>
