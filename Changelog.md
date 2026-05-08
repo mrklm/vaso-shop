@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.43] - 2026-05-08
+
+### Modifié
+- Corrige le chemin des images hero dans l'aperçu de VASO-Admin
+
 ## [1.1.42] - 2026-05-08
 
 ### Modifié

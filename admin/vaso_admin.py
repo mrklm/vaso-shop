@@ -952,12 +952,19 @@ class VasoAdminApp(tk.Tk):
             "fadeOutMs": max(0, self.parse_int(self.hero_fade_out_ms_var.get(), "fade out hero")),
         }
 
+    def resolve_public_asset_path(self, relative_path: str) -> Path:
+        normalized_path = relative_path.strip().lstrip("/")
+        if normalized_path.startswith("public/"):
+            return REPO_ROOT / normalized_path
+
+        return REPO_ROOT / "public" / normalized_path
+
     def get_selected_hero_path(self) -> Path | None:
         relative_path = self.hero_path_var.get().strip()
         if not relative_path:
             return None
 
-        return REPO_ROOT / relative_path
+        return self.resolve_public_asset_path(relative_path)
 
     def get_enabled_hero_paths(self) -> list[Path]:
         enabled_paths: list[Path] = []
@@ -965,7 +972,7 @@ class VasoAdminApp(tk.Tk):
             if not hero_image.get("enabled", True):
                 continue
 
-            path = REPO_ROOT / str(hero_image.get("path", "")).strip()
+            path = self.resolve_public_asset_path(str(hero_image.get("path", "")).strip())
             if path.is_file():
                 enabled_paths.append(path)
 
@@ -1198,7 +1205,7 @@ class VasoAdminApp(tk.Tk):
 
         hero_image = self.config_data["heroImages"].pop(selection[0])
         relative_path = hero_image.get("path", "")
-        absolute_path = REPO_ROOT / relative_path
+        absolute_path = self.resolve_public_asset_path(relative_path)
         if absolute_path.is_file() and absolute_path.is_relative_to(HERO_DIR.parent):
             try:
                 absolute_path.unlink()
