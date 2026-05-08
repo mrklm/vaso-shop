@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.46] - 2026-05-08
+
+### Modifié
+- Agrandit et recentre l'aperçu hero de VASO-Admin avec une liste mieux équilibrée
+
 ## [1.1.45] - 2026-05-08
 
 ### Modifié

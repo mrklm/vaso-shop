@@ -29,7 +29,7 @@ ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
 DEFAULT_HERO_TRANSITION_MS = 8200
 DEFAULT_HERO_FADE_IN_MS = 3200
 DEFAULT_HERO_FADE_OUT_MS = 3200
-HERO_PREVIEW_SIZE = (280, 280)
+HERO_PREVIEW_SIZE = (400, 520)
 DEFAULT_PRINTER_PROFILES = [
     {"name": "Alfawise U30", "width": 220, "depth": 220, "height": 250},
     {"name": "Ender 5 Pro", "width": 220, "depth": 220, "height": 300},
@@ -253,7 +253,6 @@ class VasoAdminApp(tk.Tk):
             self.atelier_note_text,
             self.warning_text,
             self.shipping_unsupported_text,
-            self.shipping_countries_text,
             self.output_text,
         ]
         self.tk_listbox_widgets = [self.colors_listbox, self.hero_listbox]
@@ -311,10 +310,16 @@ class VasoAdminApp(tk.Tk):
 
     def build_pricing_tab(self) -> None:
         frame = self.pricing_frame
-        frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(0, weight=1)
+        frame.rowconfigure(0, weight=1)
+        frame.rowconfigure(2, weight=1)
 
-        ttk.Label(frame, text="Prix").grid(row=0, column=0, sticky="w")
-        price_row = ttk.Frame(frame)
+        content = ttk.Frame(frame)
+        content.grid(row=1, column=0, sticky="n")
+        content.columnconfigure(1, weight=1)
+
+        ttk.Label(content, text="Prix").grid(row=0, column=0, sticky="w")
+        price_row = ttk.Frame(content)
         price_row.grid(row=0, column=1, sticky="w", pady=4)
         ttk.Entry(price_row, textvariable=self.price_euros_var, width=8).pack(side="left")
         ttk.Label(price_row, text="€").pack(side="left", padx=(6, 4))
@@ -328,15 +333,9 @@ class VasoAdminApp(tk.Tk):
             state="readonly",
         ).pack(side="left")
 
-        ttk.Label(frame, text="Message pays non geres").grid(row=1, column=0, sticky="nw")
-        self.shipping_unsupported_text = tk.Text(frame, height=2, wrap="word")
-        self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Grille livraison (JSON)").grid(row=2, column=0, sticky="nw")
-        self.shipping_countries_text = tk.Text(frame, height=16, wrap="none")
-        self.shipping_countries_text.grid(row=2, column=1, sticky="nsew", pady=4)
-
-        frame.rowconfigure(2, weight=1)
+        ttk.Label(content, text="Message pays non geres").grid(row=1, column=0, sticky="nw", pady=(12, 0))
+        self.shipping_unsupported_text = tk.Text(content, height=2, wrap="word", width=56)
+        self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=(12, 0))
 
     def build_colors_tab(self) -> None:
         frame = self.colors_frame
@@ -425,29 +424,51 @@ class VasoAdminApp(tk.Tk):
 
     def build_hero_tab(self) -> None:
         frame = self.hero_frame
+        frame.columnconfigure(0, weight=0)
         frame.columnconfigure(1, weight=1)
-        frame.columnconfigure(2, weight=1)
+        frame.columnconfigure(2, weight=0)
         frame.rowconfigure(0, weight=1)
 
-        left = ttk.Frame(frame)
-        left.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
         controls = ttk.Frame(frame)
-        controls.grid(row=0, column=1, sticky="nsew", padx=(0, 10))
+        controls.grid(row=0, column=0, sticky="nw", padx=(0, 18))
         controls.columnconfigure(1, weight=1)
         preview = ttk.Frame(frame)
-        preview.grid(row=0, column=2, sticky="nsew")
+        preview.grid(row=0, column=1, sticky="n", padx=(0, 18))
         preview.columnconfigure(0, weight=1)
+        list_panel = ttk.Frame(frame)
+        list_panel.grid(row=0, column=2, sticky="n")
+        list_panel.columnconfigure(0, weight=1)
+        list_panel.rowconfigure(1, weight=1)
 
-        self.hero_listbox = tk.Listbox(left, width=34, exportselection=False)
-        self.hero_listbox.pack(fill="y", expand=True)
+        ttk.Label(list_panel, text="Images hero").grid(row=0, column=0, pady=(0, 4))
+
+        listbox_frame = ttk.Frame(list_panel)
+        listbox_frame.grid(row=1, column=0, sticky="n")
+        listbox_frame.columnconfigure(0, weight=1)
+        listbox_frame.rowconfigure(0, weight=1)
+
+        self.hero_listbox = tk.Listbox(
+            listbox_frame,
+            width=32,
+            height=12,
+            exportselection=False,
+            xscrollcommand=lambda *args: self.hero_listbox_xscroll.set(*args),
+            yscrollcommand=lambda *args: self.hero_listbox_yscroll.set(*args),
+        )
+        self.hero_listbox.grid(row=0, column=0, sticky="nsew")
         self.hero_listbox.bind("<<ListboxSelect>>", lambda _event: self.load_selected_hero_image())
 
-        hero_buttons = ttk.Frame(left)
-        hero_buttons.pack(fill="x", pady=(8, 0))
-        ttk.Button(hero_buttons, text="Ajouter des images", command=self.add_hero_images).pack(side="left")
-        ttk.Button(hero_buttons, text="Supprimer", command=self.remove_hero_image).pack(side="left", padx=4)
-        ttk.Button(hero_buttons, text="Monter", command=lambda: self.move_hero_image(-1)).pack(side="left")
-        ttk.Button(hero_buttons, text="Descendre", command=lambda: self.move_hero_image(1)).pack(side="left", padx=4)
+        self.hero_listbox_yscroll = ttk.Scrollbar(listbox_frame, orient="vertical", command=self.hero_listbox.yview)
+        self.hero_listbox_yscroll.grid(row=0, column=1, sticky="ns")
+        self.hero_listbox_xscroll = ttk.Scrollbar(listbox_frame, orient="horizontal", command=self.hero_listbox.xview)
+        self.hero_listbox_xscroll.grid(row=1, column=0, sticky="ew")
+
+        hero_buttons = ttk.Frame(list_panel)
+        hero_buttons.grid(row=2, column=0, pady=(8, 0))
+        ttk.Button(hero_buttons, text="Ajouter", command=self.add_hero_images, width=14).grid(row=0, column=0, sticky="ew")
+        ttk.Button(hero_buttons, text="Supprimer", command=self.remove_hero_image, width=14).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(hero_buttons, text="Monter", command=lambda: self.move_hero_image(-1), width=14).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(hero_buttons, text="Descendre", command=lambda: self.move_hero_image(1), width=14).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
 
         ttk.Label(controls, text="Chemin publie").grid(row=0, column=0, sticky="w")
         ttk.Entry(controls, textvariable=self.hero_path_var).grid(row=0, column=1, sticky="ew", pady=4)
@@ -485,40 +506,48 @@ class VasoAdminApp(tk.Tk):
         actions = ttk.Frame(controls)
         actions.grid(row=5, column=0, columnspan=2, sticky="w", pady=(8, 0))
         ttk.Button(actions, text="Appliquer les changements", command=self.apply_hero_changes).pack(side="left")
-        self.hero_animation_button = ttk.Button(
-            actions,
-            text="Lancer l'animation",
-            command=self.toggle_hero_preview_animation,
-        )
-        self.hero_animation_button.pack(side="left", padx=6)
 
         help_text = (
             "L'aperçu anime toutes les images actives avec les memes timings que le site.\n"
             "Les fichiers sont copies automatiquement dans public/images/hero/."
         )
-        ttk.Label(controls, text=help_text, justify="left").grid(
+        ttk.Label(controls, text=help_text, justify="left", wraplength=300).grid(
             row=6, column=0, columnspan=2, sticky="w", pady=(10, 0)
         )
+        self.hero_animation_button = ttk.Button(
+            controls,
+            text="Lancer l'animation",
+            command=self.toggle_hero_preview_animation,
+        )
+        self.hero_animation_button.grid(row=7, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
-        ttk.Label(preview, text="Apercu hero").grid(row=0, column=0, sticky="w")
-        self.hero_preview_label = tk.Label(
+        ttk.Label(preview, text="Apercu hero").grid(row=0, column=0, sticky="n")
+        self.hero_preview_surface = tk.Frame(
             preview,
-            text="Selectionnez une image hero",
             width=HERO_PREVIEW_SIZE[0],
             height=HERO_PREVIEW_SIZE[1],
+            bd=0,
+            highlightthickness=1,
+        )
+        self.hero_preview_surface.grid(row=1, column=0, pady=(6, 8))
+        self.hero_preview_surface.grid_propagate(False)
+
+        self.hero_preview_label = tk.Label(
+            self.hero_preview_surface,
+            text="Selectionnez une image hero",
             anchor="center",
             justify="center",
             relief="flat",
             compound="center",
             wraplength=HERO_PREVIEW_SIZE[0] - 24,
         )
-        self.hero_preview_label.grid(row=1, column=0, sticky="nsew", pady=(6, 8))
+        self.hero_preview_label.pack(fill="both", expand=True)
         ttk.Label(
             preview,
             textvariable=self.hero_preview_status_var,
             justify="left",
-            wraplength=280,
-        ).grid(row=2, column=0, sticky="w")
+            wraplength=HERO_PREVIEW_SIZE[0],
+        ).grid(row=2, column=0, sticky="n")
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
@@ -561,10 +590,6 @@ class VasoAdminApp(tk.Tk):
         self.write_text(self.atelier_note_text, messages.get("atelierNote", ""))
         self.write_text(self.warning_text, messages.get("warningPla", ""))
         self.write_text(self.shipping_unsupported_text, shipping.get("unsupportedMessage", ""))
-        self.write_text(
-            self.shipping_countries_text,
-            json.dumps(shipping.get("countries", []), indent=2, ensure_ascii=False),
-        )
 
         legacy_prices_cents = pricing.get("pricesCents", {})
         fallback_price_cents = (
@@ -587,6 +612,7 @@ class VasoAdminApp(tk.Tk):
         self.refresh_hero_listbox()
 
     def collect_form(self) -> None:
+        existing_shipping_countries = self.config_data.get("shipping", {}).get("countries", [])
         self.config_data["shopStatus"] = {
             "state": self.status_state_var.get().strip() or "open",
             "label": self.status_label_var.get().strip(),
@@ -607,7 +633,7 @@ class VasoAdminApp(tk.Tk):
         self.config_data["printerVolume"] = self.collect_printer_volume_config()
         self.config_data["shipping"] = {
             "unsupportedMessage": self.shipping_unsupported_text.get("1.0", "end").strip(),
-            "countries": self.parse_shipping_countries(),
+            "countries": existing_shipping_countries,
         }
         self.config_data["heroGallery"] = {
             "transitionMs": self.parse_int(self.hero_transition_ms_var.get(), "transition hero"),
@@ -997,7 +1023,18 @@ class VasoAdminApp(tk.Tk):
 
         try:
             with Image.open(image_path) as source:
-                return ImageOps.fit(source.convert("RGBA"), HERO_PREVIEW_SIZE, method=Image.Resampling.LANCZOS)
+                contained = ImageOps.contain(
+                    source.convert("RGBA"),
+                    (HERO_PREVIEW_SIZE[0] - 24, HERO_PREVIEW_SIZE[1] - 24),
+                    method=Image.Resampling.LANCZOS,
+                )
+                background = Image.new("RGBA", HERO_PREVIEW_SIZE, self.active_theme["FIELD"])
+                offset = (
+                    (HERO_PREVIEW_SIZE[0] - contained.width) // 2,
+                    (HERO_PREVIEW_SIZE[1] - contained.height) // 2,
+                )
+                background.alpha_composite(contained, dest=offset)
+                return background
         except OSError:
             return None
 
@@ -1191,7 +1228,7 @@ class VasoAdminApp(tk.Tk):
         previous_alpha: float,
         next_alpha: float,
     ) -> Image.Image:
-        background = Image.new("RGBA", HERO_PREVIEW_SIZE, "#f4eadb")
+        background = Image.new("RGBA", HERO_PREVIEW_SIZE, self.active_theme["FIELD"])
 
         current_layer = current_image.copy()
         current_layer.putalpha(int(255 * previous_alpha))
@@ -1387,6 +1424,11 @@ class VasoAdminApp(tk.Tk):
             highlightcolor=theme["ACCENT"],
             padx=10,
             pady=10,
+        )
+        self.hero_preview_surface.configure(
+            bg=theme["PANEL"],
+            highlightbackground=theme["ACCENT"],
+            highlightcolor=theme["ACCENT"],
         )
 
         self.save_settings()
