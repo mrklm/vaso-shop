@@ -1,6 +1,9 @@
 export const SHOP_NETLIFY_SITE_URL = "https://vaso-shop.netlify.app";
 export const SHOP_PUBLIC_SITE_URL = "https://mrklm.github.io/vaso-shop/";
 export const SHOP_MONDIAL_RELAY_BRAND = "";
+export const DEFAULT_HERO_GALLERY_TRANSITION_MS = 8200;
+export const DEFAULT_HERO_GALLERY_FADE_IN_MS = 3200;
+export const DEFAULT_HERO_GALLERY_FADE_OUT_MS = 3200;
 
 const SHOP_PUBLIC_CONFIG_URL = `${import.meta.env.BASE_URL}config/shop-config.json`;
 
@@ -18,6 +21,12 @@ export interface ShopColor {
 export interface ShopHeroImage {
   path: string;
   enabled: boolean;
+}
+
+export interface ShopHeroGalleryConfig {
+  transitionMs: number;
+  fadeInMs: number;
+  fadeOutMs: number;
 }
 
 export interface ShopMessagesConfig {
@@ -63,6 +72,7 @@ export interface ShopPublicConfig {
   pricing: ShopPricingConfig;
   colors: ShopColor[];
   heroImages: ShopHeroImage[];
+  heroGallery: ShopHeroGalleryConfig;
   messages: ShopMessagesConfig;
   shopStatus: ShopStatusConfig;
   shipping: ShopShippingConfig;
@@ -225,6 +235,7 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
   const rawMessages = isRecord(rawConfig.messages) ? rawConfig.messages : {};
   const rawStatus = isRecord(rawConfig.shopStatus) ? rawConfig.shopStatus : {};
   const rawShipping = isRecord(rawConfig.shipping) ? rawConfig.shipping : {};
+  const rawHeroGallery = isRecord(rawConfig.heroGallery) ? rawConfig.heroGallery : {};
   const statusState = normalizeStatusState(rawStatus.state);
 
   return {
@@ -247,6 +258,14 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
           .map((image) => normalizeHeroImage(image))
           .filter((image): image is ShopHeroImage => image !== null)
       : [],
+    heroGallery: {
+      transitionMs: Math.max(
+        1000,
+        normalizeNumber(rawHeroGallery.transitionMs, DEFAULT_HERO_GALLERY_TRANSITION_MS),
+      ),
+      fadeInMs: Math.max(0, normalizeNumber(rawHeroGallery.fadeInMs, DEFAULT_HERO_GALLERY_FADE_IN_MS)),
+      fadeOutMs: Math.max(0, normalizeNumber(rawHeroGallery.fadeOutMs, DEFAULT_HERO_GALLERY_FADE_OUT_MS)),
+    },
     messages: {
       shippingLeadTime: normalizeString(rawMessages.shippingLeadTime).trim(),
       temporaryNotice: normalizeString(rawMessages.temporaryNotice).trim(),

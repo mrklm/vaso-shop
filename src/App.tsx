@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
 import {
+  DEFAULT_HERO_GALLERY_FADE_IN_MS,
+  DEFAULT_HERO_GALLERY_FADE_OUT_MS,
+  DEFAULT_HERO_GALLERY_TRANSITION_MS,
   fetchShopConfig,
   formatShopPriceFromCents,
   getShopBasePriceCents,
@@ -21,8 +24,6 @@ import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
 
-const HERO_GALLERY_INTERVAL_MS = 8200;
-const HERO_GALLERY_FADE_MS = 3200;
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
 const isMondialRelayWidgetReady = SHOP_MONDIAL_RELAY_BRAND.trim().length > 0;
 
@@ -110,6 +111,19 @@ function App() {
   const currentHeroGalleryImage = heroGalleryImages[heroGalleryIndex] ?? null;
   const previousHeroGalleryImage =
     heroGalleryPreviousIndex === null ? null : heroGalleryImages[heroGalleryPreviousIndex] ?? null;
+  const heroGalleryTransitionMs = Math.max(
+    1000,
+    shopConfig?.heroGallery.transitionMs ?? DEFAULT_HERO_GALLERY_TRANSITION_MS,
+  );
+  const heroGalleryFadeInMs = Math.max(
+    0,
+    shopConfig?.heroGallery.fadeInMs ?? DEFAULT_HERO_GALLERY_FADE_IN_MS,
+  );
+  const heroGalleryFadeOutMs = Math.max(
+    0,
+    shopConfig?.heroGallery.fadeOutMs ?? DEFAULT_HERO_GALLERY_FADE_OUT_MS,
+  );
+  const heroGalleryPreviewClearMs = Math.max(heroGalleryFadeInMs, heroGalleryFadeOutMs, 1);
   const selectedColorLabel = selectedColor?.label ?? "A choisir";
   const productPriceCents = shopConfig ? getShopBasePriceCents(shopConfig) : 0;
   const customerFullName = [customerFirstName.trim(), customerLastName.trim()]
@@ -249,8 +263,8 @@ function App() {
 
       clearPreviousTimeoutId = window.setTimeout(() => {
         setHeroGalleryPreviousIndex(null);
-      }, HERO_GALLERY_FADE_MS);
-    }, HERO_GALLERY_INTERVAL_MS);
+      }, heroGalleryPreviewClearMs);
+    }, heroGalleryTransitionMs);
 
     return () => {
       window.clearInterval(intervalId);
@@ -258,7 +272,7 @@ function App() {
         window.clearTimeout(clearPreviousTimeoutId);
       }
     };
-  }, [heroGalleryImages]);
+  }, [heroGalleryFadeInMs, heroGalleryFadeOutMs, heroGalleryImages, heroGalleryPreviewClearMs, heroGalleryTransitionMs]);
 
   useEffect(() => {
     if (!selectedEntry) {
@@ -516,7 +530,15 @@ function App() {
 
               <div className="shop-hero-media">
                 <div className="shop-hero-gallery" aria-label="Photos d'atelier">
-                  <div className="shop-hero-gallery-orb">
+                  <div
+                    className="shop-hero-gallery-orb"
+                    style={
+                      {
+                        "--shop-hero-fade-in-ms": `${heroGalleryFadeInMs}ms`,
+                        "--shop-hero-fade-out-ms": `${heroGalleryFadeOutMs}ms`,
+                      } as CSSProperties
+                    }
+                  >
                     {previousHeroGalleryImage && previousHeroGalleryImage !== currentHeroGalleryImage ? (
                       <img
                         key={`hero-gallery-previous-${heroGalleryPreviousIndex}-${previousHeroGalleryImage}`}

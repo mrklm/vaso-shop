@@ -9,11 +9,22 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+try:
+    from PIL import Image, ImageOps, ImageTk
+except ImportError:  # pragma: no cover - fallback runtime only
+    Image = None
+    ImageOps = None
+    ImageTk = None
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
+DEFAULT_HERO_TRANSITION_MS = 8200
+DEFAULT_HERO_FADE_IN_MS = 3200
+DEFAULT_HERO_FADE_OUT_MS = 3200
+HERO_PREVIEW_SIZE = (280, 280)
 
 THEMES = {
     "[Sombre] Midnight Garage": dict(
@@ -87,8 +98,9 @@ class VasoAdminApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("VASO-Admin")
-        self.geometry("1220x880")
-        self.minsize(1080, 760)
+        self.geometry("1140x760")
+        self.minsize(980, 680)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
 
         self.config_data = self.load_config()
         self.settings_data = self.load_settings()
@@ -117,11 +129,22 @@ class VasoAdminApp(tk.Tk):
 
         self.hero_enabled_var = tk.BooleanVar()
         self.hero_path_var = tk.StringVar()
+        self.hero_transition_ms_var = tk.StringVar()
+        self.hero_fade_in_ms_var = tk.StringVar()
+        self.hero_fade_out_ms_var = tk.StringVar()
+        self.hero_preview_status_var = tk.StringVar(value="Selectionnez une image hero")
 
         self.commit_message_var = tk.StringVar(value="Met a jour la configuration boutique")
         self.theme_name_var = tk.StringVar(
             value=self.settings_data.get("theme", next(iter(THEMES))),
         )
+
+        self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
+        self.hero_preview_photo = None
+        self.hero_preview_cycle_after_id = None
+        self.hero_preview_frame_after_id = None
+        self.hero_preview_is_animating = False
+        self.hero_preview_current_index = 0
 
         self.build_ui()
         self.populate_form()
@@ -156,29 +179,29 @@ class VasoAdminApp(tk.Tk):
         self.log(f"Configuration sauvegardee dans {CONFIG_PATH.relative_to(REPO_ROOT)}")
 
     def build_ui(self) -> None:
-        toolbar = ttk.Frame(self, padding=(12, 12, 12, 0))
+        toolbar = ttk.Frame(self, padding=(10, 10, 10, 0))
         toolbar.pack(fill="x")
 
-        ttk.Label(toolbar, text="Theme interface").pack(side="left")
         self.theme_selector = ttk.Combobox(
             toolbar,
             textvariable=self.theme_name_var,
             values=list(THEMES.keys()),
             state="readonly",
-            width=34,
+            width=30,
         )
-        self.theme_selector.pack(side="left", padx=(8, 0))
+        self.theme_selector.pack(side="right", padx=(8, 0))
+        ttk.Label(toolbar, text="Thème").pack(side="right")
         self.theme_selector.bind("<<ComboboxSelected>>", lambda _event: self.on_theme_change())
 
         self.notebook = ttk.Notebook(self)
         notebook = self.notebook
-        notebook.pack(fill="both", expand=True, padx=12, pady=12)
+        notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
-        self.general_frame = ttk.Frame(notebook, padding=12)
-        self.pricing_frame = ttk.Frame(notebook, padding=12)
-        self.colors_frame = ttk.Frame(notebook, padding=12)
-        self.hero_frame = ttk.Frame(notebook, padding=12)
-        self.publish_frame = ttk.Frame(notebook, padding=12)
+        self.general_frame = ttk.Frame(notebook, padding=8)
+        self.pricing_frame = ttk.Frame(notebook, padding=8)
+        self.colors_frame = ttk.Frame(notebook, padding=8)
+        self.hero_frame = ttk.Frame(notebook, padding=8)
+        self.publish_frame = ttk.Frame(notebook, padding=8)
 
         notebook.add(self.general_frame, text="Boutique")
         notebook.add(self.pricing_frame, text="Tarifs")
@@ -219,7 +242,7 @@ class VasoAdminApp(tk.Tk):
         ttk.Entry(frame, textvariable=self.status_label_var).grid(row=1, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Message etat").grid(row=2, column=0, sticky="nw")
-        self.status_message_text = tk.Text(frame, height=3, wrap="word")
+        self.status_message_text = tk.Text(frame, height=2, wrap="word")
         self.status_message_text.grid(row=2, column=1, sticky="nsew", pady=4)
 
         ttk.Checkbutton(
@@ -232,15 +255,15 @@ class VasoAdminApp(tk.Tk):
         ttk.Entry(frame, textvariable=self.shipping_lead_time_var).grid(row=4, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Message temporaire").grid(row=5, column=0, sticky="nw")
-        self.temporary_notice_text = tk.Text(frame, height=3, wrap="word")
+        self.temporary_notice_text = tk.Text(frame, height=2, wrap="word")
         self.temporary_notice_text.grid(row=5, column=1, sticky="nsew", pady=4)
 
         ttk.Label(frame, text="Texte atelier").grid(row=6, column=0, sticky="nw")
-        self.atelier_note_text = tk.Text(frame, height=5, wrap="word")
+        self.atelier_note_text = tk.Text(frame, height=4, wrap="word")
         self.atelier_note_text.grid(row=6, column=1, sticky="nsew", pady=4)
 
         ttk.Label(frame, text="Avertissement PLA").grid(row=7, column=0, sticky="nw")
-        self.warning_text = tk.Text(frame, height=8, wrap="word")
+        self.warning_text = tk.Text(frame, height=6, wrap="word")
         self.warning_text.grid(row=7, column=1, sticky="nsew", pady=4)
 
         ttk.Label(frame, text="Question contact").grid(row=8, column=0, sticky="w")
@@ -279,11 +302,11 @@ class VasoAdminApp(tk.Tk):
         ttk.Entry(frame, textvariable=self.free_shipping_threshold_var).grid(row=4, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Message pays non geres").grid(row=5, column=0, sticky="nw")
-        self.shipping_unsupported_text = tk.Text(frame, height=3, wrap="word")
+        self.shipping_unsupported_text = tk.Text(frame, height=2, wrap="word")
         self.shipping_unsupported_text.grid(row=5, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Grille livraison (JSON)").grid(row=6, column=0, sticky="nw")
-        self.shipping_countries_text = tk.Text(frame, height=22, wrap="none")
+        self.shipping_countries_text = tk.Text(frame, height=16, wrap="none")
         self.shipping_countries_text.grid(row=6, column=1, sticky="nsew", pady=4)
 
         frame.rowconfigure(6, weight=1)
@@ -326,15 +349,19 @@ class VasoAdminApp(tk.Tk):
     def build_hero_tab(self) -> None:
         frame = self.hero_frame
         frame.columnconfigure(1, weight=1)
+        frame.columnconfigure(2, weight=1)
         frame.rowconfigure(0, weight=1)
 
         left = ttk.Frame(frame)
-        left.grid(row=0, column=0, sticky="nsw", padx=(0, 12))
-        right = ttk.Frame(frame)
-        right.grid(row=0, column=1, sticky="nsew")
-        right.columnconfigure(1, weight=1)
+        left.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
+        controls = ttk.Frame(frame)
+        controls.grid(row=0, column=1, sticky="nsew", padx=(0, 10))
+        controls.columnconfigure(1, weight=1)
+        preview = ttk.Frame(frame)
+        preview.grid(row=0, column=2, sticky="nsew")
+        preview.columnconfigure(0, weight=1)
 
-        self.hero_listbox = tk.Listbox(left, width=40, exportselection=False)
+        self.hero_listbox = tk.Listbox(left, width=34, exportselection=False)
         self.hero_listbox.pack(fill="y", expand=True)
         self.hero_listbox.bind("<<ListboxSelect>>", lambda _event: self.load_selected_hero_image())
 
@@ -345,20 +372,74 @@ class VasoAdminApp(tk.Tk):
         ttk.Button(hero_buttons, text="Monter", command=lambda: self.move_hero_image(-1)).pack(side="left")
         ttk.Button(hero_buttons, text="Descendre", command=lambda: self.move_hero_image(1)).pack(side="left", padx=4)
 
-        ttk.Label(right, text="Chemin publie").grid(row=0, column=0, sticky="w")
-        ttk.Entry(right, textvariable=self.hero_path_var).grid(row=0, column=1, sticky="ew", pady=4)
-        ttk.Checkbutton(right, text="Image active", variable=self.hero_enabled_var).grid(
+        ttk.Label(controls, text="Chemin publie").grid(row=0, column=0, sticky="w")
+        ttk.Entry(controls, textvariable=self.hero_path_var).grid(row=0, column=1, sticky="ew", pady=4)
+        ttk.Checkbutton(controls, text="Image active", variable=self.hero_enabled_var).grid(
             row=1, column=1, sticky="w", pady=4
         )
-        ttk.Button(right, text="Appliquer les changements", command=self.apply_hero_changes).grid(
-            row=2, column=1, sticky="e", pady=8
+        ttk.Label(controls, text="Transition (ms)").grid(row=2, column=0, sticky="w")
+        ttk.Spinbox(
+            controls,
+            from_=1000,
+            to=60000,
+            increment=200,
+            textvariable=self.hero_transition_ms_var,
+            width=12,
+        ).grid(row=2, column=1, sticky="w", pady=4)
+        ttk.Label(controls, text="Fade in (ms)").grid(row=3, column=0, sticky="w")
+        ttk.Spinbox(
+            controls,
+            from_=0,
+            to=10000,
+            increment=100,
+            textvariable=self.hero_fade_in_ms_var,
+            width=12,
+        ).grid(row=3, column=1, sticky="w", pady=4)
+        ttk.Label(controls, text="Fade out (ms)").grid(row=4, column=0, sticky="w")
+        ttk.Spinbox(
+            controls,
+            from_=0,
+            to=10000,
+            increment=100,
+            textvariable=self.hero_fade_out_ms_var,
+            width=12,
+        ).grid(row=4, column=1, sticky="w", pady=4)
+
+        actions = ttk.Frame(controls)
+        actions.grid(row=5, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Button(actions, text="Appliquer les changements", command=self.apply_hero_changes).pack(side="left")
+        self.hero_animation_button = ttk.Button(
+            actions,
+            text="Lancer l'animation",
+            command=self.toggle_hero_preview_animation,
         )
+        self.hero_animation_button.pack(side="left", padx=6)
 
         help_text = (
-            "Les fichiers sont copies automatiquement dans public/images/hero/.\n"
-            "La liste ci-dessus definit l'ordre et l'activation reelle sur le site."
+            "L'aperçu anime toutes les images actives avec les memes timings que le site.\n"
+            "Les fichiers sont copies automatiquement dans public/images/hero/."
         )
-        ttk.Label(right, text=help_text, justify="left").grid(row=3, column=0, columnspan=2, sticky="w", pady=(8, 0))
+        ttk.Label(controls, text=help_text, justify="left").grid(
+            row=6, column=0, columnspan=2, sticky="w", pady=(10, 0)
+        )
+
+        ttk.Label(preview, text="Apercu hero").grid(row=0, column=0, sticky="w")
+        self.hero_preview_label = tk.Label(
+            preview,
+            text="Selectionnez une image hero",
+            width=40,
+            height=18,
+            anchor="center",
+            justify="center",
+            relief="flat",
+        )
+        self.hero_preview_label.grid(row=1, column=0, sticky="nsew", pady=(6, 8))
+        ttk.Label(
+            preview,
+            textvariable=self.hero_preview_status_var,
+            justify="left",
+            wraplength=280,
+        ).grid(row=2, column=0, sticky="w")
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
@@ -376,7 +457,7 @@ class VasoAdminApp(tk.Tk):
         ttk.Button(buttons, text="Commit", command=self.git_commit).pack(side="left", padx=4)
         ttk.Button(buttons, text="Commit + Push", command=self.git_commit_and_push).pack(side="left")
 
-        self.output_text = tk.Text(frame, height=26, wrap="word")
+        self.output_text = tk.Text(frame, height=18, wrap="word")
         self.output_text.grid(row=2, column=0, columnspan=2, sticky="nsew")
 
     def populate_form(self) -> None:
@@ -384,6 +465,7 @@ class VasoAdminApp(tk.Tk):
         shop_status = self.config_data.get("shopStatus", {})
         messages = self.config_data.get("messages", {})
         shipping = self.config_data.get("shipping", {})
+        hero_gallery = self.config_data.get("heroGallery", {})
 
         self.status_state_var.set(shop_status.get("state", "open"))
         self.status_label_var.set(shop_status.get("label", ""))
@@ -410,6 +492,9 @@ class VasoAdminApp(tk.Tk):
         self.price_m_var.set(str(prices_cents.get("M", 2500)))
         self.price_l_var.set(str(prices_cents.get("L", 0)))
         self.free_shipping_threshold_var.set(str(pricing.get("freeShippingThresholdCents", 0)))
+        self.hero_transition_ms_var.set(str(hero_gallery.get("transitionMs", DEFAULT_HERO_TRANSITION_MS)))
+        self.hero_fade_in_ms_var.set(str(hero_gallery.get("fadeInMs", DEFAULT_HERO_FADE_IN_MS)))
+        self.hero_fade_out_ms_var.set(str(hero_gallery.get("fadeOutMs", DEFAULT_HERO_FADE_OUT_MS)))
 
         self.refresh_colors_listbox()
         self.refresh_hero_listbox()
@@ -444,6 +529,11 @@ class VasoAdminApp(tk.Tk):
         self.config_data["shipping"] = {
             "unsupportedMessage": self.shipping_unsupported_text.get("1.0", "end").strip(),
             "countries": self.parse_shipping_countries(),
+        }
+        self.config_data["heroGallery"] = {
+            "transitionMs": self.parse_int(self.hero_transition_ms_var.get(), "transition hero"),
+            "fadeInMs": self.parse_int(self.hero_fade_in_ms_var.get(), "fade in hero"),
+            "fadeOutMs": self.parse_int(self.hero_fade_out_ms_var.get(), "fade out hero"),
         }
 
     def parse_int(self, raw_value: str, field_label: str) -> int:
@@ -549,27 +639,40 @@ class VasoAdminApp(tk.Tk):
         if self.hero_listbox.size():
             self.hero_listbox.selection_set(0)
             self.load_selected_hero_image()
+        else:
+            self.hero_path_var.set("")
+            self.hero_enabled_var.set(False)
+            self.update_selected_hero_preview()
 
     def load_selected_hero_image(self) -> None:
         selection = self.hero_listbox.curselection()
         if not selection:
+            self.hero_path_var.set("")
+            self.hero_enabled_var.set(False)
+            self.update_selected_hero_preview()
             return
 
         hero_image = self.config_data["heroImages"][selection[0]]
         self.hero_path_var.set(hero_image.get("path", ""))
         self.hero_enabled_var.set(bool(hero_image.get("enabled", True)))
+        if not self.hero_preview_is_animating:
+            self.update_selected_hero_preview()
 
     def apply_hero_changes(self) -> None:
         selection = self.hero_listbox.curselection()
-        if not selection:
-            return
+        if selection:
+            hero_image = self.config_data["heroImages"][selection[0]]
+            hero_image["path"] = self.hero_path_var.get().strip()
+            hero_image["enabled"] = bool(self.hero_enabled_var.get())
+            self.refresh_hero_listbox()
+            self.hero_listbox.selection_set(selection[0])
+            self.load_selected_hero_image()
 
-        hero_image = self.config_data["heroImages"][selection[0]]
-        hero_image["path"] = self.hero_path_var.get().strip()
-        hero_image["enabled"] = bool(self.hero_enabled_var.get())
-        self.refresh_hero_listbox()
-        self.hero_listbox.selection_set(selection[0])
-        self.load_selected_hero_image()
+        self.config_data["heroGallery"] = self.get_hero_gallery_settings_from_form()
+        if self.hero_preview_is_animating:
+            self.start_hero_preview_animation()
+        else:
+            self.update_selected_hero_preview()
         self.log("Hero mis a jour")
 
     def add_hero_images(self) -> None:
@@ -597,6 +700,9 @@ class VasoAdminApp(tk.Tk):
             )
 
         self.refresh_hero_listbox()
+        self.hero_listbox.selection_clear(0, "end")
+        self.hero_listbox.selection_set(len(hero_images) - 1)
+        self.load_selected_hero_image()
         self.log(f"{len(selected_paths)} image(s) hero ajoutee(s)")
 
     def unique_hero_target(self, file_name: str) -> Path:
@@ -608,6 +714,231 @@ class VasoAdminApp(tk.Tk):
             target_path = HERO_DIR / f"{stem}-{counter}{suffix}"
             counter += 1
         return target_path
+
+    def get_hero_gallery_settings_from_form(self) -> dict:
+        return {
+            "transitionMs": max(1000, self.parse_int(self.hero_transition_ms_var.get(), "transition hero")),
+            "fadeInMs": max(0, self.parse_int(self.hero_fade_in_ms_var.get(), "fade in hero")),
+            "fadeOutMs": max(0, self.parse_int(self.hero_fade_out_ms_var.get(), "fade out hero")),
+        }
+
+    def get_selected_hero_path(self) -> Path | None:
+        relative_path = self.hero_path_var.get().strip()
+        if not relative_path:
+            return None
+
+        return REPO_ROOT / relative_path
+
+    def get_enabled_hero_paths(self) -> list[Path]:
+        enabled_paths: list[Path] = []
+        for hero_image in self.config_data.get("heroImages", []):
+            if not hero_image.get("enabled", True):
+                continue
+
+            path = REPO_ROOT / str(hero_image.get("path", "")).strip()
+            if path.is_file():
+                enabled_paths.append(path)
+
+        return enabled_paths
+
+    def load_preview_image(self, image_path: Path) -> Image.Image | None:
+        if Image is None or ImageOps is None:
+            return None
+
+        try:
+            with Image.open(image_path) as source:
+                return ImageOps.fit(source.convert("RGBA"), HERO_PREVIEW_SIZE, method=Image.Resampling.LANCZOS)
+        except OSError:
+            return None
+
+    def display_preview_image(self, image: Image.Image | None, status: str, title: str = "") -> None:
+        if ImageTk is None or image is None:
+            self.hero_preview_photo = None
+            self.hero_preview_label.configure(image="", text=title or "Apercu indisponible")
+            self.hero_preview_status_var.set(status)
+            return
+
+        preview_photo = ImageTk.PhotoImage(image)
+        self.hero_preview_photo = preview_photo
+        self.hero_preview_label.configure(image=preview_photo, text="")
+        self.hero_preview_status_var.set(status)
+
+    def update_selected_hero_preview(self) -> None:
+        if self.hero_preview_is_animating:
+            return
+
+        image_path = self.get_selected_hero_path()
+        if image_path is None:
+            self.display_preview_image(None, "Selectionnez une image hero pour afficher son apercu.")
+            return
+
+        image = self.load_preview_image(image_path)
+        if image is None:
+            self.display_preview_image(
+                None,
+                f"Impossible de charger {image_path.name}.",
+                title=image_path.name,
+            )
+            return
+
+        enabled_label = "active" if self.hero_enabled_var.get() else "inactive"
+        self.display_preview_image(
+            image,
+            f"Apercu fixe : {image_path.name} ({enabled_label})",
+        )
+
+    def cancel_hero_preview_jobs(self) -> None:
+        if self.hero_preview_cycle_after_id is not None:
+            self.after_cancel(self.hero_preview_cycle_after_id)
+            self.hero_preview_cycle_after_id = None
+
+        if self.hero_preview_frame_after_id is not None:
+            self.after_cancel(self.hero_preview_frame_after_id)
+            self.hero_preview_frame_after_id = None
+
+    def stop_hero_preview_animation(self) -> None:
+        self.cancel_hero_preview_jobs()
+        self.hero_preview_is_animating = False
+        self.hero_animation_button.configure(text="Lancer l'animation")
+        self.update_selected_hero_preview()
+
+    def toggle_hero_preview_animation(self) -> None:
+        if self.hero_preview_is_animating:
+            self.stop_hero_preview_animation()
+            return
+
+        self.start_hero_preview_animation()
+
+    def start_hero_preview_animation(self) -> None:
+        if Image is None or ImageOps is None or ImageTk is None:
+            self.display_preview_image(None, "Pillow est requis pour l'aperçu hero anime.")
+            return
+
+        enabled_paths = self.get_enabled_hero_paths()
+        if not enabled_paths:
+            self.display_preview_image(None, "Aucune image hero active n'est disponible.")
+            return
+
+        if len(enabled_paths) == 1:
+            self.hero_preview_is_animating = False
+            self.hero_animation_button.configure(text="Lancer l'animation")
+            image = self.load_preview_image(enabled_paths[0])
+            self.display_preview_image(image, f"Une seule image active : {enabled_paths[0].name}")
+            return
+
+        self.cancel_hero_preview_jobs()
+        self.hero_preview_is_animating = True
+        self.hero_animation_button.configure(text="Arreter l'animation")
+        self.hero_preview_current_index = 0
+        self.run_hero_preview_cycle()
+
+    def run_hero_preview_cycle(self) -> None:
+        if not self.hero_preview_is_animating:
+            return
+
+        enabled_paths = self.get_enabled_hero_paths()
+        if len(enabled_paths) <= 1:
+            self.stop_hero_preview_animation()
+            return
+
+        settings = self.get_hero_gallery_settings_from_form()
+        current_path = enabled_paths[self.hero_preview_current_index % len(enabled_paths)]
+        next_index = (self.hero_preview_current_index + 1) % len(enabled_paths)
+        next_path = enabled_paths[next_index]
+
+        current_image = self.load_preview_image(current_path)
+        next_image = self.load_preview_image(next_path)
+        if current_image is None or next_image is None:
+            self.stop_hero_preview_animation()
+            self.display_preview_image(None, "Une image hero n'a pas pu etre chargee.")
+            return
+
+        self.display_preview_image(
+            current_image,
+            (
+                f"Animation en cours : {current_path.name} -> {next_path.name} | "
+                f"transition {settings['transitionMs']} ms | "
+                f"fade in {settings['fadeInMs']} ms | fade out {settings['fadeOutMs']} ms"
+            ),
+        )
+        delay_before_fade_ms = max(
+            0,
+            settings["transitionMs"] - max(settings["fadeInMs"], settings["fadeOutMs"], 1),
+        )
+        self.hero_preview_cycle_after_id = self.after(
+            delay_before_fade_ms,
+            lambda: self.animate_hero_crossfade(current_image, next_image, next_index, settings),
+        )
+
+    def animate_hero_crossfade(
+        self,
+        current_image: Image.Image,
+        next_image: Image.Image,
+        next_index: int,
+        settings: dict,
+    ) -> None:
+        if not self.hero_preview_is_animating:
+            return
+
+        duration_ms = max(settings["fadeInMs"], settings["fadeOutMs"], 1)
+        total_steps = max(8, min(24, duration_ms // 120 or 8))
+
+        def render_frame(step: int) -> None:
+            if not self.hero_preview_is_animating:
+                return
+
+            progress = step / total_steps
+            elapsed_ms = progress * duration_ms
+            previous_alpha = 0 if settings["fadeOutMs"] == 0 else max(
+                0.0,
+                1 - min(elapsed_ms / settings["fadeOutMs"], 1),
+            )
+            next_alpha = 1 if settings["fadeInMs"] == 0 else min(
+                elapsed_ms / settings["fadeInMs"],
+                1,
+            )
+
+            frame = self.compose_crossfade_frame(current_image, next_image, previous_alpha, next_alpha)
+            self.display_preview_image(
+                frame,
+                (
+                    f"Animation en cours | transition {settings['transitionMs']} ms | "
+                    f"fade in {settings['fadeInMs']} ms | fade out {settings['fadeOutMs']} ms"
+                ),
+            )
+
+            if step >= total_steps:
+                self.hero_preview_current_index = next_index
+                self.hero_preview_frame_after_id = None
+                self.run_hero_preview_cycle()
+                return
+
+            delay_ms = max(16, duration_ms // total_steps)
+            self.hero_preview_frame_after_id = self.after(delay_ms, lambda: render_frame(step + 1))
+
+        render_frame(1)
+
+    def compose_crossfade_frame(
+        self,
+        current_image: Image.Image,
+        next_image: Image.Image,
+        previous_alpha: float,
+        next_alpha: float,
+    ) -> Image.Image:
+        background = Image.new("RGBA", HERO_PREVIEW_SIZE, "#f4eadb")
+
+        current_layer = current_image.copy()
+        current_layer.putalpha(int(255 * previous_alpha))
+        next_layer = next_image.copy()
+        next_layer.putalpha(int(255 * next_alpha))
+
+        frame = Image.alpha_composite(background, current_layer)
+        frame = Image.alpha_composite(frame, next_layer)
+        return frame
+
+    def on_close(self) -> None:
+        self.cancel_hero_preview_jobs()
+        self.destroy()
 
     def remove_hero_image(self) -> None:
         selection = self.hero_listbox.curselection()
@@ -623,6 +954,7 @@ class VasoAdminApp(tk.Tk):
             except OSError:
                 pass
 
+        self.stop_hero_preview_animation()
         self.refresh_hero_listbox()
         self.log(f"Image hero supprimee : {relative_path}")
 
@@ -638,12 +970,14 @@ class VasoAdminApp(tk.Tk):
             return
 
         hero_images[index], hero_images[target_index] = hero_images[target_index], hero_images[index]
+        self.stop_hero_preview_animation()
         self.refresh_hero_listbox()
         self.hero_listbox.selection_clear(0, "end")
         self.hero_listbox.selection_set(target_index)
         self.load_selected_hero_image()
 
     def reload_from_disk(self) -> None:
+        self.stop_hero_preview_animation()
         self.config_data = self.load_config()
         self.populate_form()
         self.log("Configuration rechargee depuis le disque")
@@ -689,6 +1023,7 @@ class VasoAdminApp(tk.Tk):
             theme = THEMES[theme_name]
             self.theme_name_var.set(theme_name)
 
+        self.active_theme = theme
         self.configure(bg=theme["BG"])
         self.option_add("*Foreground", theme["FG"])
         self.option_add("*Background", theme["BG"])
@@ -773,6 +1108,15 @@ class VasoAdminApp(tk.Tk):
                 relief="flat",
                 borderwidth=1,
             )
+
+        self.hero_preview_label.configure(
+            bg=theme["FIELD"],
+            fg=theme["FIELD_FG"],
+            highlightbackground=theme["PANEL"],
+            highlightcolor=theme["ACCENT"],
+            padx=10,
+            pady=10,
+        )
 
         self.save_settings()
 

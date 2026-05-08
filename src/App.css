@@ -313,13 +313,17 @@
 .shop-hero-gallery-image-current {
   opacity: 0;
   transform: scale(1.018);
-  animation: shop-gallery-fade-in 3.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation:
+    shop-gallery-fade-in var(--shop-hero-fade-in-ms, 3.2s)
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .shop-hero-gallery-image-previous {
   opacity: 1;
   transform: scale(1);
-  animation: shop-gallery-fade-out 3.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation:
+    shop-gallery-fade-out var(--shop-hero-fade-out-ms, 3.2s)
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .shop-hero-gallery-placeholder {

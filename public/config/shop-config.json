@@ -115,6 +115,11 @@
     { "path": "images/hero/12.jpg", "enabled": true },
     { "path": "images/hero/13.jpg", "enabled": true }
   ],
+  "heroGallery": {
+    "transitionMs": 8200,
+    "fadeInMs": 3200,
+    "fadeOutMs": 3200
+  },
   "messages": {
     "shippingLeadTime": "Expédition sous 5 à 7 jours",
     "temporaryNotice": "",

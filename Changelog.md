@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.40] - 2026-05-08
+
+### Modifié
+- Enrichit l'onglet Hero de VASO-Admin avec aperçu, animation et réglages de transition
+
 ## [1.1.39] - 2026-05-08
 
 ### Modifié
