@@ -929,6 +929,10 @@ function App() {
                           colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
                         />
                       </div>
+                      <div className="shop-color-preview-note">
+                        Les aperçus 3D vous donnent une belle idée de la teinte, avec de légères nuances possibles selon
+                        la lumière, la matière et l&apos;impression finale.
+                      </div>
                     </div>
                   )}
                 </div>

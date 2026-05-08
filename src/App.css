@@ -767,6 +767,16 @@
     linear-gradient(180deg, rgb(247 241 232 / 96%), rgb(238 229 216 / 96%));
 }
 
+.shop-color-preview-note {
+  padding: 10px 12px;
+  border: 1px solid rgb(93 58 37 / 10%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 32%);
+  color: rgb(38 29 22 / 68%);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .shop-order-summary {
   display: grid;
   gap: 10px;

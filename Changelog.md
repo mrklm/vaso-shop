@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.55] - 2026-05-09
+
+### Modifié
+- Ajuste encore le rendu Blanc neige et ajoute une note sous l'aperçu couleur
+
 ## [1.1.54] - 2026-05-08
 
 ### Modifié

@@ -106,8 +106,8 @@
       "id": "snow-white",
       "label": "Blanc neige",
       "hex": "#ffffff",
-      "previewHex": "#fffaf2",
-      "previewEmissiveIntensity": 0.18,
+      "previewHex": "#f4efe6",
+      "previewEmissiveIntensity": 0.3,
       "available": true
     },
     {
