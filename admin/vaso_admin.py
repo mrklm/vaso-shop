@@ -6,6 +6,7 @@ import json
 import shutil
 import subprocess
 import tempfile
+from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -114,6 +115,15 @@ THEMES = {
     ),
 }
 
+SHOP_STATUS_LABELS = {
+    "open": "Boutique ouverte",
+    "slowed": "Boutique ralentie",
+    "holiday": "Vacances",
+    "closed": "Fermeture temporaire",
+}
+
+SHOP_STATUS_CODES_BY_LABEL = {label: code for code, label in SHOP_STATUS_LABELS.items()}
+
 
 class VasoAdminApp(tk.Tk):
     def __init__(self) -> None:
@@ -129,6 +139,7 @@ class VasoAdminApp(tk.Tk):
         self.style.theme_use("clam")
 
         self.status_state_var = tk.StringVar()
+        self.status_state_display_var = tk.StringVar()
         self.status_label_var = tk.StringVar()
         self.status_message_var = tk.StringVar()
         self.status_allow_checkout_var = tk.BooleanVar()
@@ -161,7 +172,7 @@ class VasoAdminApp(tk.Tk):
         self.hero_fade_out_ms_var = tk.StringVar()
         self.hero_preview_status_var = tk.StringVar(value="Selectionnez une image hero")
 
-        self.commit_message_var = tk.StringVar(value="Met a jour la configuration boutique")
+        self.commit_message_var = tk.StringVar(value=self.build_default_commit_message())
         self.theme_name_var = tk.StringVar(
             value=self.settings_data.get("theme", next(iter(THEMES))),
         )
@@ -208,6 +219,9 @@ class VasoAdminApp(tk.Tk):
             json.dump(self.config_data, handle, indent=2, ensure_ascii=False)
             handle.write("\n")
         self.log(f"Configuration sauvegardee dans {CONFIG_PATH.relative_to(REPO_ROOT)}")
+
+    def build_default_commit_message(self) -> str:
+        return f"Met a jour la configuration boutique - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
 
     def build_ui(self) -> None:
         toolbar = ttk.Frame(self, padding=(10, 10, 10, 0))
@@ -267,8 +281,8 @@ class VasoAdminApp(tk.Tk):
         ttk.Label(frame, text="Etat boutique").grid(row=0, column=0, sticky="w")
         ttk.Combobox(
             frame,
-            textvariable=self.status_state_var,
-            values=["open", "slowed", "holiday", "closed"],
+            textvariable=self.status_state_display_var,
+            values=list(SHOP_STATUS_LABELS.values()),
             state="readonly",
         ).grid(row=0, column=1, sticky="ew", pady=4)
 
@@ -276,7 +290,7 @@ class VasoAdminApp(tk.Tk):
         ttk.Entry(frame, textvariable=self.status_label_var).grid(row=1, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Message etat").grid(row=2, column=0, sticky="nw")
-        self.status_message_text = tk.Text(frame, height=2, wrap="word")
+        self.status_message_text = tk.Text(frame, height=1, wrap="word")
         self.status_message_text.grid(row=2, column=1, sticky="nsew", pady=4)
 
         ttk.Checkbutton(
@@ -289,16 +303,30 @@ class VasoAdminApp(tk.Tk):
         ttk.Entry(frame, textvariable=self.shipping_lead_time_var).grid(row=4, column=1, sticky="ew", pady=4)
 
         ttk.Label(frame, text="Message temporaire").grid(row=5, column=0, sticky="nw")
-        self.temporary_notice_text = tk.Text(frame, height=2, wrap="word")
+        self.temporary_notice_text = tk.Text(frame, height=1, wrap="word")
         self.temporary_notice_text.grid(row=5, column=1, sticky="nsew", pady=4)
 
         ttk.Label(frame, text="Texte atelier").grid(row=6, column=0, sticky="nw")
-        self.atelier_note_text = tk.Text(frame, height=1, wrap="word")
-        self.atelier_note_text.grid(row=6, column=1, sticky="ew", pady=4)
+        atelier_frame = ttk.Frame(frame)
+        atelier_frame.grid(row=6, column=1, sticky="ew", pady=4)
+        atelier_frame.columnconfigure(0, weight=1)
+        atelier_frame.rowconfigure(0, weight=1)
+        self.atelier_note_text = tk.Text(atelier_frame, height=4, wrap="word")
+        self.atelier_note_text.grid(row=0, column=0, sticky="ew")
+        self.atelier_note_scrollbar = ttk.Scrollbar(atelier_frame, orient="vertical", command=self.atelier_note_text.yview)
+        self.atelier_note_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.atelier_note_text.configure(yscrollcommand=self.atelier_note_scrollbar.set)
 
         ttk.Label(frame, text="Avertissement PLA").grid(row=7, column=0, sticky="nw")
-        self.warning_text = tk.Text(frame, height=1, wrap="word")
-        self.warning_text.grid(row=7, column=1, sticky="ew", pady=4)
+        warning_frame = ttk.Frame(frame)
+        warning_frame.grid(row=7, column=1, sticky="ew", pady=4)
+        warning_frame.columnconfigure(0, weight=1)
+        warning_frame.rowconfigure(0, weight=1)
+        self.warning_text = tk.Text(warning_frame, height=4, wrap="word")
+        self.warning_text.grid(row=0, column=0, sticky="ew")
+        self.warning_scrollbar = ttk.Scrollbar(warning_frame, orient="vertical", command=self.warning_text.yview)
+        self.warning_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.warning_text.configure(yscrollcommand=self.warning_scrollbar.set)
 
         ttk.Label(frame, text="Question contact").grid(row=8, column=0, sticky="w")
         ttk.Entry(frame, textvariable=self.contact_prompt_var).grid(row=8, column=1, sticky="ew", pady=4)
@@ -564,22 +592,31 @@ class VasoAdminApp(tk.Tk):
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
-        frame.columnconfigure(1, weight=1)
-        frame.rowconfigure(2, weight=1)
+        frame.columnconfigure(0, weight=1)
 
-        ttk.Label(frame, text="Message de commit").grid(row=0, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.commit_message_var).grid(row=0, column=1, sticky="ew", pady=4)
+        publish_panel = ttk.Frame(frame)
+        publish_panel.grid(row=0, column=0, sticky="n", pady=(18, 0))
+        publish_panel.columnconfigure(0, weight=1)
 
-        buttons = ttk.Frame(frame)
-        buttons.grid(row=1, column=0, columnspan=2, sticky="w", pady=8)
-        ttk.Button(buttons, text="Recharger la config", command=self.reload_from_disk).pack(side="left")
-        ttk.Button(buttons, text="Sauvegarder", command=self.save_config).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Git status", command=self.git_status).pack(side="left")
-        ttk.Button(buttons, text="Commit", command=self.git_commit).pack(side="left", padx=4)
-        ttk.Button(buttons, text="Commit + Push", command=self.git_commit_and_push).pack(side="left")
+        ttk.Label(publish_panel, text="Message de commit").grid(row=0, column=0, sticky="w")
+        ttk.Entry(publish_panel, textvariable=self.commit_message_var, width=72).grid(
+            row=1,
+            column=0,
+            sticky="ew",
+            pady=(4, 12),
+        )
 
-        self.output_text = tk.Text(frame, height=18, wrap="word")
-        self.output_text.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        buttons = ttk.Frame(publish_panel)
+        buttons.grid(row=2, column=0)
+        ttk.Button(buttons, text="Annuler", command=self.reload_from_disk).pack(side="left")
+        ttk.Button(buttons, text="Sauvegarder", command=self.git_commit_and_push).pack(side="left", padx=6)
+
+        log_panel = ttk.Frame(frame)
+        log_panel.grid(row=1, column=0, sticky="ew", pady=(24, 0))
+        log_panel.columnconfigure(0, weight=1)
+        ttk.Label(log_panel, text="Journal").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.output_text = tk.Text(log_panel, height=6, wrap="word")
+        self.output_text.grid(row=1, column=0, sticky="ew")
 
     def populate_form(self) -> None:
         pricing = self.config_data.get("pricing", {})
@@ -589,7 +626,11 @@ class VasoAdminApp(tk.Tk):
         hero_gallery = self.config_data.get("heroGallery", {})
         printer_volume = self.ensure_printer_volume_config()
 
-        self.status_state_var.set(shop_status.get("state", "open"))
+        status_state = shop_status.get("state", "open")
+        self.status_state_var.set(status_state)
+        self.status_state_display_var.set(
+            SHOP_STATUS_LABELS.get(status_state, SHOP_STATUS_LABELS["open"]),
+        )
         self.status_label_var.set(shop_status.get("label", ""))
         self.status_allow_checkout_var.set(bool(shop_status.get("allowCheckout", True)))
         self.status_message_var.set(shop_status.get("message", ""))
@@ -636,7 +677,10 @@ class VasoAdminApp(tk.Tk):
     def collect_form(self) -> None:
         existing_shipping_countries = self.config_data.get("shipping", {}).get("countries", [])
         self.config_data["shopStatus"] = {
-            "state": self.status_state_var.get().strip() or "open",
+            "state": SHOP_STATUS_CODES_BY_LABEL.get(
+                self.status_state_display_var.get().strip(),
+                self.status_state_var.get().strip() or "open",
+            ),
             "label": self.status_label_var.get().strip(),
             "message": self.status_message_text.get("1.0", "end").strip(),
             "allowCheckout": bool(self.status_allow_checkout_var.get()),
@@ -1313,19 +1357,23 @@ class VasoAdminApp(tk.Tk):
         self.stop_hero_preview_animation()
         self.config_data = self.load_config()
         self.populate_form()
-        self.log("Configuration rechargee depuis le disque")
+        self.commit_message_var.set(self.build_default_commit_message())
+        self.log("Modifications annulees et configuration rechargee depuis le disque")
 
     def git_status(self) -> None:
         self.run_git_command(["status", "--short"])
 
     def git_commit(self) -> None:
         self.save_config()
+        commit_message = self.commit_message_var.get().strip() or self.build_default_commit_message()
+        self.commit_message_var.set(commit_message)
         self.run_git_command(["add", "-A", "public/config/shop-config.json", "public/images/hero", "admin"])
-        self.run_git_command(["commit", "-m", self.commit_message_var.get().strip() or "Met a jour la configuration boutique"])
+        self.run_git_command(["commit", "-m", commit_message])
 
     def git_commit_and_push(self) -> None:
         self.git_commit()
         self.run_git_command(["push", "origin", "main"])
+        self.commit_message_var.set(self.build_default_commit_message())
 
     def run_git_command(self, args: list[str]) -> None:
         process = subprocess.run(

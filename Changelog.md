@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.48] - 2026-05-08
+
+### Modifié
+- Affine VASO-Admin avec un onglet Publication simplifie et des champs Boutique mieux calibres
+
 ## [1.1.47] - 2026-05-08
 
 ### Modifié
