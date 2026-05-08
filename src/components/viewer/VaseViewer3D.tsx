@@ -324,9 +324,10 @@ function ScreenshotBridge() {
 interface VaseViewer3DProps {
   mode?: "main" | "preview";
   colorOverride?: string;
+  colorOpacity?: number;
 }
 
-export function VaseViewer3D({ mode = "main", colorOverride }: VaseViewer3DProps) {
+export function VaseViewer3D({ mode = "main", colorOverride, colorOpacity = 1 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
   const randomize = useVaseStore((s) => s.randomize);
@@ -347,6 +348,7 @@ export function VaseViewer3D({ mode = "main", colorOverride }: VaseViewer3DProps
   const paramsKey = JSON.stringify(params);
   const isPreview = mode === "preview";
   const resolvedColor = colorOverride ?? vaseColor;
+  const resolvedOpacity = Math.min(1, Math.max(0.08, colorOpacity));
   const resolvedWireframe = isPreview ? false : wireframe;
   const resolvedFlatShading = isPreview ? false : flatShading;
   const resolvedRotationMode = isPreview ? "vase" : rotationMode;
@@ -404,6 +406,7 @@ export function VaseViewer3D({ mode = "main", colorOverride }: VaseViewer3DProps
             meshData={meshData}
             shading={shading}
             color={resolvedColor}
+            opacity={resolvedOpacity}
             wireframe={resolvedWireframe}
             flatShading={resolvedFlatShading}
             rotationMode={resolvedRotationMode}

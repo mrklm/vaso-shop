@@ -96,13 +96,14 @@
     {
       "id": "natural-translucent",
       "label": "Naturel (translucide)",
-      "hex": "#efe4cc",
+      "hex": "#f7edd5",
+      "opacity": 0.24,
       "available": true
     },
     {
       "id": "snow-white",
       "label": "Blanc neige",
-      "hex": "#f7f7f2",
+      "hex": "#ffffff",
       "available": true
     },
     {
@@ -114,7 +115,7 @@
     {
       "id": "pastel-yellow",
       "label": "Jaune Pastel",
-      "hex": "#f4e58d",
+      "hex": "#ffe97a",
       "available": true
     },
     {
@@ -126,19 +127,19 @@
     {
       "id": "fluorescent-orange",
       "label": "Orange fluo",
-      "hex": "#ff6a00",
+      "hex": "#f7ff00",
       "available": true
     },
     {
       "id": "gold-orange",
       "label": "Orange OR",
-      "hex": "#d88b20",
+      "hex": "#ff7a00",
       "available": true
     },
     {
       "id": "terracotta-wine",
       "label": "Terracotta (lie de vin)",
-      "hex": "#7a3b35",
+      "hex": "#a95849",
       "available": true
     },
     {
@@ -150,7 +151,7 @@
     {
       "id": "ral-4008",
       "label": "Violet RAL 4008",
-      "hex": "#8a3f63",
+      "hex": "#b05f8b",
       "available": true
     },
     {
@@ -162,7 +163,7 @@
     {
       "id": "pearlescent-green",
       "label": "Vert nacré",
-      "hex": "#6b927a",
+      "hex": "#84ae97",
       "available": true
     },
     {

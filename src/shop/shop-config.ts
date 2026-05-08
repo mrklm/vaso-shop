@@ -14,6 +14,7 @@ export interface ShopColor {
   id: string;
   label: string;
   hex: string;
+  opacity?: number;
   available: boolean;
 }
 
@@ -159,6 +160,7 @@ function normalizeColor(value: unknown, index: number): ShopColor | null {
 
   const label = normalizeString(value.label).trim();
   const hex = normalizeString(value.hex, "#d9d2c7").trim() || "#d9d2c7";
+  const opacity = Math.min(1, Math.max(0.08, normalizeNumber(value.opacity, 1)));
   if (!label) {
     return null;
   }
@@ -167,6 +169,7 @@ function normalizeColor(value: unknown, index: number): ShopColor | null {
     id: normalizeColorId(value, index),
     label,
     hex,
+    opacity,
     available: normalizeBoolean(value.available, true),
   };
 }

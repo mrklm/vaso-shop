@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.50] - 2026-05-08
+
+### Modifié
+- Ajuste la palette PLA du shop et ajoute un vrai rendu translucide au viewer
+
 ## [1.1.49] - 2026-05-08
 
 ### Modifié

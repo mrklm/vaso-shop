@@ -7,6 +7,7 @@ interface VaseMeshProps {
   meshData: MeshData;
   shading: number;
   color: string;
+  opacity: number;
   wireframe: boolean;
   flatShading: boolean;
   rotationMode: "camera" | "vase";
@@ -17,6 +18,7 @@ export function VaseMesh({
   meshData,
   shading,
   color,
+  opacity,
   wireframe,
   flatShading,
   rotationMode,
@@ -56,7 +58,7 @@ export function VaseMesh({
   useEffect(() => {
     if (!materialRef.current) return;
     materialRef.current.needsUpdate = true;
-  }, [flatShading]);
+  }, [flatShading, opacity]);
 
   const roughness = 1 - (shading / 100) * 0.7;
   const metalness = (shading / 100) * 0.3;
@@ -69,6 +71,9 @@ export function VaseMesh({
         color={color}
         roughness={roughness}
         metalness={metalness}
+        transparent={opacity < 0.999}
+        opacity={opacity}
+        depthWrite={opacity >= 0.999}
         wireframe={wireframe}
         flatShading={flatShading}
         side={THREE.DoubleSide}

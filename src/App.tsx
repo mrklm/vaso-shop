@@ -729,7 +729,7 @@ function App() {
               </button>
             </div>
             <div className="shop-viewer-frame">
-              <VaseViewer3D />
+              <VaseViewer3D colorOpacity={selectedColor?.opacity ?? 1} />
             </div>
           </div>
 
@@ -925,6 +925,7 @@ function App() {
                         <VaseViewer3D
                           mode="preview"
                           colorOverride={selectedColor?.hex ?? "#d9d2c7"}
+                          colorOpacity={selectedColor?.opacity ?? 1}
                         />
                       </div>
                     </div>
