@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.59] - 2026-05-09
+
+### Modifié
+- Fiabilise le bouton Sauvegarder de VASO-Admin avec de meilleurs retours Git
+
 ## [1.1.58] - 2026-05-09
 
 ### Modifié
