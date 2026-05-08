@@ -380,13 +380,13 @@ export function VaseViewer3D({ mode = "main", colorOverride, colorOpacity = 1 }:
         }}
         style={{ background: "var(--color-bg)" }}
         gl={{ preserveDrawingBuffer: true }}
-        shadows
+        shadows={!isPreview}
       >
-        <ambientLight intensity={0.25} />
+        <ambientLight intensity={isPreview ? 0.58 : 0.25} />
         <directionalLight
           position={[100, 200, 100]}
-          intensity={1.6}
-          castShadow
+          intensity={isPreview ? 1.05 : 1.6}
+          castShadow={!isPreview}
           shadow-bias={-0.0005}
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
@@ -397,9 +397,9 @@ export function VaseViewer3D({ mode = "main", colorOverride, colorOpacity = 1 }:
           shadow-camera-top={200}
           shadow-camera-bottom={-200}
         />
-        <directionalLight position={[-3, 4, -2]} intensity={0.3} />
-        <pointLight position={[0, 200, 0]} intensity={0.3} />
-        <hemisphereLight args={["#b1e1ff", "#b97a20", 0.3]} />
+        <directionalLight position={[-3, 4, -2]} intensity={isPreview ? 0.18 : 0.3} />
+        <pointLight position={[0, 200, 0]} intensity={isPreview ? 0.16 : 0.3} />
+        <hemisphereLight args={["#f5efe6", "#efe5d7", isPreview ? 0.62 : 0.3]} />
 
         {meshData && (
           <VaseMesh
@@ -416,14 +416,16 @@ export function VaseViewer3D({ mode = "main", colorOverride, colorOpacity = 1 }:
 
         <PreviewEngravingOverlay params={params} seed={seed} isSeedModified={showSeedModified} />
 
-        <mesh
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, -params.heightMm / 2 - 0.01, 0]}
-          receiveShadow
-        >
-          <planeGeometry args={[600, 600]} />
-          <shadowMaterial opacity={0.5} />
-        </mesh>
+        {!isPreview && (
+          <mesh
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, -params.heightMm / 2 - 0.01, 0]}
+            receiveShadow
+          >
+            <planeGeometry args={[600, 600]} />
+            <shadowMaterial opacity={0.5} />
+          </mesh>
+        )}
 
         {/* <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={300} blur={2} far={200} /> */}
 
@@ -450,10 +452,12 @@ export function VaseViewer3D({ mode = "main", colorOverride, colorOpacity = 1 }:
           />
         )}
 
-        <EffectComposer>
-          <SSAO radius={0.03} intensity={5} luminanceInfluence={0.3} />
-          <ToneMapping mode={ToneMappingMode.AGX} />
-        </EffectComposer>
+        {!isPreview && (
+          <EffectComposer>
+            <SSAO radius={0.03} intensity={5} luminanceInfluence={0.3} />
+            <ToneMapping mode={ToneMappingMode.AGX} />
+          </EffectComposer>
+        )}
       </Canvas>
     </div>
   );

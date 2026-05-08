@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.53] - 2026-05-08
+
+### Modifié
+- Eclaircit le rendu des aperçus couleur clairs sans toucher aux pastilles PLA
+
 ## [1.1.52] - 2026-05-08
 
 ### Modifié

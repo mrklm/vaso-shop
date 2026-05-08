@@ -301,8 +301,8 @@ function App() {
   }, [availableColors, selectedColorId, setSelectedColorId]);
 
   useEffect(() => {
-    setVaseColor(selectedColor?.hex ?? "#d9d2c7");
-  }, [selectedColor?.hex, setVaseColor]);
+    setVaseColor(selectedColor?.previewHex ?? selectedColor?.hex ?? "#d9d2c7");
+  }, [selectedColor?.hex, selectedColor?.previewHex, setVaseColor]);
 
   useEffect(() => {
     if (heroGalleryImages.length <= 1) {
@@ -924,7 +924,7 @@ function App() {
                       <div className="shop-color-preview-viewer">
                         <VaseViewer3D
                           mode="preview"
-                          colorOverride={selectedColor?.hex ?? "#d9d2c7"}
+                          colorOverride={selectedColor?.previewHex ?? selectedColor?.hex ?? "#d9d2c7"}
                           colorOpacity={selectedColor?.opacity ?? 1}
                         />
                       </div>
