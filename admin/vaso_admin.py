@@ -5,15 +5,20 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import tempfile
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 try:
-    from PIL import Image, ImageOps, ImageTk
+    from PIL import Image, ImageOps
 except ImportError:  # pragma: no cover - fallback runtime only
     Image = None
     ImageOps = None
+
+try:
+    from PIL import ImageTk
+except ImportError:  # pragma: no cover - fallback runtime only
     ImageTk = None
 
 
@@ -163,6 +168,7 @@ class VasoAdminApp(tk.Tk):
 
         self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
         self.hero_preview_photo = None
+        self.hero_preview_temp_path = Path(tempfile.gettempdir()) / "vaso-admin-hero-preview.png"
         self.hero_preview_cycle_after_id = None
         self.hero_preview_frame_after_id = None
         self.hero_preview_is_animating = False
@@ -976,13 +982,17 @@ class VasoAdminApp(tk.Tk):
             return None
 
     def display_preview_image(self, image: Image.Image | None, status: str, title: str = "") -> None:
-        if ImageTk is None or image is None:
+        if image is None:
             self.hero_preview_photo = None
             self.hero_preview_label.configure(image="", text=title or "Apercu indisponible")
             self.hero_preview_status_var.set(status)
             return
 
-        preview_photo = ImageTk.PhotoImage(image)
+        if ImageTk is not None:
+            preview_photo = ImageTk.PhotoImage(image)
+        else:
+            image.save(self.hero_preview_temp_path, format="PNG")
+            preview_photo = tk.PhotoImage(file=str(self.hero_preview_temp_path))
         self.hero_preview_photo = preview_photo
         self.hero_preview_label.configure(image=preview_photo, text="")
         self.hero_preview_status_var.set(status)
@@ -991,7 +1001,7 @@ class VasoAdminApp(tk.Tk):
         if self.hero_preview_is_animating:
             return
 
-        if Image is None or ImageOps is None or ImageTk is None:
+        if Image is None or ImageOps is None:
             self.display_preview_image(
                 None,
                 "Pillow n'est pas installe. Lancez : python3 -m pip install -r admin/requirements.txt",
@@ -1042,7 +1052,7 @@ class VasoAdminApp(tk.Tk):
         self.start_hero_preview_animation()
 
     def start_hero_preview_animation(self) -> None:
-        if Image is None or ImageOps is None or ImageTk is None:
+        if Image is None or ImageOps is None:
             self.display_preview_image(
                 None,
                 "Pillow n'est pas installe. Lancez : python3 -m pip install -r admin/requirements.txt",
@@ -1174,6 +1184,11 @@ class VasoAdminApp(tk.Tk):
 
     def on_close(self) -> None:
         self.cancel_hero_preview_jobs()
+        try:
+            if self.hero_preview_temp_path.exists():
+                self.hero_preview_temp_path.unlink()
+        except OSError:
+            pass
         self.destroy()
 
     def remove_hero_image(self) -> None:

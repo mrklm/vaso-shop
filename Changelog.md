@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.42] - 2026-05-08
+
+### Modifié
+- Fiabilise l'aperçu hero de VASO-Admin avec ou sans ImageTk
+
 ## [1.1.41] - 2026-05-08
 
 ### Modifié
