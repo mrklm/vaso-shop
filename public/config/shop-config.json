@@ -264,12 +264,12 @@
     "temporaryNotice": "",
     "atelierNote": "L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la demande, vérifié, protégé puis expédié avec soin.",
     "warningPla": "Nous attirons votre attention sur le fait qu'un vase imprimé en PLA n'est pas prévu pour contenir de l'eau. En effet, la matière étant biosourcée à base d'amidon de maïs, il s'agit d'un matériau biodégradable : le mettre en contact avec de l'eau dégraderait rapidement le vase. Toutefois, en prenant en compte les dimensions du vase (diamètre minimum et maximum), vous pouvez anticiper l'ajout d'un contenant en verre à l'intérieur.",
-    "colorPreviewNote": "Les aperçus 3D vous donnent une belle idée de la teinte, avec de légères nuances possibles selon la lumière, la matière et l'impression finale.",
+    "colorPreviewNote": "Les aperçus 3D vous donnent une idée de la teinte, cepandant les écrans peuvent être trompeurs, merci de prendre en compte que la couleur depuis votre écran ne sera pas forcement exactement le même que ce que vous optiendrez à l'impression finale.",
     "contactPrompt": "Vous avez des questions ?",
     "contactButtonLabel": "Contactez nous",
     "contactEmail": "",
     "contactEmailSubject": "Contact VASO SHOP",
-    "contactEmailBody": "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :\n"
+    "contactEmailBody": "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :"
   },
   "shopStatus": {
     "state": "open",
