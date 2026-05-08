@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.45] - 2026-05-08
+
+### Modifié
+- Clarifie la saisie du prix dans VASO-Admin avec euros, centimes et aperçu final
+
 ## [1.1.44] - 2026-05-08
 
 ### Modifié

@@ -282,7 +282,6 @@ export default async (request) => {
     min_diameter_mm: normalizeMetadataValue(payload.minDiameterMm, 32),
     max_diameter_mm: normalizeMetadataValue(payload.maxDiameterMm, 32),
     material: normalizeMetadataValue(payload.material, 32),
-    product_size: normalizeMetadataValue(payload.productSize, 8),
     product_price_cents: normalizeMetadataValue(productPriceCents, 40),
     color_id: normalizeMetadataValue(payload.colorId, 64),
     color_label: normalizeMetadataValue(payload.colorLabel, 128),

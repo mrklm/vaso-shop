@@ -1,12 +1,6 @@
 {
   "pricing": {
-    "defaultSize": "M",
-    "pricesCents": {
-      "S": 1900,
-      "M": 2500,
-      "L": 3500
-    },
-    "freeShippingThresholdCents": 0
+    "priceCents": 2500
   },
   "printerVolume": {
     "enforce": false,

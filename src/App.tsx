@@ -396,7 +396,6 @@ function App() {
           minDiameterMm: selectedEntry.minDiameterMm,
           maxDiameterMm: selectedEntry.maxDiameterMm,
           material: selectedEntry.material,
-          productSize: shopConfig.pricing.defaultSize,
           productPriceCents,
           colorId: selectedColorId,
           colorLabel: selectedColorLabel,

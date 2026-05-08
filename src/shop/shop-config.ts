@@ -7,7 +7,6 @@ export const DEFAULT_HERO_GALLERY_FADE_OUT_MS = 3200;
 
 const SHOP_PUBLIC_CONFIG_URL = `${import.meta.env.BASE_URL}config/shop-config.json`;
 
-export type ShopSizeKey = "S" | "M" | "L";
 export type ShopStatusState = "open" | "slowed" | "holiday" | "closed";
 export type ShopShippingModeId = "relay" | "home";
 
@@ -39,9 +38,7 @@ export interface ShopMessagesConfig {
 }
 
 export interface ShopPricingConfig {
-  defaultSize: ShopSizeKey;
-  pricesCents: Record<ShopSizeKey, number>;
-  freeShippingThresholdCents: number;
+  priceCents: number;
 }
 
 export interface ShopPrinterProfile {
@@ -131,14 +128,6 @@ function normalizeStatusState(value: unknown): ShopStatusState {
   }
 
   return "open";
-}
-
-function normalizeSizeKey(value: unknown): ShopSizeKey {
-  if (value === "S" || value === "M" || value === "L") {
-    return value;
-  }
-
-  return "M";
 }
 
 function normalizeColorId(rawColor: Record<string, unknown>, index: number): string {
@@ -281,15 +270,17 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
     ? activePrinterProfile
     : safePrinterProfiles[0].name;
 
+  const rawLegacyPrices = isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents : {};
+  const fallbackPriceCents = Math.max(
+    0,
+    normalizeNumber(
+      rawLegacyPrices.M ?? rawLegacyPrices.S ?? rawLegacyPrices.L,
+      0,
+    ),
+  );
   return {
     pricing: {
-      defaultSize: normalizeSizeKey(rawPricing.defaultSize),
-      pricesCents: {
-        S: Math.max(0, normalizeNumber(rawPricing.pricesCents && isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents.S : undefined, 0)),
-        M: Math.max(0, normalizeNumber(rawPricing.pricesCents && isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents.M : undefined, 0)),
-        L: Math.max(0, normalizeNumber(rawPricing.pricesCents && isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents.L : undefined, 0)),
-      },
-      freeShippingThresholdCents: Math.max(0, normalizeNumber(rawPricing.freeShippingThresholdCents, 0)),
+      priceCents: Math.max(0, normalizeNumber(rawPricing.priceCents, fallbackPriceCents)),
     },
     printerVolume: {
       enforce: normalizeBoolean(rawPrinterVolume.enforce, false),
@@ -353,26 +344,14 @@ export async function fetchShopConfig(): Promise<ShopPublicConfig> {
 }
 
 export function getShopBasePriceCents(config: ShopPublicConfig): number {
-  const { defaultSize, pricesCents } = config.pricing;
-  const sizePrice = pricesCents[defaultSize];
-
-  if (sizePrice > 0) {
-    return sizePrice;
-  }
-
-  return pricesCents.M || pricesCents.S || pricesCents.L || 0;
+  return Math.max(0, config.pricing.priceCents);
 }
 
 export function getShopEffectiveShippingPriceCents(
-  config: ShopPublicConfig,
-  productPriceCents: number,
+  _config: ShopPublicConfig,
+  _productPriceCents: number,
   shippingPriceCents: number,
 ): number {
-  const freeShippingThresholdCents = Math.max(0, config.pricing.freeShippingThresholdCents);
-  if (freeShippingThresholdCents > 0 && productPriceCents >= freeShippingThresholdCents) {
-    return 0;
-  }
-
   return Math.max(0, shippingPriceCents);
 }
 

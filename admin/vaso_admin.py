@@ -137,11 +137,9 @@ class VasoAdminApp(tk.Tk):
         self.contact_prompt_var = tk.StringVar()
         self.contact_button_label_var = tk.StringVar()
 
-        self.default_size_var = tk.StringVar()
-        self.price_s_var = tk.StringVar()
-        self.price_m_var = tk.StringVar()
-        self.price_l_var = tk.StringVar()
-        self.free_shipping_threshold_var = tk.StringVar()
+        self.price_euros_var = tk.StringVar()
+        self.price_cents_var = tk.StringVar()
+        self.price_preview_var = tk.StringVar()
         self.printer_enforce_var = tk.BooleanVar()
         self.printer_active_profile_var = tk.StringVar()
         self.printer_name_var = tk.StringVar()
@@ -173,6 +171,9 @@ class VasoAdminApp(tk.Tk):
         self.hero_preview_frame_after_id = None
         self.hero_preview_is_animating = False
         self.hero_preview_current_index = 0
+
+        self.price_euros_var.trace_add("write", lambda *_args: self.update_price_preview())
+        self.price_cents_var.trace_add("write", lambda *_args: self.update_price_preview())
 
         self.build_ui()
         self.populate_form()
@@ -312,35 +313,30 @@ class VasoAdminApp(tk.Tk):
         frame = self.pricing_frame
         frame.columnconfigure(1, weight=1)
 
-        ttk.Label(frame, text="Taille active sur le shop").grid(row=0, column=0, sticky="w")
-        ttk.Combobox(
-            frame,
-            textvariable=self.default_size_var,
-            values=["S", "M", "L"],
+        ttk.Label(frame, text="Prix").grid(row=0, column=0, sticky="w")
+        price_row = ttk.Frame(frame)
+        price_row.grid(row=0, column=1, sticky="w", pady=4)
+        ttk.Entry(price_row, textvariable=self.price_euros_var, width=8).pack(side="left")
+        ttk.Label(price_row, text="€").pack(side="left", padx=(6, 4))
+        ttk.Label(price_row, text=",").pack(side="left", padx=(0, 4))
+        ttk.Entry(price_row, textvariable=self.price_cents_var, width=4).pack(side="left")
+        ttk.Label(price_row, text="Aperçu shop").pack(side="left", padx=(16, 6))
+        ttk.Entry(
+            price_row,
+            textvariable=self.price_preview_var,
+            width=14,
             state="readonly",
-        ).grid(row=0, column=1, sticky="ew", pady=4)
+        ).pack(side="left")
 
-        ttk.Label(frame, text="Prix S (centimes)").grid(row=1, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.price_s_var).grid(row=1, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Prix M (centimes)").grid(row=2, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.price_m_var).grid(row=2, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Prix L (centimes)").grid(row=3, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.price_l_var).grid(row=3, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Seuil livraison offerte (centimes)").grid(row=4, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.free_shipping_threshold_var).grid(row=4, column=1, sticky="ew", pady=4)
-
-        ttk.Label(frame, text="Message pays non geres").grid(row=5, column=0, sticky="nw")
+        ttk.Label(frame, text="Message pays non geres").grid(row=1, column=0, sticky="nw")
         self.shipping_unsupported_text = tk.Text(frame, height=2, wrap="word")
-        self.shipping_unsupported_text.grid(row=5, column=1, sticky="ew", pady=4)
+        self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=4)
 
-        ttk.Label(frame, text="Grille livraison (JSON)").grid(row=6, column=0, sticky="nw")
+        ttk.Label(frame, text="Grille livraison (JSON)").grid(row=2, column=0, sticky="nw")
         self.shipping_countries_text = tk.Text(frame, height=16, wrap="none")
-        self.shipping_countries_text.grid(row=6, column=1, sticky="nsew", pady=4)
+        self.shipping_countries_text.grid(row=2, column=1, sticky="nsew", pady=4)
 
-        frame.rowconfigure(6, weight=1)
+        frame.rowconfigure(2, weight=1)
 
     def build_colors_tab(self) -> None:
         frame = self.colors_frame
@@ -570,12 +566,17 @@ class VasoAdminApp(tk.Tk):
             json.dumps(shipping.get("countries", []), indent=2, ensure_ascii=False),
         )
 
-        self.default_size_var.set(pricing.get("defaultSize", "M"))
-        prices_cents = pricing.get("pricesCents", {})
-        self.price_s_var.set(str(prices_cents.get("S", 0)))
-        self.price_m_var.set(str(prices_cents.get("M", 2500)))
-        self.price_l_var.set(str(prices_cents.get("L", 0)))
-        self.free_shipping_threshold_var.set(str(pricing.get("freeShippingThresholdCents", 0)))
+        legacy_prices_cents = pricing.get("pricesCents", {})
+        fallback_price_cents = (
+            legacy_prices_cents.get("M")
+            or legacy_prices_cents.get("S")
+            or legacy_prices_cents.get("L")
+            or 2500
+        )
+        price_cents = int(pricing.get("priceCents", fallback_price_cents))
+        self.price_euros_var.set(str(price_cents // 100))
+        self.price_cents_var.set(f"{price_cents % 100:02d}")
+        self.update_price_preview()
         self.printer_enforce_var.set(bool(printer_volume.get("enforce", False)))
         self.refresh_printer_profile_selector()
         self.hero_transition_ms_var.set(str(hero_gallery.get("transitionMs", DEFAULT_HERO_TRANSITION_MS)))
@@ -601,16 +602,7 @@ class VasoAdminApp(tk.Tk):
             "contactButtonLabel": self.contact_button_label_var.get().strip(),
         }
         self.config_data["pricing"] = {
-            "defaultSize": self.default_size_var.get().strip() or "M",
-            "pricesCents": {
-                "S": self.parse_int(self.price_s_var.get(), "prix S"),
-                "M": self.parse_int(self.price_m_var.get(), "prix M"),
-                "L": self.parse_int(self.price_l_var.get(), "prix L"),
-            },
-            "freeShippingThresholdCents": self.parse_int(
-                self.free_shipping_threshold_var.get(),
-                "seuil livraison offerte",
-            ),
+            "priceCents": self.parse_price_cents(),
         }
         self.config_data["printerVolume"] = self.collect_printer_volume_config()
         self.config_data["shipping"] = {
@@ -628,6 +620,25 @@ class VasoAdminApp(tk.Tk):
             return int(raw_value.strip() or "0")
         except ValueError as error:
             raise ValueError(f"Valeur invalide pour {field_label}") from error
+
+    def parse_price_cents(self) -> int:
+        euros = self.parse_int(self.price_euros_var.get(), "prix en euros")
+        cents = self.parse_int(self.price_cents_var.get(), "prix en centimes")
+        if euros < 0:
+            raise ValueError("Le prix en euros ne peut pas être négatif.")
+        if cents < 0 or cents > 99:
+            raise ValueError("Les centimes doivent être compris entre 0 et 99.")
+        return euros * 100 + cents
+
+    def format_price_preview(self, value_in_cents: int) -> str:
+        euros = max(0, value_in_cents) / 100
+        return f"{euros:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def update_price_preview(self) -> None:
+        try:
+            self.price_preview_var.set(self.format_price_preview(self.parse_price_cents()))
+        except ValueError:
+            self.price_preview_var.set("Saisie invalide")
 
     def parse_shipping_countries(self) -> list[dict]:
         raw_json = self.shipping_countries_text.get("1.0", "end").strip()

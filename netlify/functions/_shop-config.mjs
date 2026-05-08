@@ -40,14 +40,6 @@ function normalizeStatusState(value) {
   return "open";
 }
 
-function normalizeSizeKey(value) {
-  if (value === "S" || value === "M" || value === "L") {
-    return value;
-  }
-
-  return "M";
-}
-
 function normalizeShippingOption(value) {
   if (!isRecord(value)) {
     return null;
@@ -95,16 +87,14 @@ function normalizeShopConfig(rawValue) {
   const rawShipping = isRecord(rawConfig.shipping) ? rawConfig.shipping : {};
   const rawPrices = isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents : {};
   const statusState = normalizeStatusState(rawStatus.state);
+  const fallbackPriceCents = Math.max(
+    0,
+    normalizeNumber(rawPrices.M ?? rawPrices.S ?? rawPrices.L, 0),
+  );
 
   return {
     pricing: {
-      defaultSize: normalizeSizeKey(rawPricing.defaultSize),
-      pricesCents: {
-        S: Math.max(0, normalizeNumber(rawPrices.S, 0)),
-        M: Math.max(0, normalizeNumber(rawPrices.M, 0)),
-        L: Math.max(0, normalizeNumber(rawPrices.L, 0)),
-      },
-      freeShippingThresholdCents: Math.max(0, normalizeNumber(rawPricing.freeShippingThresholdCents, 0)),
+      priceCents: Math.max(0, normalizeNumber(rawPricing.priceCents, fallbackPriceCents)),
     },
     shopStatus: {
       state: statusState,
@@ -130,17 +120,10 @@ export async function readShopConfig() {
 }
 
 export function getConfiguredProductPriceCents(config) {
-  const { defaultSize, pricesCents } = config.pricing;
-  const defaultSizePrice = pricesCents[defaultSize];
-  return defaultSizePrice || pricesCents.M || pricesCents.S || pricesCents.L || 0;
+  return Math.max(0, config.pricing.priceCents);
 }
 
 export function getEffectiveShippingPriceCents(config, productPriceCents, shippingPriceCents) {
-  const freeShippingThresholdCents = Math.max(0, config.pricing.freeShippingThresholdCents);
-  if (freeShippingThresholdCents > 0 && productPriceCents >= freeShippingThresholdCents) {
-    return 0;
-  }
-
   return Math.max(0, shippingPriceCents);
 }
 
