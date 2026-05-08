@@ -508,11 +508,13 @@ class VasoAdminApp(tk.Tk):
         self.hero_preview_label = tk.Label(
             preview,
             text="Selectionnez une image hero",
-            width=40,
-            height=18,
+            width=HERO_PREVIEW_SIZE[0],
+            height=HERO_PREVIEW_SIZE[1],
             anchor="center",
             justify="center",
             relief="flat",
+            compound="center",
+            wraplength=HERO_PREVIEW_SIZE[0] - 24,
         )
         self.hero_preview_label.grid(row=1, column=0, sticky="nsew", pady=(6, 8))
         ttk.Label(

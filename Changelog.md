@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.44] - 2026-05-08
+
+### Modifié
+- Restaure un aperçu hero au bon format dans VASO-Admin
+
 ## [1.1.43] - 2026-05-08
 
 ### Modifié
