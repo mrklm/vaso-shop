@@ -10,22 +10,92 @@
   },
   "printerVolume": {
     "enforce": false,
-    "activeProfile": "Alfawise U30",
+    "activeProfile": "Ender 5-S1",
     "profiles": [
-      { "name": "Alfawise U30", "width": 220, "depth": 220, "height": 250 },
-      { "name": "Ender 5 Pro", "width": 220, "depth": 220, "height": 300 },
-      { "name": "Ender 5-S1", "width": 220, "depth": 220, "height": 280 },
-      { "name": "Creality CR-10S", "width": 300, "depth": 300, "height": 400 },
-      { "name": "Bambu Lab A1 Mini", "width": 180, "depth": 180, "height": 180 },
-      { "name": "Bambu Lab A1", "width": 256, "depth": 256, "height": 256 },
-      { "name": "Bambu Lab P1S", "width": 256, "depth": 256, "height": 256 },
-      { "name": "Prusa MINI+", "width": 180, "depth": 180, "height": 180 },
-      { "name": "Prusa MK4S", "width": 250, "depth": 210, "height": 220 },
-      { "name": "Prusa CORE One", "width": 250, "depth": 220, "height": 270 },
-      { "name": "Creality Ender-3 V3 SE", "width": 220, "depth": 220, "height": 250 },
-      { "name": "Creality Ender-3 V3 KE", "width": 220, "depth": 220, "height": 240 },
-      { "name": "Creality K1C", "width": 220, "depth": 220, "height": 250 },
-      { "name": "ELEGOO Neptune 4 Pro", "width": 225, "depth": 225, "height": 265 }
+      {
+        "name": "Alfawise U30",
+        "width": 220,
+        "depth": 220,
+        "height": 250
+      },
+      {
+        "name": "Ender 5 Pro",
+        "width": 220,
+        "depth": 220,
+        "height": 300
+      },
+      {
+        "name": "Ender 5-S1",
+        "width": 220,
+        "depth": 220,
+        "height": 280
+      },
+      {
+        "name": "Creality CR-10S",
+        "width": 300,
+        "depth": 300,
+        "height": 400
+      },
+      {
+        "name": "Bambu Lab A1 Mini",
+        "width": 180,
+        "depth": 180,
+        "height": 180
+      },
+      {
+        "name": "Bambu Lab A1",
+        "width": 256,
+        "depth": 256,
+        "height": 256
+      },
+      {
+        "name": "Bambu Lab P1S",
+        "width": 256,
+        "depth": 256,
+        "height": 256
+      },
+      {
+        "name": "Prusa MINI+",
+        "width": 180,
+        "depth": 180,
+        "height": 180
+      },
+      {
+        "name": "Prusa MK4S",
+        "width": 250,
+        "depth": 210,
+        "height": 220
+      },
+      {
+        "name": "Prusa CORE One",
+        "width": 250,
+        "depth": 220,
+        "height": 270
+      },
+      {
+        "name": "Creality Ender-3 V3 SE",
+        "width": 220,
+        "depth": 220,
+        "height": 250
+      },
+      {
+        "name": "Creality Ender-3 V3 KE",
+        "width": 220,
+        "depth": 220,
+        "height": 240
+      },
+      {
+        "name": "Creality K1C",
+        "width": 220,
+        "depth": 220,
+        "height": 250
+      },
+      {
+        "name": "ELEGOO Neptune 4 Pro",
+        "width": 225,
+        "depth": 225,
+        "height": 265
+      }
     ]
   },
   "colors": [
@@ -121,19 +191,58 @@
     }
   ],
   "heroImages": [
-    { "path": "images/hero/1.jpg", "enabled": true },
-    { "path": "images/hero/2.jpg", "enabled": true },
-    { "path": "images/hero/3.jpg", "enabled": true },
-    { "path": "images/hero/4.jpg", "enabled": true },
-    { "path": "images/hero/5.jpg", "enabled": true },
-    { "path": "images/hero/6.jpg", "enabled": true },
-    { "path": "images/hero/7.jpg", "enabled": true },
-    { "path": "images/hero/8.jpg", "enabled": true },
-    { "path": "images/hero/9.jpg", "enabled": true },
-    { "path": "images/hero/10.jpg", "enabled": true },
-    { "path": "images/hero/11.jpg", "enabled": true },
-    { "path": "images/hero/12.jpg", "enabled": true },
-    { "path": "images/hero/13.jpg", "enabled": true }
+    {
+      "path": "images/hero/1.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/2.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/3.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/4.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/5.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/6.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/7.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/8.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/9.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/10.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/11.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/12.jpg",
+      "enabled": true
+    },
+    {
+      "path": "images/hero/13.jpg",
+      "enabled": true
+    }
   ],
   "heroGallery": {
     "transitionMs": 8200,
@@ -160,68 +269,153 @@
       {
         "country": "France",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 410 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 749 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 410
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 749
+          }
         ]
       },
       {
         "country": "Belgique",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 460 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1250 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 460
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1250
+          }
         ]
       },
       {
         "country": "Luxembourg",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 460 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1250 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 460
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1250
+          }
         ]
       },
       {
         "country": "Pays-Bas",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 660 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1250 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 660
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1250
+          }
         ]
       },
       {
         "country": "Espagne",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 660 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1270 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 660
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1270
+          }
         ]
       },
       {
         "country": "Portugal",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 660 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1270 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 660
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1270
+          }
         ]
       },
       {
         "country": "Italie",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 660 },
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1270 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 660
+          },
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1270
+          }
         ]
       },
       {
         "country": "Pologne",
         "options": [
-          { "id": "relay", "label": "Point relais", "provider": "Mondial Relay", "priceCents": 720 }
+          {
+            "id": "relay",
+            "label": "Point relais",
+            "provider": "Mondial Relay",
+            "priceCents": 720
+          }
         ]
       },
       {
         "country": "Allemagne",
         "options": [
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1250 }
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1250
+          }
         ]
       },
       {
         "country": "Autriche",
         "options": [
-          { "id": "home", "label": "Livraison à domicile", "provider": "Mondial Relay Domicile", "priceCents": 1600 }
+          {
+            "id": "home",
+            "label": "Livraison à domicile",
+            "provider": "Mondial Relay Domicile",
+            "priceCents": 1600
+          }
         ]
       }
     ]
