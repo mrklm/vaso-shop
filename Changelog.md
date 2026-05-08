@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.39] - 2026-05-08
+
+### Modifié
+- Ajoute un sélecteur de thème persistant à VASO-Admin
+
 ## [1.1.38] - 2026-05-08
 
 ### Modifié

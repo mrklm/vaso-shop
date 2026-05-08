@@ -13,6 +13,74 @@ from tkinter import filedialog, messagebox, ttk
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
+ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
+
+THEMES = {
+    "[Sombre] Midnight Garage": dict(
+        BG="#151515", PANEL="#1F1F1F", FIELD="#2A2A2A",
+        FG="#EAEAEA", FIELD_FG="#F0F0F0", ACCENT="#FF9800"
+    ),
+    "[Sombre] AIR-KLM Night flight": dict(
+        BG="#0B1E2D", PANEL="#102A3D", FIELD="#16384F",
+        FG="#EAF6FF", FIELD_FG="#FFFFFF", ACCENT="#00A1DE"
+    ),
+    "[Sombre] Café Serré": dict(
+        BG="#1B120C", PANEL="#2A1C14", FIELD="#3A281D",
+        FG="#F2E6D8", FIELD_FG="#FFF4E6", ACCENT="#C28E5C"
+    ),
+    "[Sombre] Matrix Déjà Vu": dict(
+        BG="#000A00", PANEL="#001F00", FIELD="#003300",
+        FG="#00FF66", FIELD_FG="#66FF99", ACCENT="#00FF00"
+    ),
+    "[Sombre] Miami Vice 1987": dict(
+        BG="#14002E", PANEL="#2B0057", FIELD="#004D4D",
+        FG="#FFF0FF", FIELD_FG="#FFFFFF", ACCENT="#00FFD5"
+    ),
+    "[Sombre] Cyber Licorne": dict(
+        BG="#1A0026", PANEL="#2E004F", FIELD="#3D0066",
+        FG="#F6E7FF", FIELD_FG="#FFFFFF", ACCENT="#FF2CF7"
+    ),
+    "[Clair] AIR-KLM Day flight": dict(
+        BG="#EAF6FF", PANEL="#D6EEF9", FIELD="#FFFFFF",
+        FG="#0B2A3F", FIELD_FG="#0B2A3F", ACCENT="#00A1DE"
+    ),
+    "[Clair] Matin Brumeux": dict(
+        BG="#E6E7E8", PANEL="#D4D7DB", FIELD="#FFFFFF",
+        FG="#1E1F22", FIELD_FG="#1E1F22", ACCENT="#6B7C93"
+    ),
+    "[Clair] Latte Vanille": dict(
+        BG="#FAF6F1", PANEL="#EFE6DC", FIELD="#FFFFFF",
+        FG="#3D2E22", FIELD_FG="#3D2E22", ACCENT="#D8B892"
+    ),
+    "[Clair] Miellerie La Divette": dict(
+        BG="#E6B65C", PANEL="#F5E6CC", FIELD="#FFFFFF",
+        FG="#50371A", FIELD_FG="#50371A", ACCENT="#F2B705"
+    ),
+    "[Pouêt] Chewing-gum Océan": dict(
+        BG="#00A6C8", PANEL="#0083A1", FIELD="#00C7B7",
+        FG="#082026", FIELD_FG="#082026", ACCENT="#FF4FD8"
+    ),
+    "[Pouêt] Pamplemousse": dict(
+        BG="#FF4A1C", PANEL="#E63B10", FIELD="#FF7A00",
+        FG="#1A0B00", FIELD_FG="#1A0B00", ACCENT="#00E5FF"
+    ),
+    "[Pouêt] Raisin Toxique": dict(
+        BG="#7A00FF", PANEL="#5B00C9", FIELD="#B000FF",
+        FG="#0F001A", FIELD_FG="#0F001A", ACCENT="#39FF14"
+    ),
+    "[Pouêt] Citron qui pique": dict(
+        BG="#FFF200", PANEL="#E6D800", FIELD="#FFF7A6",
+        FG="#1A1A00", FIELD_FG="#1A1A00", ACCENT="#0066FF"
+    ),
+    "[Pouêt] Barbie Apocalypse": dict(
+        BG="#FF1493", PANEL="#004D40", FIELD="#1B5E20",
+        FG="#E8FFF8", FIELD_FG="#FFFFFF", ACCENT="#FFEB3B"
+    ),
+    "[Pouêt] Compagnie Créole": dict(
+        BG="#8B3A1A", PANEL="#F2C94C", FIELD="#FFFFFF",
+        FG="#5A2E0C", FIELD_FG="#5A2E0C", ACCENT="#8B3A1A"
+    ),
+}
 
 
 class VasoAdminApp(tk.Tk):
@@ -23,6 +91,9 @@ class VasoAdminApp(tk.Tk):
         self.minsize(1080, 760)
 
         self.config_data = self.load_config()
+        self.settings_data = self.load_settings()
+        self.style = ttk.Style(self)
+        self.style.theme_use("clam")
 
         self.status_state_var = tk.StringVar()
         self.status_label_var = tk.StringVar()
@@ -48,13 +119,33 @@ class VasoAdminApp(tk.Tk):
         self.hero_path_var = tk.StringVar()
 
         self.commit_message_var = tk.StringVar(value="Met a jour la configuration boutique")
+        self.theme_name_var = tk.StringVar(
+            value=self.settings_data.get("theme", next(iter(THEMES))),
+        )
 
         self.build_ui()
         self.populate_form()
+        self.apply_theme(self.theme_name_var.get())
 
     def load_config(self) -> dict:
         with CONFIG_PATH.open("r", encoding="utf-8") as handle:
             return json.load(handle)
+
+    def load_settings(self) -> dict:
+        if not ADMIN_SETTINGS_PATH.exists():
+            return {}
+
+        try:
+            with ADMIN_SETTINGS_PATH.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    def save_settings(self) -> None:
+        ADMIN_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with ADMIN_SETTINGS_PATH.open("w", encoding="utf-8") as handle:
+            json.dump({"theme": self.theme_name_var.get()}, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
 
     def save_config(self) -> None:
         self.collect_form()
@@ -65,7 +156,22 @@ class VasoAdminApp(tk.Tk):
         self.log(f"Configuration sauvegardee dans {CONFIG_PATH.relative_to(REPO_ROOT)}")
 
     def build_ui(self) -> None:
-        notebook = ttk.Notebook(self)
+        toolbar = ttk.Frame(self, padding=(12, 12, 12, 0))
+        toolbar.pack(fill="x")
+
+        ttk.Label(toolbar, text="Theme interface").pack(side="left")
+        self.theme_selector = ttk.Combobox(
+            toolbar,
+            textvariable=self.theme_name_var,
+            values=list(THEMES.keys()),
+            state="readonly",
+            width=34,
+        )
+        self.theme_selector.pack(side="left", padx=(8, 0))
+        self.theme_selector.bind("<<ComboboxSelected>>", lambda _event: self.on_theme_change())
+
+        self.notebook = ttk.Notebook(self)
+        notebook = self.notebook
         notebook.pack(fill="both", expand=True, padx=12, pady=12)
 
         self.general_frame = ttk.Frame(notebook, padding=12)
@@ -85,6 +191,17 @@ class VasoAdminApp(tk.Tk):
         self.build_colors_tab()
         self.build_hero_tab()
         self.build_publish_tab()
+
+        self.tk_text_widgets = [
+            self.status_message_text,
+            self.temporary_notice_text,
+            self.atelier_note_text,
+            self.warning_text,
+            self.shipping_unsupported_text,
+            self.shipping_countries_text,
+            self.output_text,
+        ]
+        self.tk_listbox_widgets = [self.colors_listbox, self.hero_listbox]
 
     def build_general_tab(self) -> None:
         frame = self.general_frame
@@ -560,6 +677,104 @@ class VasoAdminApp(tk.Tk):
     def write_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", "end")
         widget.insert("1.0", value)
+
+    def on_theme_change(self) -> None:
+        self.apply_theme(self.theme_name_var.get())
+        self.log(f"Theme applique : {self.theme_name_var.get()}")
+
+    def apply_theme(self, theme_name: str) -> None:
+        theme = THEMES.get(theme_name)
+        if theme is None:
+            theme_name = next(iter(THEMES))
+            theme = THEMES[theme_name]
+            self.theme_name_var.set(theme_name)
+
+        self.configure(bg=theme["BG"])
+        self.option_add("*Foreground", theme["FG"])
+        self.option_add("*Background", theme["BG"])
+
+        self.style.configure("TFrame", background=theme["BG"])
+        self.style.configure("TLabel", background=theme["BG"], foreground=theme["FG"])
+        self.style.configure(
+            "TButton",
+            background=theme["PANEL"],
+            foreground=theme["FG"],
+            borderwidth=0,
+            focusthickness=0,
+            padding=(10, 6),
+        )
+        self.style.map(
+            "TButton",
+            background=[("active", theme["ACCENT"]), ("pressed", theme["ACCENT"])],
+            foreground=[("active", theme["FIELD_FG"]), ("pressed", theme["FIELD_FG"])],
+        )
+        self.style.configure(
+            "TEntry",
+            fieldbackground=theme["FIELD"],
+            foreground=theme["FIELD_FG"],
+            insertcolor=theme["FIELD_FG"],
+        )
+        self.style.configure(
+            "TCombobox",
+            fieldbackground=theme["FIELD"],
+            background=theme["PANEL"],
+            foreground=theme["FIELD_FG"],
+            arrowcolor=theme["FG"],
+        )
+        self.style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", theme["FIELD"])],
+            foreground=[("readonly", theme["FIELD_FG"])],
+            selectbackground=[("readonly", theme["ACCENT"])],
+            selectforeground=[("readonly", theme["FIELD_FG"])],
+        )
+        self.style.configure("TCheckbutton", background=theme["BG"], foreground=theme["FG"])
+        self.style.map(
+            "TCheckbutton",
+            background=[("active", theme["BG"])],
+            foreground=[("active", theme["FG"])],
+            indicatorcolor=[("selected", theme["ACCENT"]), ("!selected", theme["FIELD"])],
+        )
+        self.style.configure("TNotebook", background=theme["BG"], borderwidth=0, tabmargins=(0, 0, 0, 0))
+        self.style.configure(
+            "TNotebook.Tab",
+            background=theme["PANEL"],
+            foreground=theme["FG"],
+            padding=(12, 8),
+            borderwidth=0,
+        )
+        self.style.map(
+            "TNotebook.Tab",
+            background=[("selected", theme["ACCENT"]), ("active", theme["PANEL"])],
+            foreground=[("selected", theme["FIELD_FG"]), ("active", theme["FG"])],
+        )
+
+        for widget in self.tk_text_widgets:
+            widget.configure(
+                bg=theme["FIELD"],
+                fg=theme["FIELD_FG"],
+                insertbackground=theme["FIELD_FG"],
+                selectbackground=theme["ACCENT"],
+                selectforeground=theme["FIELD_FG"],
+                highlightbackground=theme["PANEL"],
+                highlightcolor=theme["ACCENT"],
+                relief="flat",
+                borderwidth=1,
+            )
+
+        for widget in self.tk_listbox_widgets:
+            widget.configure(
+                bg=theme["PANEL"],
+                fg=theme["FG"],
+                selectbackground=theme["ACCENT"],
+                selectforeground=theme["FIELD_FG"],
+                highlightbackground=theme["PANEL"],
+                highlightcolor=theme["ACCENT"],
+                relief="flat",
+                borderwidth=1,
+            )
+
+        self.save_settings()
 
     def log(self, message: str) -> None:
         self.output_text.insert("end", f"{message}\n")
