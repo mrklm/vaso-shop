@@ -129,6 +129,30 @@ function appendMetadata(params, scope, metadata) {
   });
 }
 
+function buildOrderMetadata(payload, shippingOption, productPriceCents, shippingPriceCents, orderTotalCents, orderReference) {
+  return {
+    order_ref: orderReference,
+    seed: normalizeMetadataValue(payload.seed, 50),
+    version: normalizeMetadataValue(payload.version, 32),
+    height_mm: normalizeMetadataValue(payload.heightMm, 32),
+    min_diameter_mm: normalizeMetadataValue(payload.minDiameterMm, 32),
+    max_diameter_mm: normalizeMetadataValue(payload.maxDiameterMm, 32),
+    material: normalizeMetadataValue(payload.material, 32),
+    product_price_cents: normalizeMetadataValue(productPriceCents, 40),
+    color_id: normalizeMetadataValue(payload.colorId, 64),
+    color_label: normalizeMetadataValue(payload.colorLabel, 128),
+    shipping_mode: normalizeMetadataValue(shippingOption.label, 80),
+    shipping_provider: normalizeMetadataValue(shippingOption.provider, 120),
+    shipping_country: normalizeMetadataValue(payload.customerCountry, 120),
+    shipping_price_cents: normalizeMetadataValue(shippingPriceCents, 40),
+    relay_id: normalizeMetadataValue(payload.relayId, 80),
+    relay_name: normalizeMetadataValue(payload.relayName, 160),
+    relay_city: normalizeMetadataValue(payload.relayCity, 120),
+    relay_country: normalizeMetadataValue(payload.relayCountry, 120),
+    order_total_cents: normalizeMetadataValue(orderTotalCents, 40),
+  };
+}
+
 function buildLineItems(params, payload, shippingOption, productPriceCents, shippingPriceCents) {
   const currency = (readEnv("STRIPE_CURRENCY") ?? "eur").trim().toLowerCase();
   const productName = (readEnv("STRIPE_PRODUCT_NAME") ?? "Vase Vaso").trim();
@@ -204,11 +228,13 @@ export default async (request) => {
     return jsonResponse({ error: "Méthode non autorisée." }, 405, corsHeaders);
   }
 
-  if (origin) {
-    const allowedOrigins = buildAllowedOrigins(requestOrigin);
-    if (!allowedOrigins.has(origin)) {
-      return jsonResponse({ error: "Origine non autorisée." }, 403, corsHeaders);
-    }
+  if (!origin) {
+    return jsonResponse({ error: "Origine requise." }, 403, corsHeaders);
+  }
+
+  const allowedOrigins = buildAllowedOrigins(requestOrigin);
+  if (!allowedOrigins.has(origin)) {
+    return jsonResponse({ error: "Origine non autorisée." }, 403, corsHeaders);
   }
 
   const stripeSecretKey = readEnv("STRIPE_SECRET_KEY")?.trim();
@@ -274,39 +300,14 @@ export default async (request) => {
   cancelUrl.searchParams.set("order_ref", orderReference);
   cancelUrl.searchParams.set("seed", `${payload.seed}`);
 
-  const metadata = {
-    order_ref: orderReference,
-    seed: normalizeMetadataValue(payload.seed, 50),
-    version: normalizeMetadataValue(payload.version, 32),
-    height_mm: normalizeMetadataValue(payload.heightMm, 32),
-    min_diameter_mm: normalizeMetadataValue(payload.minDiameterMm, 32),
-    max_diameter_mm: normalizeMetadataValue(payload.maxDiameterMm, 32),
-    material: normalizeMetadataValue(payload.material, 32),
-    product_price_cents: normalizeMetadataValue(productPriceCents, 40),
-    color_id: normalizeMetadataValue(payload.colorId, 64),
-    color_label: normalizeMetadataValue(payload.colorLabel, 128),
-    customer_name: normalizeMetadataValue(
-      `${payload.customerFirstName} ${payload.customerLastName}`,
-      160,
-    ),
-    customer_email: normalizeMetadataValue(payload.customerEmail, 160),
-    customer_phone: normalizeMetadataValue(payload.customerPhone, 60),
-    customer_address: normalizeMetadataValue(payload.customerAddress, 240),
-    customer_city: normalizeMetadataValue(payload.customerCity, 120),
-    customer_postal_code: normalizeMetadataValue(payload.customerPostalCode, 40),
-    customer_country: normalizeMetadataValue(payload.customerCountry, 120),
-    shipping_mode: normalizeMetadataValue(shippingOption.label, 80),
-    shipping_provider: normalizeMetadataValue(shippingOption.provider, 120),
-    shipping_price_cents: normalizeMetadataValue(shippingPriceCents, 40),
-    relay_id: normalizeMetadataValue(payload.relayId, 80),
-    relay_name: normalizeMetadataValue(payload.relayName, 160),
-    relay_address: normalizeMetadataValue(payload.relayAddress, 240),
-    relay_postal_code: normalizeMetadataValue(payload.relayPostalCode, 40),
-    relay_city: normalizeMetadataValue(payload.relayCity, 120),
-    relay_country: normalizeMetadataValue(payload.relayCountry, 120),
-    order_total_cents: normalizeMetadataValue(orderTotalCents, 40),
-    customer_message: normalizeMetadataValue(payload.customerMessage, 500),
-  };
+  const metadata = buildOrderMetadata(
+    payload,
+    shippingOption,
+    productPriceCents,
+    shippingPriceCents,
+    orderTotalCents,
+    orderReference,
+  );
 
   try {
     const params = new URLSearchParams();

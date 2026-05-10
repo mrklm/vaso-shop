@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.61] - 2026-05-10
+
+### Modifié
+- Durcit le checkout Stripe et limite les donnees personnelles exposees
+
 ## [1.1.60] - 2026-05-10
 
 ### Modifié

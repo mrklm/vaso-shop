@@ -100,9 +100,6 @@ function parseStripeEvent(rawBody) {
 
 function normalizeCheckoutSession(session) {
   const metadata = session.metadata ?? {};
-  const customerDetails = session.customer_details ?? {};
-  const shippingDetails = session.shipping_details ?? {};
-  const customerAddress = customerDetails.address ?? {};
 
   return {
     orderRef: metadata.order_ref ?? session.client_reference_id ?? null,
@@ -114,14 +111,13 @@ function normalizeCheckoutSession(session) {
     heightMm: metadata.height_mm ?? null,
     minDiameterMm: metadata.min_diameter_mm ?? null,
     maxDiameterMm: metadata.max_diameter_mm ?? null,
-    customerName: metadata.customer_name ?? customerDetails.name ?? shippingDetails.name ?? null,
-    customerEmail: metadata.customer_email ?? session.customer_email ?? customerDetails.email ?? null,
-    customerPhone: metadata.customer_phone ?? customerDetails.phone ?? shippingDetails.phone ?? null,
-    customerAddress: metadata.customer_address ?? customerAddress.line1 ?? null,
-    customerCity: metadata.customer_city ?? customerAddress.city ?? null,
-    customerPostalCode: metadata.customer_postal_code ?? customerAddress.postal_code ?? null,
-    customerCountry: metadata.customer_country ?? customerAddress.country ?? null,
-    customerMessage: metadata.customer_message ?? null,
+    shippingMode: metadata.shipping_mode ?? null,
+    shippingProvider: metadata.shipping_provider ?? null,
+    shippingCountry: metadata.shipping_country ?? metadata.customer_country ?? null,
+    relayId: metadata.relay_id ?? null,
+    relayName: metadata.relay_name ?? null,
+    relayCity: metadata.relay_city ?? null,
+    relayCountry: metadata.relay_country ?? null,
     amountTotal: session.amount_total ?? null,
     currency: session.currency ?? null,
     checkoutStatus: session.status ?? null,
