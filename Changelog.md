@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.60] - 2026-05-10
+
+### Modifié
+- Verrouille le viewer principal sur une teinte neutre, independamment du choix de couleur
+
 ## [1.1.59] - 2026-05-09
 
 ### Modifié

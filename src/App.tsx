@@ -26,6 +26,7 @@ import "./App.css";
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
 const isMondialRelayWidgetReady = SHOP_MONDIAL_RELAY_BRAND.trim().length > 0;
+const SHOP_NEUTRAL_VASE_COLOR = "#d9d2c7";
 
 interface ShopRelaySelection {
   id: string;
@@ -245,7 +246,7 @@ function App() {
     setShowClipping(false);
     setRotationMode("camera");
     setAutoRotate(true);
-    setVaseColor("#d9d2c7");
+    setVaseColor(SHOP_NEUTRAL_VASE_COLOR);
   }, [
     setAutoRotate,
     setFlatShading,
@@ -299,10 +300,6 @@ function App() {
       setSelectedColorId(availableColors[0]?.id ?? "");
     }
   }, [availableColors, selectedColorId, setSelectedColorId]);
-
-  useEffect(() => {
-    setVaseColor(selectedColor?.previewHex ?? selectedColor?.hex ?? "#d9d2c7");
-  }, [selectedColor?.hex, selectedColor?.previewHex, setVaseColor]);
 
   useEffect(() => {
     if (heroGalleryImages.length <= 1) {
@@ -729,7 +726,7 @@ function App() {
               </button>
             </div>
             <div className="shop-viewer-frame">
-              <VaseViewer3D />
+              <VaseViewer3D colorOverride={SHOP_NEUTRAL_VASE_COLOR} />
             </div>
           </div>
 
@@ -924,7 +921,7 @@ function App() {
                       <div className="shop-color-preview-viewer">
                         <VaseViewer3D
                           mode="preview"
-                          colorOverride={selectedColor?.previewHex ?? selectedColor?.hex ?? "#d9d2c7"}
+                          colorOverride={selectedColor?.previewHex ?? selectedColor?.hex ?? SHOP_NEUTRAL_VASE_COLOR}
                           colorOpacity={selectedColor?.opacity ?? 1}
                           colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
                           shadingOverride={selectedColor?.previewShading}
