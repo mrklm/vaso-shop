@@ -27,6 +27,11 @@ import "./App.css";
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
 const isMondialRelayWidgetReady = SHOP_MONDIAL_RELAY_BRAND.trim().length > 0;
 const SHOP_NEUTRAL_VASE_COLOR = "#d9d2c7";
+const SHOP_PRIORITY_COUNTRY = "France";
+const SHOP_COUNTRIES_FOR_ORDER = [
+  SHOP_PRIORITY_COUNTRY,
+  ...SHOP_COUNTRIES.filter((country) => country !== SHOP_PRIORITY_COUNTRY),
+] as const;
 
 interface ShopRelaySelection {
   id: string;
@@ -1003,6 +1008,15 @@ function App() {
 
                     <label className="shop-field shop-field-wide">
                       <span>Pays</span>
+                      <button
+                        className={`shop-country-priority${customerCountry === SHOP_PRIORITY_COUNTRY ? " active" : ""}`}
+                        type="button"
+                        onClick={() => setCustomerCountry(SHOP_PRIORITY_COUNTRY)}
+                        disabled={!canAccessClientStep}
+                      >
+                        <strong>France recommandée</strong>
+                        <span>Choisir la France en un clic</span>
+                      </button>
                       <select
                         name="country"
                         value={customerCountry}
@@ -1011,7 +1025,7 @@ function App() {
                         required
                       >
                         <option value="">Sélectionnez un pays</option>
-                        {SHOP_COUNTRIES.map((country) => (
+                        {SHOP_COUNTRIES_FOR_ORDER.map((country) => (
                           <option key={country} value={country}>
                             {country}
                           </option>

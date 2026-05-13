@@ -656,7 +656,7 @@ class VasoAdminApp(tk.Tk):
             pady=4,
             padx=(8, 10),
         )
-        ttk.Label(settings, text="Jeton admin").grid(row=1, column=0, sticky="w")
+        ttk.Label(settings, text="Mot de passe").grid(row=1, column=0, sticky="w")
         ttk.Entry(settings, textvariable=self.orders_api_token_var, show="*").grid(
             row=1,
             column=1,

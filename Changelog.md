@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.70] - 2026-05-13
+
+### Modifié
+- Met la France en avant dans le choix du pays avec un raccourci visuel en un clic
+
 ## [1.1.69] - 2026-05-13
 
 ### Modifié
