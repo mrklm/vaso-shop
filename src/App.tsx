@@ -1369,9 +1369,8 @@ function App() {
                 </div>
               </article>
 
-              <p className="shop-form-note">
-                Le règlement s'effectue sur une page Stripe sécurisée avec le montant de livraison
-                correspondant au pays et au mode sélectionnés.
+              <p className="shop-form-note shop-form-note-footer">
+                Copyright © 2026 - Vaso-Shop - Site internet KLM
               </p>
             </form>
           </section>

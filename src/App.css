@@ -1155,6 +1155,10 @@
   line-height: 1.5;
 }
 
+.shop-form-note-footer {
+  text-align: center;
+}
+
 .viewer-3d {
   width: 100%;
   height: 100%;
