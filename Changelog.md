@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.69] - 2026-05-13
+
+### Modifié
+- Fiabilise l'acces de VASO-Admin a l'historique prive des commandes Netlify
+
 ## [1.1.68] - 2026-05-13
 
 ### Ajouté

@@ -11,6 +11,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from urllib import error as urllib_error
+from urllib import parse as urllib_parse
 from urllib import request as urllib_request
 
 try:
@@ -1562,10 +1563,25 @@ class VasoAdminApp(tk.Tk):
             messagebox.showerror("VASO-Admin", "Renseigne le jeton admin des commandes.")
             return
 
+        parsed_url = urllib_parse.urlsplit(api_url)
+        query_params = urllib_parse.parse_qsl(parsed_url.query, keep_blank_values=True)
+        filtered_params = [(key, value) for key, value in query_params if key != "token"]
+        filtered_params.append(("token", api_token))
+        request_url = urllib_parse.urlunsplit(
+            (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                parsed_url.path,
+                urllib_parse.urlencode(filtered_params),
+                parsed_url.fragment,
+            ),
+        )
+
         request = urllib_request.Request(
-            api_url,
+            request_url,
             headers={
                 "x-admin-orders-token": api_token,
+                "Authorization": f"Bearer {api_token}",
                 "Accept": "application/json",
             },
             method="GET",

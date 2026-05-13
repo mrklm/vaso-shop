@@ -32,7 +32,15 @@ function isAuthorized(request) {
   }
 
   const headerValue = request.headers.get("x-admin-orders-token")?.trim();
-  if (!headerValue || headerValue !== configuredToken) {
+  const authorizationHeader = request.headers.get("authorization")?.trim();
+  const bearerValue =
+    authorizationHeader?.toLowerCase().startsWith("bearer ")
+      ? authorizationHeader.slice("bearer ".length).trim()
+      : "";
+  const tokenFromQuery = new URL(request.url).searchParams.get("token")?.trim() ?? "";
+  const candidateToken = headerValue || bearerValue || tokenFromQuery;
+
+  if (!candidateToken || candidateToken !== configuredToken) {
     return { ok: false, missingConfig: false };
   }
 
