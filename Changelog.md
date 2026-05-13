@@ -7,9 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.68] - 2026-05-13
+
+### Ajouté
+- Affiche les commandes payees dans VASO-Admin via un historique prive Netlify
+
 ## [1.1.67] - 2026-05-13
 
-### Modifié
+### Ajouté
 - Envoie une notification Discord automatique apres chaque commande Stripe validee
 
 ## [1.1.66] - 2026-05-13

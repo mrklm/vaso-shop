@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 try:
     from PIL import Image, ImageOps
@@ -28,6 +30,7 @@ CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
 PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "admin"]
+DEFAULT_ORDERS_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/list-orders"
 DEFAULT_HERO_TRANSITION_MS = 8200
 DEFAULT_HERO_FADE_IN_MS = 3200
 DEFAULT_HERO_FADE_OUT_MS = 3200
@@ -174,9 +177,16 @@ class VasoAdminApp(tk.Tk):
         self.hero_preview_status_var = tk.StringVar(value="Selectionnez une image hero")
 
         self.commit_message_var = tk.StringVar(value=self.build_default_commit_message())
+        self.orders_api_url_var = tk.StringVar(
+            value=self.settings_data.get("orders_api_url", DEFAULT_ORDERS_API_URL),
+        )
+        self.orders_api_token_var = tk.StringVar(
+            value=self.settings_data.get("orders_api_token", ""),
+        )
         self.theme_name_var = tk.StringVar(
             value=self.settings_data.get("theme", next(iter(THEMES))),
         )
+        self.orders_data: list[dict] = []
 
         self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
         self.hero_preview_photo = None
@@ -210,7 +220,16 @@ class VasoAdminApp(tk.Tk):
     def save_settings(self) -> None:
         ADMIN_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
         with ADMIN_SETTINGS_PATH.open("w", encoding="utf-8") as handle:
-            json.dump({"theme": self.theme_name_var.get()}, handle, indent=2, ensure_ascii=False)
+            json.dump(
+                {
+                    "theme": self.theme_name_var.get(),
+                    "orders_api_url": self.orders_api_url_var.get().strip(),
+                    "orders_api_token": self.orders_api_token_var.get().strip(),
+                },
+                handle,
+                indent=2,
+                ensure_ascii=False,
+            )
             handle.write("\n")
 
     def save_config(self) -> None:
@@ -249,6 +268,7 @@ class VasoAdminApp(tk.Tk):
         self.printer_frame = ttk.Frame(notebook, padding=8)
         self.colors_frame = ttk.Frame(notebook, padding=8)
         self.hero_frame = ttk.Frame(notebook, padding=8)
+        self.orders_frame = ttk.Frame(notebook, padding=8)
         self.publish_frame = ttk.Frame(notebook, padding=8)
 
         notebook.add(self.general_frame, text="Boutique")
@@ -257,6 +277,7 @@ class VasoAdminApp(tk.Tk):
         notebook.add(self.printer_frame, text="Imprimante")
         notebook.add(self.colors_frame, text="Couleurs")
         notebook.add(self.hero_frame, text="Hero")
+        notebook.add(self.orders_frame, text="Commandes")
         notebook.add(self.publish_frame, text="Publication")
 
         self.build_general_tab()
@@ -265,6 +286,7 @@ class VasoAdminApp(tk.Tk):
         self.build_printer_tab()
         self.build_colors_tab()
         self.build_hero_tab()
+        self.build_orders_tab()
         self.build_publish_tab()
 
         self.tk_text_widgets = [
@@ -275,9 +297,10 @@ class VasoAdminApp(tk.Tk):
             self.color_preview_note_text,
             self.contact_email_body_text,
             self.shipping_unsupported_text,
+            self.orders_detail_text,
             self.output_text,
         ]
-        self.tk_listbox_widgets = [self.colors_listbox, self.hero_listbox]
+        self.tk_listbox_widgets = [self.colors_listbox, self.hero_listbox, self.orders_listbox]
 
     def build_general_tab(self) -> None:
         frame = self.general_frame
@@ -614,6 +637,55 @@ class VasoAdminApp(tk.Tk):
             justify="left",
             wraplength=HERO_PREVIEW_SIZE[0],
         ).grid(row=2, column=0, sticky="n")
+
+    def build_orders_tab(self) -> None:
+        frame = self.orders_frame
+        frame.columnconfigure(1, weight=1)
+        frame.rowconfigure(1, weight=1)
+
+        settings = ttk.Frame(frame)
+        settings.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 12))
+        settings.columnconfigure(1, weight=1)
+
+        ttk.Label(settings, text="URL commandes").grid(row=0, column=0, sticky="w")
+        ttk.Entry(settings, textvariable=self.orders_api_url_var).grid(
+            row=0,
+            column=1,
+            sticky="ew",
+            pady=4,
+            padx=(8, 10),
+        )
+        ttk.Label(settings, text="Jeton admin").grid(row=1, column=0, sticky="w")
+        ttk.Entry(settings, textvariable=self.orders_api_token_var, show="*").grid(
+            row=1,
+            column=1,
+            sticky="ew",
+            pady=4,
+            padx=(8, 10),
+        )
+        ttk.Button(settings, text="Rafraichir", command=self.refresh_orders).grid(
+            row=0,
+            column=2,
+            rowspan=2,
+            sticky="ns",
+        )
+
+        left = ttk.Frame(frame)
+        left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
+        left.rowconfigure(1, weight=1)
+        right = ttk.Frame(frame)
+        right.grid(row=1, column=1, sticky="nsew")
+        right.columnconfigure(0, weight=1)
+        right.rowconfigure(1, weight=1)
+
+        ttk.Label(left, text="Commandes recues").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.orders_listbox = tk.Listbox(left, width=42, exportselection=False)
+        self.orders_listbox.grid(row=1, column=0, sticky="nsew")
+        self.orders_listbox.bind("<<ListboxSelect>>", lambda _event: self.load_selected_order())
+
+        ttk.Label(right, text="Detail commande").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.orders_detail_text = tk.Text(right, height=18, wrap="word")
+        self.orders_detail_text.grid(row=1, column=0, sticky="nsew")
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
@@ -1343,6 +1415,7 @@ class VasoAdminApp(tk.Tk):
 
     def on_close(self) -> None:
         self.cancel_hero_preview_jobs()
+        self.save_settings()
         try:
             if self.hero_preview_temp_path.exists():
                 self.hero_preview_temp_path.unlink()
@@ -1476,6 +1549,119 @@ class VasoAdminApp(tk.Tk):
         if process.stderr.strip():
             self.log(process.stderr.strip())
         return process
+
+    def refresh_orders(self) -> None:
+        api_url = self.orders_api_url_var.get().strip()
+        api_token = self.orders_api_token_var.get().strip()
+
+        if not api_url:
+            messagebox.showerror("VASO-Admin", "Renseigne l'URL de l'API commandes.")
+            return
+
+        if not api_token:
+            messagebox.showerror("VASO-Admin", "Renseigne le jeton admin des commandes.")
+            return
+
+        request = urllib_request.Request(
+            api_url,
+            headers={
+                "x-admin-orders-token": api_token,
+                "Accept": "application/json",
+            },
+            method="GET",
+        )
+
+        try:
+            with urllib_request.urlopen(request, timeout=20) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace").strip()
+            message = body or f"HTTP {error.code}"
+            self.log(f"Erreur API commandes : {message}")
+            messagebox.showerror("VASO-Admin", f"Impossible de charger les commandes.\n{message}")
+            return
+        except (urllib_error.URLError, TimeoutError, json.JSONDecodeError) as error:
+            self.log(f"Erreur API commandes : {error}")
+            messagebox.showerror("VASO-Admin", f"Impossible de charger les commandes.\n{error}")
+            return
+
+        self.orders_data = payload.get("orders", []) if isinstance(payload, dict) else []
+        self.orders_listbox.delete(0, "end")
+
+        for order in self.orders_data:
+            created_at = f"{order.get('createdAt', '')}".replace("T", " ").replace("Z", "")
+            customer_name = " ".join(
+                part.strip()
+                for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip()
+            summary = " | ".join(
+                part for part in [created_at[:16], order.get("orderRef", ""), customer_name, f"vase {order.get('seed', '')}"] if part
+            )
+            self.orders_listbox.insert("end", summary or "Commande")
+
+        self.write_text(
+            self.orders_detail_text,
+            "Selectionnez une commande dans la liste." if self.orders_data else "Aucune commande recue pour le moment.",
+        )
+        self.save_settings()
+        self.log(f"Commandes rechargees : {len(self.orders_data)}")
+
+    def load_selected_order(self) -> None:
+        selection = self.orders_listbox.curselection()
+        if not selection:
+            return
+
+        order = self.orders_data[selection[0]]
+        customer_full_name = " ".join(
+            part.strip()
+            for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
+            if isinstance(part, str) and part.strip()
+        ).strip()
+        address_lines = [
+            order.get("customerAddress", ""),
+            " ".join(
+                part.strip()
+                for part in [order.get("customerPostalCode", ""), order.get("customerCity", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip(),
+            order.get("customerCountry", ""),
+        ]
+        relay_lines = [
+            order.get("relayName", ""),
+            order.get("relayAddress", ""),
+            " ".join(
+                part.strip()
+                for part in [order.get("relayPostalCode", ""), order.get("relayCity", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip(),
+            order.get("relayCountry", ""),
+        ]
+        detail_lines = [
+            f"Reference : {order.get('orderRef', 'n/a')}",
+            f"Date : {order.get('createdAt', 'n/a')}",
+            f"Vase : n° {order.get('seed', 'n/a')}",
+            f"Couleur : {order.get('colorLabel', 'n/a')}",
+            f"Materiau : {order.get('material', 'n/a')}",
+            f"Hauteur : {order.get('heightMm', 'n/a')} mm",
+            "",
+            f"Client : {customer_full_name or 'n/a'}",
+            f"Email : {order.get('customerEmail', 'n/a')}",
+            f"Telephone : {order.get('customerPhone', 'non renseigne')}",
+            f"Adresse : {', '.join(line for line in address_lines if isinstance(line, str) and line.strip()) or 'n/a'}",
+            "",
+            f"Livraison : {order.get('shippingMode', 'n/a')}",
+            f"Transporteur : {order.get('shippingProvider', 'n/a')}",
+            f"Point relais : {', '.join(line for line in relay_lines if isinstance(line, str) and line.strip()) or 'non'}",
+            "",
+            f"Montant : {order.get('amountTotal', 'n/a')} {order.get('currency', '')}",
+            f"Statut paiement : {order.get('paymentStatus', 'n/a')}",
+        ]
+
+        if order.get("customerMessage"):
+            detail_lines.extend(["", f"Message client : {order.get('customerMessage')}"])
+
+        self.write_text(self.orders_detail_text, "\n".join(detail_lines))
 
     def write_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", "end")

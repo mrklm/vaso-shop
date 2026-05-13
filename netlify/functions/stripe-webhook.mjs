@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { getStore } from "@netlify/blobs";
 
 const DEFAULT_TOLERANCE_SECONDS = 300;
 
@@ -157,6 +158,19 @@ function buildGenericEventSummary(event) {
   };
 }
 
+function normalizeOrderRecord(order, event) {
+  return {
+    ...order,
+    stripeEventId: event?.id ?? null,
+    stripeEventType: event?.type ?? null,
+    livemode: event?.livemode ?? null,
+    createdAt:
+      typeof event?.created === "number"
+        ? new Date(event.created * 1000).toISOString()
+        : new Date().toISOString(),
+  };
+}
+
 function formatAmountFromMinorUnits(amount, currency) {
   if (!Number.isFinite(amount)) {
     return null;
@@ -241,17 +255,49 @@ async function sendDiscordNotification(order) {
   return true;
 }
 
+async function persistOrder(order) {
+  const ordersStore = getStore("vaso-orders");
+  const safeOrderRef = `${order.orderRef ?? "unknown"}`
+    .replace(/[^A-Za-z0-9_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "unknown";
+  const key = `orders/${order.createdAt ?? new Date().toISOString()}-${safeOrderRef}.json`;
+  const customerFullName = [order.customerFirstName, order.customerLastName]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .trim();
+
+  await ordersStore.setJSON(key, order, {
+    metadata: {
+      orderRef: order.orderRef ?? "",
+      seed: order.seed ?? "",
+      colorLabel: order.colorLabel ?? "",
+      customerFullName,
+      createdAt: order.createdAt ?? "",
+    },
+  });
+}
+
 async function handleStripeEvent(event) {
   const session = event?.data?.object;
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const order = normalizeCheckoutSession(session);
+      const order = normalizeOrderRecord(normalizeCheckoutSession(session), event);
       logWebhookEvent(event.type, {
         ...buildGenericEventSummary(event),
         order,
       });
-      await sendDiscordNotification(order);
+      await persistOrder(order);
+      try {
+        await sendDiscordNotification(order);
+      } catch (error) {
+        console.error(
+          `[stripe-webhook] discord notification failed ${
+            error instanceof Error ? error.message : "unexpected error"
+          }`,
+        );
+      }
       break;
     }
 
