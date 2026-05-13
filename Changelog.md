@@ -7,6 +7,16 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.66] - 2026-05-13
+
+### Modifié
+- Passe Netlify en backend Stripe uniquement avec une page publique de renvoi vers GitHub Pages
+
+## [1.1.65] - 2026-05-13
+
+### Modifié
+- Force la redirection publique Netlify vers GitHub Pages meme quand le build du shop existe
+
 ## [1.1.64] - 2026-05-13
 
 ### Modifié
