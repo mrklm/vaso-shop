@@ -31,6 +31,7 @@ Backend léger :
 ![Parcours de commande](screenshots/vaso_shop_2.png)
 ![Configuration livraison et paiement](screenshots/vaso_shop_3.png)
 ![VASO-Admin](screenshots/vaso_shop_4.png)
+![VASO-Admin commandes](screenshots/vaso_shop_5.png)
 
 ---
 

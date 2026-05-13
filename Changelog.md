@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.79] - 2026-05-13
+
+### Modifié
+- Met a jour la documentation du shop et complete les captures README
+
 ## [1.1.78] - 2026-05-13
 
 ### Modifié
