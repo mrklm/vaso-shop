@@ -1370,7 +1370,7 @@ function App() {
               </article>
 
               <p className="shop-form-note shop-form-note-footer">
-                Copyright © 2026 - Vaso-Shop - Site internet KLM
+                Copyright © 2026 - Vaso-Shop - Klm
               </p>
             </form>
           </section>

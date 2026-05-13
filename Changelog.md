@@ -7,9 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
-## [1.1.76] - 2026-05-13
+## [1.1.77] - 2026-05-13
 
 ### Modifié
+- Raccourcit la mention copyright finale et harmonise Klm
+
+## [1.1.76] - 2026-05-13
+
+### Ajouté
 - Remplace la note Stripe finale par une mention copyright centree
 
 ## [1.1.75] - 2026-05-13
