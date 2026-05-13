@@ -1,131 +1,88 @@
-# Vaso Web
+# Vaso Shop
 
-**Vaso Web** est un générateur de vases polygonaux accessible directement dans le navigateur.
+**Vaso Shop** est la boutique web de l'atelier **Vaso**.
 
-Il permet de créer des vases à partir de profils polygonaux interpolés verticalement, de générer un maillage 3D, puis d’exporter le modèle au format **STL** pour l’impression 3D.
+Le site permet de parcourir des vases générés en direct, d'en retenir un modèle précis, de
+choisir un coloris PLA, puis de passer commande via **Stripe Checkout**.
 
-Version web du projet **Vaso** (application Python Tkinter).
-
----
-
-## 🌐 Accès en ligne
-
-👉 https://mrklm.github.io/vaso-web/
-
-Aucune installation requise — fonctionne directement dans le navigateur.
+Le projet inclut aussi **VASO-Admin**, une interface locale pour piloter la boutique, ajuster les
+textes, les tarifs, les couleurs, les livraisons et consulter les commandes payées.
 
 ---
 
-## 👁️ Aperçu
+## Accès en ligne
 
-![Vue principale](screenshots/vaso_web_1.png)  
-![Profils](screenshots/vaso_web_2.png)  
-![Options](screenshots/vaso_web_3.png)
+Boutique publique :
 
----
+`https://mrklm.github.io/vaso-shop/`
 
-## ✨ Fonctionnalités
+Backend léger :
 
-- définition de **2 à 10 profils polygonaux**
-- réglage pour chaque profil :
-  - diamètre
-  - nombre de côtés
-  - rotation
-  - position verticale
-- panneau **Paramètres généraux** :
-  - hauteur du vase
-  - nombre de profils
-  - seed
-  - style aléatoire
-  - complexité
-  - textures et zooms
-- panneau **Options** :
-  - apparence et thème
-  - vue 3D
-  - volume imprimante
-  - paramètres STL avancés
-  - presets
-- interpolation entre profils
-- génération d’un **maillage 3D**
-- export en **STL**
-- texte additif sur le fond du vase exporté :
-  - version de l’application
-  - numéro de seed sur 8 chiffres
-  - suffixe `M` si le vase a été modifié manuellement après génération
-- textures paramétriques
-- génération **aléatoire contrôlée**
-- aperçu **temps réel**
-- capture d’écran avec bandeau d’information
-- contrôle du volume d’impression selon le profil d’imprimante choisi
-- interface web moderne (**React**)
+- fonctions Netlify pour Stripe
+- webhook Stripe
+- notifications Discord
+- historique privé des commandes
 
 ---
 
-## 🎲 Génération aléatoire
+## Aperçu
 
-Vaso Web permet de générer automatiquement des formes variées.
-
-Paramètres disponibles :
-
-- **style de génération**
-- **niveau de complexité**
-  - sobre
-  - moyen
-  - complexe
-- **texture**
-- **zoom de texture**
-
-La génération utilise une **seed** permettant de reproduire une forme identique.
-
-Si l’utilisateur modifie manuellement un vase après génération, la seed affichée reste la même mais reçoit un suffixe `M` :
-
-- dans l’aperçu 3D
-- dans le texte additif du STL
-- sur le bandeau de la capture d’écran
-
-Ce suffixe indique que la forme courante n’est plus un résultat "pur seed".
+![Accueil shop](screenshots/vaso_shop_1.png)
+![Parcours de commande](screenshots/vaso_shop_2.png)
+![Configuration livraison et paiement](screenshots/vaso_shop_3.png)
+![VASO-Admin](screenshots/vaso_shop_4.png)
 
 ---
 
-## 🧱 Architecture du projet
+## Fonctionnalités
+
+- génération et navigation entre plusieurs modèles de vases
+- visualisation 3D du modèle courant
+- choix de la couleur PLA
+- récapitulatif détaillé avant paiement
+- paiement Stripe Checkout
+- pages de retour après paiement ou annulation
+- prise en charge de plusieurs modes de livraison selon le pays
+- suspension temporaire des modes de livraison depuis `VASO-Admin`
+- notifications Discord automatiques après paiement validé
+- stockage privé des commandes via Netlify Blobs
+- consultation des commandes dans `VASO-Admin`
+
+---
+
+## Architecture
 
 ```text
-vaso-web
-├─ src/
-│ ├─ components/
-│ ├─ engine/
-│ ├─ hooks/
-│ ├─ store/
-│ ├─ data/
-│ └─ themes/
-├─ public/
+vaso-shop
+├─ src/                     # boutique React / Vite
+├─ public/                  # assets publics + config boutique JSON
+├─ netlify/functions/       # Stripe, Discord, commandes
+├─ admin/                   # VASO-Admin (outil local Python/Tkinter)
 ├─ screenshots/
-├─ electron/
-├─ index.html
+├─ electron/                # emballage desktop éventuel
+├─ netlify.toml
 ├─ package.json
-├─ vite.config.ts
 └─ README.md
 ```
 
-
 ---
 
-## 🧪 Installation (développement)
+## Développement
 
-## 1. Cloner le projet
+### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/mrklm/vaso-web.git
-cd vaso-web
+git clone https://github.com/mrklm/vaso-shop.git
+cd vaso-shop
 ```
 
-## 2. Installer les dépendances
+### 2. Installer les dépendances
 
 ```bash
 npm install
 ```
 
-## 3. Lancer en mode développement
+### 3. Lancer la boutique en local
 
 ```bash
 npm run dev
@@ -135,58 +92,78 @@ Puis ouvrir :
 
 `http://localhost:5173`
 
-## 4. Build production
+### 4. Build production
 
 ```bash
 npm run build
 ```
 
-Génère :
+---
 
-`dist/`
+## VASO-Admin
 
-## 🔄 Déploiement
+`VASO-Admin` est l'interface locale de gestion de la boutique.
 
-Le site est automatiquement déployé via GitHub Actions sur GitHub Pages.
+Lancement :
 
-Chaque push sur main déclenche :
+```bash
+python3 admin/vaso_admin.py
+```
 
-- build du projet
-- publication de `dist/`
-- mise à jour du site en ligne
+Il permet notamment :
 
-## 🧠 Technologies utilisées
+- d'éditer `public/config/shop-config.json`
+- de modifier les textes de la boutique
+- de régler les tarifs
+- de piloter les couleurs PLA
+- de gérer les images hero
+- de suspendre temporairement certains modes de livraison
+- de consulter les commandes payées
+- de publier les changements vers GitHub
 
-- React
-- Vite
-- JavaScript / TypeScript
-- Three.js / React Three Fiber
-- Zustand
-- Electron pour la version desktop/export natif
+Plus de détails :
 
-## 🔗 Lien avec la version Python
-
-- 🐍 Vaso (desktop)  
-  https://github.com/mrklm/vaso
-- 🌐 Vaso Web (ce projet)  
-  version navigateur, sans installation, avec export STL et aperçu 3D temps réel
-
-## 📜 Licence
-
-Projet open source distribué sous licence **GNU GPL v3**.
-
-Voir le fichier [LICENSE](LICENSE).
-
-## 💡 Pourquoi ce projet est-il sous licence libre ?
-
-Ce projet s'inscrit dans la philosophie du logiciel libre, promue par des 
-associations comme [April](https://www.april.org/). 
-
-Le partage des connaissances et des outils est essentiel
-pour une société numérique plus juste et transparente.
+[`admin/README.md`](admin/README.md)
 
 ---
 
-## 📬 Contact:
+## Déploiement
 
-clementmorel@free.fr
+Architecture actuelle :
+
+- **GitHub Pages** publie la boutique publique
+- **Netlify** héberge uniquement le backend léger
+
+Netlify sert à :
+
+- créer les sessions Stripe Checkout
+- recevoir le webhook Stripe
+- envoyer les notifications Discord
+- stocker l'historique privé des commandes
+
+---
+
+## Technologies
+
+- React
+- Vite
+- TypeScript
+- Three.js / React Three Fiber
+- Zustand
+- Netlify Functions
+- Stripe
+- Python / Tkinter pour `VASO-Admin`
+
+---
+
+## Licence
+
+Projet distribué sous licence **GNU GPL v3**.
+
+Voir le fichier [LICENSE](LICENSE).
+
+---
+
+## Contact
+
+`clementmorel@free.fr`

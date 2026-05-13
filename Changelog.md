@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.78] - 2026-05-13
+
+### Modifié
+- Reecrit le README de Vaso-Shop et remplace les captures par les vues du shop actuel
+
 ## [1.1.77] - 2026-05-13
 
 ### Modifié
