@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.72] - 2026-05-13
+
+### Modifié
+- Simplifie la page de paiement confirme pour coller au fonctionnement reel de l'atelier
+
 ## [1.1.71] - 2026-05-13
 
 ### Modifié
