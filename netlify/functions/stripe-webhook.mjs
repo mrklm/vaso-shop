@@ -157,15 +157,101 @@ function buildGenericEventSummary(event) {
   };
 }
 
-function handleStripeEvent(event) {
+function formatAmountFromMinorUnits(amount, currency) {
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+
+  const normalizedCurrency = `${currency ?? "EUR"}`.toUpperCase();
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: normalizedCurrency,
+    minimumFractionDigits: 2,
+  }).format(amount / 100);
+}
+
+function buildDiscordMessage(order) {
+  const customerFullName = [order.customerFirstName, order.customerLastName]
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+    .trim();
+
+  const addressLines = [
+    order.customerAddress,
+    [order.customerPostalCode, order.customerCity].filter(Boolean).join(" ").trim(),
+    order.customerCountry,
+  ].filter((value) => typeof value === "string" && value.trim().length > 0);
+
+  const relayLines = [
+    order.relayName,
+    order.relayAddress,
+    [order.relayPostalCode, order.relayCity].filter(Boolean).join(" ").trim(),
+    order.relayCountry,
+  ].filter((value) => typeof value === "string" && value.trim().length > 0);
+
+  const lines = [
+    "**Nouvelle commande Vaso**",
+    `Reference : ${order.orderRef ?? "n/a"}`,
+    `Vase : n° ${order.seed ?? "n/a"}${order.heightMm ? ` · ${order.heightMm} mm` : ""}`,
+    `Couleur : ${order.colorLabel ?? "n/a"}`,
+    `Materiau : ${order.material ?? "n/a"}`,
+    `Montant : ${formatAmountFromMinorUnits(order.amountTotal, order.currency) ?? "n/a"}`,
+    `Client : ${customerFullName || "n/a"}`,
+    `Email : ${order.customerEmail ?? "n/a"}`,
+    `Telephone : ${order.customerPhone ?? "non renseigne"}`,
+    `Adresse : ${addressLines.join(", ") || "n/a"}`,
+    `Livraison : ${order.shippingMode ?? "n/a"}${order.shippingProvider ? ` · ${order.shippingProvider}` : ""}`,
+  ];
+
+  if (relayLines.length > 0) {
+    lines.push(`Point relais : ${relayLines.join(", ")}`);
+  }
+
+  if (order.customerMessage) {
+    lines.push(`Message client : ${order.customerMessage}`);
+  }
+
+  return lines.join("\n");
+}
+
+async function sendDiscordNotification(order) {
+  const webhookUrl = readEnv("DISCORD_WEBHOOK_URL")?.trim();
+  if (!webhookUrl) {
+    return false;
+  }
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify({
+      username: "Commandes Vaso Shop",
+      content: buildDiscordMessage(order),
+    }),
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text().catch(() => "");
+    throw new Error(
+      `Discord a refuse la notification (${response.status})${responseText ? `: ${responseText}` : ""}`,
+    );
+  }
+
+  return true;
+}
+
+async function handleStripeEvent(event) {
   const session = event?.data?.object;
 
   switch (event.type) {
     case "checkout.session.completed": {
+      const order = normalizeCheckoutSession(session);
       logWebhookEvent(event.type, {
         ...buildGenericEventSummary(event),
-        order: normalizeCheckoutSession(session),
+        order,
       });
+      await sendDiscordNotification(order);
       break;
     }
 
@@ -222,7 +308,7 @@ export default async (request) => {
   try {
     verifyStripeSignature(rawBody, signatureHeader, endpointSecret);
     const event = parseStripeEvent(rawBody);
-    handleStripeEvent(event);
+    await handleStripeEvent(event);
 
     return jsonResponse({ received: true, type: event.type ?? null }, 200);
   } catch (error) {

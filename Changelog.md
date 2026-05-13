@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.67] - 2026-05-13
+
+### Modifié
+- Envoie une notification Discord automatique apres chaque commande Stripe validee
+
 ## [1.1.66] - 2026-05-13
 
 ### Modifié
