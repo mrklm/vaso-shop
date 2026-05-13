@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.62] - 2026-05-13
+
+### Modifié
+- Fait remonter les details complets de commande Stripe dans le webhook Netlify
+
 ## [1.1.61] - 2026-05-10
 
 ### Modifié
