@@ -1008,15 +1008,6 @@ function App() {
 
                     <label className="shop-field shop-field-wide">
                       <span>Pays</span>
-                      <button
-                        className={`shop-country-priority${customerCountry === SHOP_PRIORITY_COUNTRY ? " active" : ""}`}
-                        type="button"
-                        onClick={() => setCustomerCountry(SHOP_PRIORITY_COUNTRY)}
-                        disabled={!canAccessClientStep}
-                      >
-                        <strong>France recommandée</strong>
-                        <span>Choisir la France en un clic</span>
-                      </button>
                       <select
                         name="country"
                         value={customerCountry}

@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.71] - 2026-05-13
+
+### Modifié
+- Place la France en premier dans la liste des pays de commande
+
 ## [1.1.70] - 2026-05-13
 
 ### Modifié
