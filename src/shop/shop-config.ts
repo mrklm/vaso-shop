@@ -36,6 +36,7 @@ export interface ShopMessagesConfig {
   shippingLeadTime: string;
   temporaryNotice: string;
   atelierNote: string;
+  materialPlaNote: string;
   warningPla: string;
   colorPreviewNote: string;
   contactPrompt: string;
@@ -327,6 +328,9 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
       shippingLeadTime: normalizeString(rawMessages.shippingLeadTime).trim(),
       temporaryNotice: normalizeString(rawMessages.temporaryNotice).trim(),
       atelierNote: normalizeString(rawMessages.atelierNote).trim(),
+      materialPlaNote:
+        normalizeString(rawMessages.materialPlaNote).trim() ||
+        "Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.",
       warningPla: normalizeString(rawMessages.warningPla).trim(),
       colorPreviewNote:
         normalizeString(rawMessages.colorPreviewNote).trim() ||

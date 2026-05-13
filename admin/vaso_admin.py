@@ -296,6 +296,7 @@ class VasoAdminApp(tk.Tk):
             self.status_message_text,
             self.temporary_notice_text,
             self.atelier_note_text,
+            self.material_pla_note_text,
             self.warning_text,
             self.color_preview_note_text,
             self.contact_email_body_text,
@@ -360,9 +361,24 @@ class VasoAdminApp(tk.Tk):
         self.atelier_note_scrollbar.grid(row=0, column=1, sticky="ns")
         self.atelier_note_text.configure(yscrollcommand=self.atelier_note_scrollbar.set)
 
-        ttk.Label(frame, text="Avertissement PLA").grid(row=9, column=0, sticky="nw")
+        ttk.Label(frame, text="Matière PLA").grid(row=9, column=0, sticky="nw")
+        material_frame = ttk.Frame(frame)
+        material_frame.grid(row=9, column=1, sticky="ew", pady=4)
+        material_frame.columnconfigure(0, weight=1)
+        material_frame.rowconfigure(0, weight=1)
+        self.material_pla_note_text = tk.Text(material_frame, height=3, wrap="word")
+        self.material_pla_note_text.grid(row=0, column=0, sticky="ew")
+        self.material_pla_note_scrollbar = ttk.Scrollbar(
+            material_frame,
+            orient="vertical",
+            command=self.material_pla_note_text.yview,
+        )
+        self.material_pla_note_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.material_pla_note_text.configure(yscrollcommand=self.material_pla_note_scrollbar.set)
+
+        ttk.Label(frame, text="Avertissement PLA").grid(row=10, column=0, sticky="nw")
         warning_frame = ttk.Frame(frame)
-        warning_frame.grid(row=9, column=1, sticky="ew", pady=4)
+        warning_frame.grid(row=10, column=1, sticky="ew", pady=4)
         warning_frame.columnconfigure(0, weight=1)
         warning_frame.rowconfigure(0, weight=1)
         self.warning_text = tk.Text(warning_frame, height=4, wrap="word")
@@ -371,9 +387,9 @@ class VasoAdminApp(tk.Tk):
         self.warning_scrollbar.grid(row=0, column=1, sticky="ns")
         self.warning_text.configure(yscrollcommand=self.warning_scrollbar.set)
 
-        ttk.Label(frame, text="Avertissement couleur").grid(row=10, column=0, sticky="nw")
+        ttk.Label(frame, text="Avertissement couleur").grid(row=11, column=0, sticky="nw")
         color_note_frame = ttk.Frame(frame)
-        color_note_frame.grid(row=10, column=1, sticky="ew", pady=4)
+        color_note_frame.grid(row=11, column=1, sticky="ew", pady=4)
         color_note_frame.columnconfigure(0, weight=1)
         color_note_frame.rowconfigure(0, weight=1)
         self.color_preview_note_text = tk.Text(color_note_frame, height=3, wrap="word")
@@ -391,6 +407,7 @@ class VasoAdminApp(tk.Tk):
         frame.rowconfigure(8, weight=0)
         frame.rowconfigure(9, weight=0)
         frame.rowconfigure(10, weight=0)
+        frame.rowconfigure(11, weight=0)
 
     def build_contact_tab(self) -> None:
         frame = self.contact_frame
@@ -758,6 +775,13 @@ class VasoAdminApp(tk.Tk):
         self.write_text(self.status_message_text, shop_status.get("message", ""))
         self.write_text(self.temporary_notice_text, messages.get("temporaryNotice", ""))
         self.write_text(self.atelier_note_text, messages.get("atelierNote", ""))
+        self.write_text(
+            self.material_pla_note_text,
+            messages.get(
+                "materialPlaNote",
+                "Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.",
+            ),
+        )
         self.write_text(self.warning_text, messages.get("warningPla", ""))
         self.write_text(
             self.color_preview_note_text,
@@ -810,6 +834,7 @@ class VasoAdminApp(tk.Tk):
             "shippingLeadTime": self.shipping_lead_time_var.get().strip(),
             "temporaryNotice": self.temporary_notice_text.get("1.0", "end").strip(),
             "atelierNote": self.atelier_note_text.get("1.0", "end").strip(),
+            "materialPlaNote": self.material_pla_note_text.get("1.0", "end").strip(),
             "warningPla": self.warning_text.get("1.0", "end").strip(),
             "colorPreviewNote": self.color_preview_note_text.get("1.0", "end").strip(),
             "contactPrompt": self.contact_prompt_var.get().strip(),

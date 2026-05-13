@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.75] - 2026-05-13
+
+### Modifié
+- Rend editable dans VASO-Admin le texte PLA affiche dans le bloc Modele actuel
+
 ## [1.1.74] - 2026-05-13
 
 ### Modifié

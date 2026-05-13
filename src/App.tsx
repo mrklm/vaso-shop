@@ -775,7 +775,7 @@ function App() {
                 <div className="shop-stat shop-stat-material">
                   <span className="shop-stat-label">Matière</span>
                   <strong>{currentEntry?.material ?? "PLA"}</strong>
-                  <p>Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.</p>
+                  <p>{shopConfig.messages.materialPlaNote}</p>
                 </div>
               </div>
 
