@@ -118,6 +118,7 @@ function App() {
   const [customerPostalCode, setCustomerPostalCode] = useState("");
   const [customerCountry, setCustomerCountry] = useState("");
   const [shippingModeId, setShippingModeId] = useState("");
+  const [isShippingModeMenuOpen, setIsShippingModeMenuOpen] = useState(false);
   const [relaySelection, setRelaySelection] = useState<ShopRelaySelection | null>(null);
   const [relaySelectionError, setRelaySelectionError] = useState("");
   const [customerMessage, setCustomerMessage] = useState("");
@@ -213,6 +214,11 @@ function App() {
     : null;
   const orderTotalCents = productPriceCents + shippingPriceCents;
   const orderTotalLabel = formatShopPriceFromCents(orderTotalCents);
+  const selectedShippingOptionLabel = shopConfig && selectedShippingOption
+    ? `${formatShippingOptionDisplay(selectedShippingOption.label, selectedShippingOption.provider)} · ${formatShopPriceFromCents(
+        getShopEffectiveShippingPriceCents(shopConfig, productPriceCents, selectedShippingOption.priceCents),
+      )}`
+    : "";
   const contactEmail = shopConfig?.messages.contactEmail?.trim() ?? "";
   const contactEmailSubject = shopConfig?.messages.contactEmailSubject?.trim() || "Contact VASO SHOP";
   const contactEmailBody =
@@ -415,6 +421,7 @@ function App() {
   useEffect(() => {
     if (!customerCountry.trim()) {
       setShippingModeId("");
+      setIsShippingModeMenuOpen(false);
       setRelaySelection(null);
       setRelaySelectionError("");
       return;
@@ -425,6 +432,7 @@ function App() {
     );
     if (!isCurrentModeStillAvailable) {
       setShippingModeId("");
+      setIsShippingModeMenuOpen(false);
       setRelaySelection(null);
       setRelaySelectionError("");
     }
@@ -1032,44 +1040,77 @@ function App() {
 
                     <label className="shop-field shop-field-wide">
                       <span>Mode de livraison</span>
-                      <div className="shop-shipping-mode-list" role="radiogroup" aria-label="Mode de livraison">
+                      <div className="shop-shipping-combobox">
                         {customerCountry.trim().length === 0 ? (
                           <div className="shop-shipping-mode-empty">Choisissez d'abord un pays</div>
                         ) : isUnsupportedShippingCountry ? (
                           <div className="shop-shipping-mode-empty">Aucun mode de livraison disponible pour ce pays</div>
                         ) : (
-                          shippingOptions.map((option) => {
-                            const isSuspended = isShopShippingOptionSuspended(shopConfig, option.id);
-                            const isActive = shippingModeId === option.id;
+                          <>
+                            <button
+                              className={`shop-shipping-combobox-trigger${isShippingModeMenuOpen ? " open" : ""}`}
+                              type="button"
+                              onClick={() => setIsShippingModeMenuOpen((currentValue) => !currentValue)}
+                              disabled={!canAccessClientStep}
+                              aria-haspopup="listbox"
+                              aria-expanded={isShippingModeMenuOpen}
+                            >
+                              <span>
+                                {selectedShippingOptionLabel || "Sélectionnez un mode de livraison"}
+                              </span>
+                              <span className="shop-shipping-combobox-arrow" aria-hidden="true">
+                                ▾
+                              </span>
+                            </button>
 
-                            return (
-                              <button
-                                key={option.id}
-                                className={`shop-shipping-mode-option${isActive ? " active" : ""}`}
-                                type="button"
-                                role="radio"
-                                aria-checked={isActive}
-                                onClick={() => setShippingModeId(option.id)}
-                                disabled={!canAccessClientStep || isSuspended}
-                              >
-                                <span className="shop-shipping-mode-copy">
-                                  <strong>
-                                    {formatShippingOptionDisplay(option.label, option.provider)}
-                                  </strong>
-                                  <span>
-                                    {formatShopPriceFromCents(
-                                      getShopEffectiveShippingPriceCents(shopConfig, productPriceCents, option.priceCents),
-                                    )}
-                                  </span>
-                                </span>
-                                {isSuspended ? (
-                                  <span className="shop-shipping-mode-unavailable">
-                                    Indisponible temporairement
-                                  </span>
-                                ) : null}
-                              </button>
-                            );
-                          })
+                            {isShippingModeMenuOpen ? (
+                              <div className="shop-shipping-combobox-menu" role="listbox" aria-label="Mode de livraison">
+                                {shippingOptions.map((option) => {
+                                  const isSuspended = isShopShippingOptionSuspended(shopConfig, option.id);
+                                  const isActive = shippingModeId === option.id;
+
+                                  return (
+                                    <button
+                                      key={option.id}
+                                      className={`shop-shipping-mode-option${isActive ? " active" : ""}`}
+                                      type="button"
+                                      role="option"
+                                      aria-selected={isActive}
+                                      onClick={() => {
+                                        if (isSuspended) {
+                                          return;
+                                        }
+
+                                        setShippingModeId(option.id);
+                                        setIsShippingModeMenuOpen(false);
+                                      }}
+                                      disabled={isSuspended}
+                                    >
+                                      <span className="shop-shipping-mode-copy">
+                                        <strong>
+                                          {formatShippingOptionDisplay(option.label, option.provider)}
+                                        </strong>
+                                        <span>
+                                          {formatShopPriceFromCents(
+                                            getShopEffectiveShippingPriceCents(
+                                              shopConfig,
+                                              productPriceCents,
+                                              option.priceCents,
+                                            ),
+                                          )}
+                                        </span>
+                                      </span>
+                                      {isSuspended ? (
+                                        <span className="shop-shipping-mode-unavailable">
+                                          Indisponible temporairement
+                                        </span>
+                                      ) : null}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </>
                         )}
                       </div>
                     </label>

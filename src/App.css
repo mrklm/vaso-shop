@@ -1024,7 +1024,43 @@
   font: inherit;
 }
 
-.shop-shipping-mode-list {
+.shop-shipping-combobox {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-shipping-combobox-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgb(93 58 37 / 12%);
+  border-radius: 14px;
+  background: var(--color-field);
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shop-shipping-combobox-trigger.open {
+  border-color: rgb(47 36 29 / 24%);
+}
+
+.shop-shipping-combobox-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.shop-shipping-combobox-arrow {
+  flex-shrink: 0;
+  color: rgb(38 29 22 / 62%);
+  font-size: 0.9rem;
+}
+
+.shop-shipping-combobox-menu {
   display: grid;
   gap: 10px;
 }
@@ -1071,6 +1107,7 @@
 .shop-shipping-mode-option:disabled {
   cursor: not-allowed;
   opacity: 1;
+  background: rgb(255 247 247 / 92%);
 }
 
 .shop-shipping-mode-copy {

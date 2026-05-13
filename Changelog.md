@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.74] - 2026-05-13
+
+### Modifié
+- Transforme le choix de livraison en combo et garde visibles les modes temporairement indisponibles
+
 ## [1.1.73] - 2026-05-13
 
 ### Ajouté
