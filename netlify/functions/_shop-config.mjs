@@ -103,6 +103,8 @@ function normalizeShopConfig(rawValue) {
       allowCheckout: normalizeBoolean(rawStatus.allowCheckout, statusState === "open" || statusState === "slowed"),
     },
     shipping: {
+      suspendRelay: normalizeBoolean(rawShipping.suspendRelay, false),
+      suspendHomeDelivery: normalizeBoolean(rawShipping.suspendHomeDelivery, false),
       unsupportedMessage:
         normalizeString(rawShipping.unsupportedMessage).trim() || DEFAULT_SHIPPING_UNSUPPORTED_MESSAGE,
       countries: Array.isArray(rawShipping.countries)
@@ -130,6 +132,14 @@ export function getEffectiveShippingPriceCents(config, productPriceCents, shippi
 export function getConfiguredShippingOption(config, country, modeId) {
   const normalizedCountry = `${country ?? ""}`.trim();
   const normalizedModeId = `${modeId ?? ""}`.trim();
+  if (normalizedModeId === "relay" && config.shipping.suspendRelay) {
+    throw new Error("La livraison en point relais est momentanement suspendue.");
+  }
+
+  if (normalizedModeId === "home" && config.shipping.suspendHomeDelivery) {
+    throw new Error("La livraison a domicile est momentanement suspendue.");
+  }
+
   const countryConfig = config.shipping.countries.find((entry) => entry.country === normalizedCountry);
   if (!countryConfig) {
     throw new Error(config.shipping.unsupportedMessage);

@@ -82,6 +82,8 @@ export interface ShopShippingCountryConfig {
 }
 
 export interface ShopShippingConfig {
+  suspendRelay: boolean;
+  suspendHomeDelivery: boolean;
   unsupportedMessage: string;
   countries: ShopShippingCountryConfig[];
 }
@@ -344,6 +346,8 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
       allowCheckout: normalizeBoolean(rawStatus.allowCheckout, statusState === "open" || statusState === "slowed"),
     },
     shipping: {
+      suspendRelay: normalizeBoolean(rawShipping.suspendRelay, false),
+      suspendHomeDelivery: normalizeBoolean(rawShipping.suspendHomeDelivery, false),
       unsupportedMessage:
         normalizeString(rawShipping.unsupportedMessage).trim() || DEFAULT_SHIPPING_UNSUPPORTED_MESSAGE,
       countries: Array.isArray(rawShipping.countries)

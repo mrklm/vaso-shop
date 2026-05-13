@@ -19,6 +19,7 @@ import {
 import {
   getShopShippingOption,
   getShopShippingOptions,
+  isShopShippingOptionSuspended,
 } from "./shop/shop-shipping";
 import { useShopStore } from "./shop/shop-store";
 import vasoMark from "./assets/shop/vaso-mark.png";
@@ -194,6 +195,10 @@ function App() {
     () => (shopConfig ? getShopShippingOption(shopConfig, customerCountry, shippingModeId) : null),
     [customerCountry, shippingModeId, shopConfig],
   );
+  const isSelectedShippingOptionSuspended =
+    shopConfig && selectedShippingOption
+      ? isShopShippingOptionSuspended(shopConfig, selectedShippingOption.id)
+      : false;
   const isUnsupportedShippingCountry =
     Boolean(shopConfig) && customerCountry.trim().length > 0 && shippingOptions.length === 0;
   const isRelayShippingMode = selectedShippingOption?.id === "relay";
@@ -231,7 +236,8 @@ function App() {
     customerCity.trim().length > 0 &&
     customerPostalCode.trim().length > 0 &&
     customerCountry.trim().length > 0;
-  const isShippingSelectionComplete = selectedShippingOption !== null;
+  const isShippingSelectionComplete =
+    selectedShippingOption !== null && !isSelectedShippingOptionSuspended;
   const isRelaySelectionComplete = !isRelayShippingMode || relaySelection !== null;
   const canValidateClientStep =
     isClientInfoComplete &&
@@ -1026,27 +1032,46 @@ function App() {
 
                     <label className="shop-field shop-field-wide">
                       <span>Mode de livraison</span>
-                      <select
-                        name="shippingMode"
-                        value={shippingModeId}
-                        onChange={(event) => setShippingModeId(event.target.value)}
-                        disabled={!canAccessClientStep || !customerCountry.trim() || isUnsupportedShippingCountry}
-                        required
-                      >
-                        <option value="">
-                          {customerCountry.trim().length === 0
-                            ? "Choisissez d'abord un pays"
-                            : "Sélectionnez un mode de livraison"}
-                        </option>
-                        {shippingOptions.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {formatShippingOptionDisplay(option.label, option.provider)} ·{" "}
-                            {formatShopPriceFromCents(
-                              getShopEffectiveShippingPriceCents(shopConfig, productPriceCents, option.priceCents),
-                            )}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="shop-shipping-mode-list" role="radiogroup" aria-label="Mode de livraison">
+                        {customerCountry.trim().length === 0 ? (
+                          <div className="shop-shipping-mode-empty">Choisissez d'abord un pays</div>
+                        ) : isUnsupportedShippingCountry ? (
+                          <div className="shop-shipping-mode-empty">Aucun mode de livraison disponible pour ce pays</div>
+                        ) : (
+                          shippingOptions.map((option) => {
+                            const isSuspended = isShopShippingOptionSuspended(shopConfig, option.id);
+                            const isActive = shippingModeId === option.id;
+
+                            return (
+                              <button
+                                key={option.id}
+                                className={`shop-shipping-mode-option${isActive ? " active" : ""}`}
+                                type="button"
+                                role="radio"
+                                aria-checked={isActive}
+                                onClick={() => setShippingModeId(option.id)}
+                                disabled={!canAccessClientStep || isSuspended}
+                              >
+                                <span className="shop-shipping-mode-copy">
+                                  <strong>
+                                    {formatShippingOptionDisplay(option.label, option.provider)}
+                                  </strong>
+                                  <span>
+                                    {formatShopPriceFromCents(
+                                      getShopEffectiveShippingPriceCents(shopConfig, productPriceCents, option.priceCents),
+                                    )}
+                                  </span>
+                                </span>
+                                {isSuspended ? (
+                                  <span className="shop-shipping-mode-unavailable">
+                                    Indisponible temporairement
+                                  </span>
+                                ) : null}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
                     </label>
 
                     <label className="shop-field shop-field-wide">

@@ -1024,6 +1024,76 @@
   font: inherit;
 }
 
+.shop-shipping-mode-list {
+  display: grid;
+  gap: 10px;
+}
+
+.shop-shipping-mode-empty {
+  padding: 14px 16px;
+  border: 1px dashed rgb(93 58 37 / 16%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 34%);
+  color: rgb(38 29 22 / 62%);
+}
+
+.shop-shipping-mode-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgb(93 58 37 / 12%);
+  border-radius: 14px;
+  background: var(--color-field);
+  color: var(--color-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.shop-shipping-mode-option:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgb(165 79 43 / 22%);
+  box-shadow: 0 10px 20px rgb(83 54 28 / 6%);
+}
+
+.shop-shipping-mode-option.active {
+  border-color: rgb(47 36 29 / 30%);
+  background: rgb(255 249 242 / 96%);
+}
+
+.shop-shipping-mode-option:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.shop-shipping-mode-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.shop-shipping-mode-copy strong {
+  font-size: 0.92rem;
+}
+
+.shop-shipping-mode-copy span {
+  color: rgb(38 29 22 / 68%);
+  font-size: 0.82rem;
+}
+
+.shop-shipping-mode-unavailable {
+  flex-shrink: 0;
+  color: #b72626;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .shop-field textarea {
   resize: vertical;
   min-height: 116px;

@@ -148,6 +148,8 @@ class VasoAdminApp(tk.Tk):
         self.status_label_var = tk.StringVar()
         self.status_message_var = tk.StringVar()
         self.status_allow_checkout_var = tk.BooleanVar()
+        self.shipping_suspend_relay_var = tk.BooleanVar()
+        self.shipping_suspend_home_var = tk.BooleanVar()
         self.shipping_lead_time_var = tk.StringVar()
         self.temporary_notice_var = tk.StringVar()
         self.contact_prompt_var = tk.StringVar()
@@ -328,16 +330,28 @@ class VasoAdminApp(tk.Tk):
           variable=self.status_allow_checkout_var,
         ).grid(row=3, column=1, sticky="w", pady=(0, 8))
 
-        ttk.Label(frame, text="Delai expedition").grid(row=4, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.shipping_lead_time_var).grid(row=4, column=1, sticky="ew", pady=4)
+        ttk.Checkbutton(
+          frame,
+          text="Suspendre le service mondial relais",
+          variable=self.shipping_suspend_relay_var,
+        ).grid(row=4, column=1, sticky="w", pady=(0, 4))
 
-        ttk.Label(frame, text="Message temporaire").grid(row=5, column=0, sticky="nw")
+        ttk.Checkbutton(
+          frame,
+          text="Suspendre livraison à domicile",
+          variable=self.shipping_suspend_home_var,
+        ).grid(row=5, column=1, sticky="w", pady=(0, 8))
+
+        ttk.Label(frame, text="Delai expedition").grid(row=6, column=0, sticky="w")
+        ttk.Entry(frame, textvariable=self.shipping_lead_time_var).grid(row=6, column=1, sticky="ew", pady=4)
+
+        ttk.Label(frame, text="Message temporaire").grid(row=7, column=0, sticky="nw")
         self.temporary_notice_text = tk.Text(frame, height=1, wrap="word")
-        self.temporary_notice_text.grid(row=5, column=1, sticky="nsew", pady=4)
+        self.temporary_notice_text.grid(row=7, column=1, sticky="nsew", pady=4)
 
-        ttk.Label(frame, text="Texte atelier").grid(row=6, column=0, sticky="nw")
+        ttk.Label(frame, text="Texte atelier").grid(row=8, column=0, sticky="nw")
         atelier_frame = ttk.Frame(frame)
-        atelier_frame.grid(row=6, column=1, sticky="ew", pady=4)
+        atelier_frame.grid(row=8, column=1, sticky="ew", pady=4)
         atelier_frame.columnconfigure(0, weight=1)
         atelier_frame.rowconfigure(0, weight=1)
         self.atelier_note_text = tk.Text(atelier_frame, height=4, wrap="word")
@@ -346,9 +360,9 @@ class VasoAdminApp(tk.Tk):
         self.atelier_note_scrollbar.grid(row=0, column=1, sticky="ns")
         self.atelier_note_text.configure(yscrollcommand=self.atelier_note_scrollbar.set)
 
-        ttk.Label(frame, text="Avertissement PLA").grid(row=7, column=0, sticky="nw")
+        ttk.Label(frame, text="Avertissement PLA").grid(row=9, column=0, sticky="nw")
         warning_frame = ttk.Frame(frame)
-        warning_frame.grid(row=7, column=1, sticky="ew", pady=4)
+        warning_frame.grid(row=9, column=1, sticky="ew", pady=4)
         warning_frame.columnconfigure(0, weight=1)
         warning_frame.rowconfigure(0, weight=1)
         self.warning_text = tk.Text(warning_frame, height=4, wrap="word")
@@ -357,9 +371,9 @@ class VasoAdminApp(tk.Tk):
         self.warning_scrollbar.grid(row=0, column=1, sticky="ns")
         self.warning_text.configure(yscrollcommand=self.warning_scrollbar.set)
 
-        ttk.Label(frame, text="Avertissement couleur").grid(row=8, column=0, sticky="nw")
+        ttk.Label(frame, text="Avertissement couleur").grid(row=10, column=0, sticky="nw")
         color_note_frame = ttk.Frame(frame)
-        color_note_frame.grid(row=8, column=1, sticky="ew", pady=4)
+        color_note_frame.grid(row=10, column=1, sticky="ew", pady=4)
         color_note_frame.columnconfigure(0, weight=1)
         color_note_frame.rowconfigure(0, weight=1)
         self.color_preview_note_text = tk.Text(color_note_frame, height=3, wrap="word")
@@ -373,10 +387,10 @@ class VasoAdminApp(tk.Tk):
         self.color_preview_note_text.configure(yscrollcommand=self.color_preview_note_scrollbar.set)
 
         frame.rowconfigure(2, weight=0)
-        frame.rowconfigure(5, weight=0)
-        frame.rowconfigure(6, weight=0)
         frame.rowconfigure(7, weight=0)
         frame.rowconfigure(8, weight=0)
+        frame.rowconfigure(9, weight=0)
+        frame.rowconfigure(10, weight=0)
 
     def build_contact_tab(self) -> None:
         frame = self.contact_frame
@@ -732,6 +746,8 @@ class VasoAdminApp(tk.Tk):
         self.status_label_var.set(shop_status.get("label", ""))
         self.status_allow_checkout_var.set(bool(shop_status.get("allowCheckout", True)))
         self.status_message_var.set(shop_status.get("message", ""))
+        self.shipping_suspend_relay_var.set(bool(shipping.get("suspendRelay", False)))
+        self.shipping_suspend_home_var.set(bool(shipping.get("suspendHomeDelivery", False)))
         self.shipping_lead_time_var.set(messages.get("shippingLeadTime", ""))
         self.temporary_notice_var.set(messages.get("temporaryNotice", ""))
         self.contact_prompt_var.set(messages.get("contactPrompt", "Vous avez des questions ?"))
@@ -807,6 +823,8 @@ class VasoAdminApp(tk.Tk):
         }
         self.config_data["printerVolume"] = self.collect_printer_volume_config()
         self.config_data["shipping"] = {
+            "suspendRelay": bool(self.shipping_suspend_relay_var.get()),
+            "suspendHomeDelivery": bool(self.shipping_suspend_home_var.get()),
             "unsupportedMessage": self.shipping_unsupported_text.get("1.0", "end").strip(),
             "countries": existing_shipping_countries,
         }

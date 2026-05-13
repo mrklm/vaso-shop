@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.73] - 2026-05-13
+
+### Ajouté
+- Cases pour desactiver temporairement les modes de livraison dans Vaso_Admin
+
 ## [1.1.72] - 2026-05-13
 
 ### Modifié
