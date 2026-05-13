@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.64] - 2026-05-13
+
+### Modifié
+- Corrige la redirection Netlify publique vers GitHub Pages sans casser les fonctions Stripe
+
 ## [1.1.63] - 2026-05-13
 
 ### Modifié

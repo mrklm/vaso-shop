@@ -7,11 +7,6 @@
   included_files = ["public/config/**"]
 
 [[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-[[redirects]]
   from = "/*"
   to = "https://mrklm.github.io/vaso-shop/:splat"
   status = 301
