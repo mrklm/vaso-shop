@@ -1,6 +1,6 @@
 {
   "pricing": {
-    "priceCents": 2500
+    "priceCents": 100
   },
   "printerVolume": {
     "enforce": false,
