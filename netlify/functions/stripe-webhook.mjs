@@ -184,6 +184,23 @@ function formatAmountFromMinorUnits(amount, currency) {
   }).format(amount / 100);
 }
 
+function formatOrderDateTime(createdAt) {
+  if (typeof createdAt !== "string" || createdAt.trim().length === 0) {
+    return null;
+  }
+
+  const parsedDate = new Date(createdAt);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Europe/Paris",
+  }).format(parsedDate);
+}
+
 function buildDiscordMessage(order) {
   const customerFullName = [order.customerFirstName, order.customerLastName]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
@@ -205,6 +222,7 @@ function buildDiscordMessage(order) {
 
   const lines = [
     "**Nouvelle commande Vaso**",
+    `Date : ${formatOrderDateTime(order.createdAt) ?? "n/a"}`,
     `Reference : ${order.orderRef ?? "n/a"}`,
     `Vase : n° ${order.seed ?? "n/a"}${order.heightMm ? ` · ${order.heightMm} mm` : ""}`,
     `Couleur : ${order.colorLabel ?? "n/a"}`,

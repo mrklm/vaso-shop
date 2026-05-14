@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.80] - 2026-05-14
+
+### Modifié
+- Ajoute l'horodatage des commandes dans la notification Discord
+
 ## [1.1.79] - 2026-05-13
 
 ### Modifié
