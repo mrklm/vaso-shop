@@ -32,6 +32,7 @@ HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
 PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "admin"]
 DEFAULT_ORDERS_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/list-orders"
+DEFAULT_DISCORD_TEST_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/send-discord-test"
 DEFAULT_HERO_TRANSITION_MS = 8200
 DEFAULT_HERO_FADE_IN_MS = 3200
 DEFAULT_HERO_FADE_OUT_MS = 3200
@@ -457,6 +458,26 @@ class VasoAdminApp(tk.Tk):
         ttk.Label(content, text="Message pays non geres").grid(row=1, column=0, sticky="nw", pady=(12, 0))
         self.shipping_unsupported_text = tk.Text(content, height=2, wrap="word", width=56)
         self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=(12, 0))
+
+        discord_test_frame = ttk.LabelFrame(content, text="Test notification Discord")
+        discord_test_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(18, 0))
+        discord_test_frame.columnconfigure(0, weight=1)
+
+        ttk.Label(
+            discord_test_frame,
+            text=(
+                "Envoie un message clairement marque comme test vers Discord.\n"
+                "Aucune commande reelle n'est creee."
+            ),
+            justify="left",
+            wraplength=520,
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+
+        ttk.Button(
+            discord_test_frame,
+            text="Envoyer un test Discord",
+            command=self.send_discord_test_message,
+        ).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
 
     def build_colors_tab(self) -> None:
         frame = self.colors_frame
@@ -1665,6 +1686,67 @@ class VasoAdminApp(tk.Tk):
         )
         self.save_settings()
         self.log(f"Commandes rechargees : {len(self.orders_data)}")
+
+    def build_discord_test_api_url(self) -> str:
+        api_url = self.orders_api_url_var.get().strip() or DEFAULT_ORDERS_API_URL
+        parsed_url = urllib_parse.urlsplit(api_url)
+        path = parsed_url.path
+
+        if path.endswith("/list-orders"):
+            path = f"{path[:-len('/list-orders')]}/send-discord-test"
+        elif path.endswith("list-orders"):
+            path = path[: -len("list-orders")] + "send-discord-test"
+        elif "/.netlify/functions/" in path:
+            path = DEFAULT_DISCORD_TEST_API_URL.removeprefix("https://vaso-shop.netlify.app")
+        else:
+            path = DEFAULT_DISCORD_TEST_API_URL.removeprefix("https://vaso-shop.netlify.app")
+
+        return urllib_parse.urlunsplit(
+            (
+                parsed_url.scheme or "https",
+                parsed_url.netloc or urllib_parse.urlsplit(DEFAULT_DISCORD_TEST_API_URL).netloc,
+                path,
+                "",
+                "",
+            ),
+        )
+
+    def send_discord_test_message(self) -> None:
+        api_token = self.orders_api_token_var.get().strip()
+        if not api_token:
+            messagebox.showerror("VASO-Admin", "Renseigne le mot de passe admin avant d'envoyer un test Discord.")
+            return
+
+        request_url = self.build_discord_test_api_url()
+        request = urllib_request.Request(
+            request_url,
+            headers={
+                "x-admin-orders-token": api_token,
+                "Authorization": f"Bearer {api_token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json; charset=utf-8",
+            },
+            data=b"{}",
+            method="POST",
+        )
+
+        try:
+            with urllib_request.urlopen(request, timeout=20) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except urllib_error.HTTPError as error:
+            body = error.read().decode("utf-8", errors="replace").strip()
+            message = body or f"HTTP {error.code}"
+            self.log(f"Erreur test Discord : {message}")
+            messagebox.showerror("VASO-Admin", f"Impossible d'envoyer le test Discord.\n{message}")
+            return
+        except (urllib_error.URLError, TimeoutError, json.JSONDecodeError) as error:
+            self.log(f"Erreur test Discord : {error}")
+            messagebox.showerror("VASO-Admin", f"Impossible d'envoyer le test Discord.\n{error}")
+            return
+
+        message = payload.get("message", "Message de test Discord envoye.") if isinstance(payload, dict) else "Message de test Discord envoye."
+        self.log(message)
+        messagebox.showinfo("VASO-Admin", message)
 
     def load_selected_order(self) -> None:
         selection = self.orders_listbox.curselection()

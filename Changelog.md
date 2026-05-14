@@ -7,9 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.81] - 2026-05-14
+
+### Ajouté
+- Ajoute un bouton de test Discord dans VASO-Admin avec une fonction Netlify dédiée
+
 ## [1.1.80] - 2026-05-14
 
-### Modifié
+### Ajouté
 - Ajoute l'horodatage des commandes dans la notification Discord
 
 ## [1.1.79] - 2026-05-13
