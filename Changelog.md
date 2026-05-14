@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.82] - 2026-05-14
+
+### Modifié
+- Ameliore l'onglet Tarifs et passe le mot de passe admin en session unique
+
 ## [1.1.81] - 2026-05-14
 
 ### Ajouté

@@ -9,7 +9,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from urllib import error as urllib_error
 from urllib import parse as urllib_parse
 from urllib import request as urllib_request
@@ -184,12 +184,11 @@ class VasoAdminApp(tk.Tk):
         self.orders_api_url_var = tk.StringVar(
             value=self.settings_data.get("orders_api_url", DEFAULT_ORDERS_API_URL),
         )
-        self.orders_api_token_var = tk.StringVar(
-            value=self.settings_data.get("orders_api_token", ""),
-        )
         self.theme_name_var = tk.StringVar(
             value=self.settings_data.get("theme", next(iter(THEMES))),
         )
+        self.session_auth_status_var = tk.StringVar(value="Session admin verrouillée")
+        self.session_admin_token = ""
         self.orders_data: list[dict] = []
 
         self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
@@ -206,6 +205,7 @@ class VasoAdminApp(tk.Tk):
         self.build_ui()
         self.populate_form()
         self.apply_theme(self.theme_name_var.get())
+        self.after(120, self.prompt_session_admin_token)
 
     def load_config(self) -> dict:
         with CONFIG_PATH.open("r", encoding="utf-8") as handle:
@@ -228,7 +228,6 @@ class VasoAdminApp(tk.Tk):
                 {
                     "theme": self.theme_name_var.get(),
                     "orders_api_url": self.orders_api_url_var.get().strip(),
-                    "orders_api_token": self.orders_api_token_var.get().strip(),
                 },
                 handle,
                 indent=2,
@@ -261,6 +260,8 @@ class VasoAdminApp(tk.Tk):
         self.theme_selector.pack(side="right", padx=(8, 0))
         ttk.Label(toolbar, text="Thème").pack(side="right")
         self.theme_selector.bind("<<ComboboxSelected>>", lambda _event: self.on_theme_change())
+        ttk.Button(toolbar, text="Mot de passe session", command=self.prompt_session_admin_token).pack(side="left")
+        ttk.Label(toolbar, textvariable=self.session_auth_status_var).pack(side="left", padx=(0, 12))
 
         self.notebook = ttk.Notebook(self)
         notebook = self.notebook
@@ -434,14 +435,14 @@ class VasoAdminApp(tk.Tk):
         frame = self.pricing_frame
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure(0, weight=1)
-        frame.rowconfigure(2, weight=1)
+        frame.rowconfigure(2, weight=0)
 
-        content = ttk.Frame(frame)
-        content.grid(row=1, column=0, sticky="n")
-        content.columnconfigure(1, weight=1)
+        pricing_block = ttk.LabelFrame(frame, text="Tarif affiche dans la boutique", padding=14)
+        pricing_block.grid(row=1, column=0, sticky="n", pady=(8, 12))
+        pricing_block.columnconfigure(1, weight=1)
 
-        ttk.Label(content, text="Prix").grid(row=0, column=0, sticky="w")
-        price_row = ttk.Frame(content)
+        ttk.Label(pricing_block, text="Prix").grid(row=0, column=0, sticky="w")
+        price_row = ttk.Frame(pricing_block)
         price_row.grid(row=0, column=1, sticky="w", pady=4)
         ttk.Entry(price_row, textvariable=self.price_euros_var, width=8).pack(side="left")
         ttk.Label(price_row, text="€").pack(side="left", padx=(6, 4))
@@ -455,29 +456,30 @@ class VasoAdminApp(tk.Tk):
             state="readonly",
         ).pack(side="left")
 
-        ttk.Label(content, text="Message pays non geres").grid(row=1, column=0, sticky="nw", pady=(12, 0))
-        self.shipping_unsupported_text = tk.Text(content, height=2, wrap="word", width=56)
+        ttk.Label(pricing_block, text="Message pays non geres").grid(row=1, column=0, sticky="nw", pady=(12, 0))
+        self.shipping_unsupported_text = tk.Text(pricing_block, height=2, wrap="word", width=56)
         self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=(12, 0))
 
-        discord_test_frame = ttk.LabelFrame(content, text="Test notification Discord")
-        discord_test_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(18, 0))
+        discord_test_frame = ttk.LabelFrame(frame, text="Test message alerte commande Discord", padding=14)
+        discord_test_frame.grid(row=2, column=0, sticky="n", pady=(0, 8))
         discord_test_frame.columnconfigure(0, weight=1)
 
         ttk.Label(
             discord_test_frame,
             text=(
                 "Envoie un message clairement marque comme test vers Discord.\n"
-                "Aucune commande reelle n'est creee."
+                "Aucune commande reelle n'est creee et rien n'est ajoute aux commandes."
             ),
             justify="left",
             wraplength=520,
-        ).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 10))
 
-        ttk.Button(
+        self.discord_test_button = ttk.Button(
             discord_test_frame,
             text="Envoyer un test Discord",
             command=self.send_discord_test_message,
-        ).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
+        )
+        self.discord_test_button.grid(row=1, column=0, sticky="w")
 
     def build_colors_tab(self) -> None:
         frame = self.colors_frame
@@ -708,19 +710,30 @@ class VasoAdminApp(tk.Tk):
             pady=4,
             padx=(8, 10),
         )
-        ttk.Label(settings, text="Mot de passe").grid(row=1, column=0, sticky="w")
-        ttk.Entry(settings, textvariable=self.orders_api_token_var, show="*").grid(
+        ttk.Label(
+            settings,
+            text="Le mot de passe de session est demande a l'ouverture et vaut pour tous les onglets.",
+            justify="left",
+            wraplength=520,
+        ).grid(
             row=1,
-            column=1,
-            sticky="ew",
-            pady=4,
-            padx=(8, 10),
+            column=0,
+            columnspan=2,
+            sticky="w",
+            pady=(2, 4),
         )
-        ttk.Button(settings, text="Rafraichir", command=self.refresh_orders).grid(
+        self.orders_refresh_button = ttk.Button(settings, text="Rafraichir", command=self.refresh_orders)
+        self.orders_refresh_button.grid(
             row=0,
             column=2,
             rowspan=2,
             sticky="ns",
+        )
+        ttk.Button(settings, text="Changer le mot de passe session", command=self.prompt_session_admin_token).grid(
+            row=2,
+            column=2,
+            sticky="e",
+            pady=(4, 0),
         )
 
         left = ttk.Frame(frame)
@@ -1617,14 +1630,13 @@ class VasoAdminApp(tk.Tk):
 
     def refresh_orders(self) -> None:
         api_url = self.orders_api_url_var.get().strip()
-        api_token = self.orders_api_token_var.get().strip()
+        api_token = self.get_session_admin_token()
 
         if not api_url:
             messagebox.showerror("VASO-Admin", "Renseigne l'URL de l'API commandes.")
             return
 
         if not api_token:
-            messagebox.showerror("VASO-Admin", "Renseigne le jeton admin des commandes.")
             return
 
         parsed_url = urllib_parse.urlsplit(api_url)
@@ -1712,9 +1724,8 @@ class VasoAdminApp(tk.Tk):
         )
 
     def send_discord_test_message(self) -> None:
-        api_token = self.orders_api_token_var.get().strip()
+        api_token = self.get_session_admin_token()
         if not api_token:
-            messagebox.showerror("VASO-Admin", "Renseigne le mot de passe admin avant d'envoyer un test Discord.")
             return
 
         request_url = self.build_discord_test_api_url()
@@ -1747,6 +1758,43 @@ class VasoAdminApp(tk.Tk):
         message = payload.get("message", "Message de test Discord envoye.") if isinstance(payload, dict) else "Message de test Discord envoye."
         self.log(message)
         messagebox.showinfo("VASO-Admin", message)
+
+    def prompt_session_admin_token(self) -> None:
+        token = simpledialog.askstring(
+            "VASO-Admin",
+            "Renseigne le mot de passe admin pour cette session :",
+            parent=self,
+            show="*",
+        )
+
+        if token is None:
+            if not self.session_admin_token:
+                self.session_auth_status_var.set("Session admin verrouillée")
+                self.log("Mot de passe session non renseigne.")
+            return
+
+        cleaned_token = token.strip()
+        if not cleaned_token:
+            self.session_admin_token = ""
+            self.session_auth_status_var.set("Session admin verrouillée")
+            self.log("Mot de passe session vide.")
+            return
+
+        self.session_admin_token = cleaned_token
+        self.session_auth_status_var.set("Session admin déverrouillée")
+        self.log("Mot de passe session enregistre pour cette ouverture.")
+
+    def get_session_admin_token(self) -> str:
+        if self.session_admin_token:
+            return self.session_admin_token
+
+        self.prompt_session_admin_token()
+        if not self.session_admin_token:
+            messagebox.showerror(
+                "VASO-Admin",
+                "Le mot de passe de session est requis pour acceder aux commandes et aux tests Discord.",
+            )
+        return self.session_admin_token
 
     def load_selected_order(self) -> None:
         selection = self.orders_listbox.curselection()
@@ -1851,6 +1899,17 @@ class VasoAdminApp(tk.Tk):
             background=theme["PANEL"],
             foreground=theme["FIELD_FG"],
             arrowcolor=theme["FG"],
+        )
+        self.style.configure(
+            "TLabelframe",
+            background=theme["BG"],
+            borderwidth=1,
+            relief="solid",
+        )
+        self.style.configure(
+            "TLabelframe.Label",
+            background=theme["BG"],
+            foreground=theme["FG"],
         )
         self.style.map(
             "TCombobox",
