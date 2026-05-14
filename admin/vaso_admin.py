@@ -1728,7 +1728,20 @@ class VasoAdminApp(tk.Tk):
         if not api_token:
             return
 
-        request_url = self.build_discord_test_api_url()
+        base_url = self.build_discord_test_api_url()
+        parsed_url = urllib_parse.urlsplit(base_url)
+        query_params = urllib_parse.parse_qsl(parsed_url.query, keep_blank_values=True)
+        filtered_params = [(key, value) for key, value in query_params if key != "token"]
+        filtered_params.append(("token", api_token))
+        request_url = urllib_parse.urlunsplit(
+            (
+                parsed_url.scheme,
+                parsed_url.netloc,
+                parsed_url.path,
+                urllib_parse.urlencode(filtered_params),
+                parsed_url.fragment,
+            ),
+        )
         request = urllib_request.Request(
             request_url,
             headers={

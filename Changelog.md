@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.83] - 2026-05-14
+
+### Modifié
+- Corrige l'authentification du bouton de test Discord dans VASO-Admin
+
 ## [1.1.82] - 2026-05-14
 
 ### Modifié
