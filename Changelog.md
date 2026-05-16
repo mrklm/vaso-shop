@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.85] - 2026-05-16
+
+### Ajouté
+- Ajoute dans VASO-Admin une option pour ignorer le déploiement Netlify sur un commit
+
 ## [1.1.84] - 2026-05-16
 
 ### Ajouté

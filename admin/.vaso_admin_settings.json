@@ -1,4 +1,5 @@
 {
   "theme": "[Clair] Miellerie La Divette",
-  "orders_api_url": "https://vaso-shop.netlify.app/.netlify/functions/list-orders"
+  "orders_api_url": "https://vaso-shop.netlify.app/.netlify/functions/list-orders",
+  "skip_netlify_deploy": true
 }

@@ -181,6 +181,9 @@ class VasoAdminApp(tk.Tk):
         self.hero_preview_status_var = tk.StringVar(value="Selectionnez une image hero")
 
         self.commit_message_var = tk.StringVar(value=self.build_default_commit_message())
+        self.skip_netlify_deploy_var = tk.BooleanVar(
+            value=bool(self.settings_data.get("skip_netlify_deploy", True)),
+        )
         self.orders_api_url_var = tk.StringVar(
             value=self.settings_data.get("orders_api_url", DEFAULT_ORDERS_API_URL),
         )
@@ -228,6 +231,7 @@ class VasoAdminApp(tk.Tk):
                 {
                     "theme": self.theme_name_var.get(),
                     "orders_api_url": self.orders_api_url_var.get().strip(),
+                    "skip_netlify_deploy": bool(self.skip_netlify_deploy_var.get()),
                 },
                 handle,
                 indent=2,
@@ -769,8 +773,14 @@ class VasoAdminApp(tk.Tk):
             pady=(4, 12),
         )
 
+        ttk.Checkbutton(
+            publish_panel,
+            text="Ignorer le déploiement Netlify pour ce commit",
+            variable=self.skip_netlify_deploy_var,
+        ).grid(row=2, column=0, sticky="w", pady=(0, 10))
+
         buttons = ttk.Frame(publish_panel)
-        buttons.grid(row=2, column=0)
+        buttons.grid(row=3, column=0)
         ttk.Button(buttons, text="Annuler", command=self.reload_from_disk).pack(side="left")
         ttk.Button(buttons, text="Sauvegarder", command=self.git_commit_and_push).pack(side="left", padx=6)
 
@@ -1555,7 +1565,7 @@ class VasoAdminApp(tk.Tk):
             self.log(f"Erreur de sauvegarde : {error}")
             return False
 
-        commit_message = self.commit_message_var.get().strip() or self.build_default_commit_message()
+        commit_message = self.build_effective_commit_message()
         self.commit_message_var.set(commit_message)
         add_process = self.run_git_command(["add", "-A", *PUBLISH_PATHS])
         if add_process.returncode != 0:
@@ -1594,6 +1604,15 @@ class VasoAdminApp(tk.Tk):
 
         self.log("Commit local cree.")
         return True
+
+    def build_effective_commit_message(self) -> str:
+        base_message = self.commit_message_var.get().strip() or self.build_default_commit_message()
+        normalized_message = base_message.replace("[skip netlify]", "").replace("[skip ci]", "").strip()
+
+        if self.skip_netlify_deploy_var.get():
+            return f"{normalized_message} [skip netlify]"
+
+        return normalized_message
 
     def git_commit_and_push(self) -> None:
         if not self.git_commit():
