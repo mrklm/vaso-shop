@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.90] - 2026-05-16
+
+### Modifié
+- Réduit la taille de la vue contenant dans l'etape 1
+
 ## [1.1.89] - 2026-05-16
 
 ### Ajouté
