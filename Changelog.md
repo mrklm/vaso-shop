@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.86] - 2026-05-16
+
+### Modifié
+- Ajuste le texte d'introduction du parcours de commande
+
 ## [1.1.85] - 2026-05-16
 
 ### Ajouté

@@ -825,7 +825,7 @@ function App() {
                   <p className="shop-panel-title">Page de commande</p>
                   <h2>Un parcours clair avant le paiement.</h2>
                   <p>
-                    La page descend automatiquement jusqu'ici pour valider le modele, choisir la
+                    La page descend automatiquement pour valider le modèle, choisir la
                     couleur, renseigner vos informations puis ouvrir le paiement sécurisé Stripe.
                   </p>
                 </div>
