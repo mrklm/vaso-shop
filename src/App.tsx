@@ -871,6 +871,15 @@ function App() {
                   </div>
                 </div>
                 <div className="shop-order-step-actions">
+                  <div className="shop-order-note shop-order-note-highlight shop-order-warning">
+                    <span className="shop-order-warning-icon" aria-hidden="true">
+                      <span>!</span>
+                    </span>
+                    <div className="shop-order-warning-copy">
+                      <strong>Attention</strong>
+                      <p>{shopConfig.messages.warningPla}</p>
+                    </div>
+                  </div>
                   {isModelStepConfirmed ? (
                     <span className="shop-step-status">Modèle validé</span>
                   ) : (
@@ -930,15 +939,6 @@ function App() {
                       liste.
                     </p>
                   </div>
-                  <div className="shop-order-note shop-order-note-highlight shop-order-warning">
-                    <span className="shop-order-warning-icon" aria-hidden="true">
-                      <span>!</span>
-                    </span>
-                    <div className="shop-order-warning-copy">
-                      <strong>Attention</strong>
-                      <p>{shopConfig.messages.warningPla}</p>
-                    </div>
-                  </div>
                 </div>
                 <div className="shop-order-step-actions">
                   {isColorStepConfirmed ? (
@@ -983,20 +983,6 @@ function App() {
                 <div className="shop-order-step-content">
                   <div className="shop-order-form-grid">
                     <label className="shop-field">
-                      <span>Nom</span>
-                      <input
-                        name="lastName"
-                        type="text"
-                        value={customerLastName}
-                        onChange={(event) => setCustomerLastName(event.target.value)}
-                        placeholder="Votre nom"
-                        required
-                        disabled={!canAccessClientStep}
-                        autoComplete="family-name"
-                      />
-                    </label>
-
-                    <label className="shop-field">
                       <span>Prénom</span>
                       <input
                         name="firstName"
@@ -1007,6 +993,20 @@ function App() {
                         required
                         disabled={!canAccessClientStep}
                         autoComplete="given-name"
+                      />
+                    </label>
+
+                    <label className="shop-field">
+                      <span>Nom</span>
+                      <input
+                        name="lastName"
+                        type="text"
+                        value={customerLastName}
+                        onChange={(event) => setCustomerLastName(event.target.value)}
+                        placeholder="Votre nom"
+                        required
+                        disabled={!canAccessClientStep}
+                        autoComplete="family-name"
                       />
                     </label>
 

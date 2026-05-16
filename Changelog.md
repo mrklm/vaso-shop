@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.87] - 2026-05-16
+
+### Modifié
+- Deplace l'avertissement PLA dans l'etape 1 et inverse nom/prenom dans les coordonnees
+
 ## [1.1.86] - 2026-05-16
 
 ### Modifié
