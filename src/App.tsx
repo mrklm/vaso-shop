@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { InsertView2D } from "./components/viewer/InsertView2D";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
@@ -887,6 +888,10 @@ function App() {
                       Je valide ce modèle
                     </button>
                   )}
+                  <InsertView2D
+                    params={selectedEntry.params}
+                    compatibility={selectedEntry.waterproofInsertCompatibility}
+                  />
                 </div>
               </article>
 

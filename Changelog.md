@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.89] - 2026-05-16
+
+### Ajouté
+- Ajoute une vue en coupe du contenant compatible dans l'etape 1 de validation du modele
+
 ## [1.1.88] - 2026-05-16
 
 ### Modifié
