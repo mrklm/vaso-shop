@@ -738,6 +738,11 @@
   color: #8f5331;
 }
 
+.shop-insert-view-title {
+  color: rgb(38 29 22 / 56%);
+  text-align: center;
+}
+
 .shop-insert-view-graphic {
   width: 100%;
   height: auto;

@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.92] - 2026-05-16
+
+### Modifié
+- Clarifie les dimensions du contenant et centre son titre dans la vue dédiée
+
 ## [1.1.91] - 2026-05-16
 
 ### Modifié

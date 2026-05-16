@@ -13,10 +13,10 @@ function formatInsertDimensions(
 ): string {
   const bottomDiameter = preset.bottomDiameterMm ?? preset.topDiameterMm;
   if (preset.type === "test_tube") {
-    return "75 × 20 mm";
+    return "Hauteur 75 mm · Ø 20 mm";
   }
 
-  return `${preset.heightMm - 3} × Ø${preset.topDiameterMm - 3}/${bottomDiameter - 3} mm`;
+  return `Hauteur ${preset.heightMm - 3} mm · Ø↑ ${preset.topDiameterMm - 3} mm · Ø↓ ${bottomDiameter - 3} mm`;
 }
 
 export function InsertView2D({ params, compatibility }: InsertView2DProps) {
@@ -84,7 +84,7 @@ export function InsertView2D({ params, compatibility }: InsertView2DProps) {
 
   return (
     <div className="shop-insert-view-card">
-      <span className="shop-panel-title">Contenant</span>
+      <span className="shop-panel-title shop-insert-view-title">Contenant</span>
       <svg
         className="shop-insert-view-graphic"
         width={width}
