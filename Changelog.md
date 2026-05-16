@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.84] - 2026-05-16
+
+### Ajouté
+- Analyse automatiquement le plus grand contenant étanche compatible et l'affiche dans le shop et les commandes
+
 ## [1.1.83] - 2026-05-14
 
 ### Modifié

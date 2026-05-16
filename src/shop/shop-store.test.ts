@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { analyzeWaterproofInsertCompatibility } from "../engine/insert-compatibility";
 import { useShopStore } from "./shop-store";
 import type { ShopVaseEntry } from "./shop-types";
 import { useUIStore } from "../store/ui-store";
@@ -18,6 +19,7 @@ function createEntry(id: string, seed: number, isSeedModified: boolean): ShopVas
     heightMm: params.heightMm,
     minDiameterMm: 60,
     maxDiameterMm: 120,
+    waterproofInsertCompatibility: analyzeWaterproofInsertCompatibility(params),
     material: "PLA",
     params,
   };

@@ -137,6 +137,7 @@ function buildOrderMetadata(payload, shippingOption, productPriceCents, shipping
     height_mm: normalizeMetadataValue(payload.heightMm, 32),
     min_diameter_mm: normalizeMetadataValue(payload.minDiameterMm, 32),
     max_diameter_mm: normalizeMetadataValue(payload.maxDiameterMm, 32),
+    waterproof_insert_label: normalizeMetadataValue(payload.waterproofInsertLabel, 120),
     material: normalizeMetadataValue(payload.material, 32),
     product_price_cents: normalizeMetadataValue(productPriceCents, 40),
     color_id: normalizeMetadataValue(payload.colorId, 64),

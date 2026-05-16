@@ -1844,6 +1844,7 @@ class VasoAdminApp(tk.Tk):
             f"Date : {order.get('createdAt', 'n/a')}",
             f"Vase : n° {order.get('seed', 'n/a')}",
             f"Couleur : {order.get('colorLabel', 'n/a')}",
+            f"Contenant compatible : {order.get('waterproofInsertLabel', 'n/a')}",
             f"Materiau : {order.get('material', 'n/a')}",
             f"Hauteur : {order.get('heightMm', 'n/a')} mm",
             "",

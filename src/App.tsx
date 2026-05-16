@@ -65,6 +65,7 @@ function buildShopContactBody(
     heightMm: number;
     minDiameterMm: number;
     maxDiameterMm: number;
+    waterproofInsertLabel: string;
     colorLabel: string;
   } | null,
 ): string {
@@ -86,6 +87,7 @@ function buildShopContactBody(
     `Hauteur : ${vaseDetails.heightMm} mm`,
     `Diamètre minimum : ${vaseDetails.minDiameterMm} mm`,
     `Diamètre maximum : ${vaseDetails.maxDiameterMm} mm`,
+    `Contenant compatible : ${vaseDetails.waterproofInsertLabel}`,
     "",
   ].join("\n");
 }
@@ -225,11 +227,12 @@ function App() {
     shopConfig?.messages.contactEmailBody ||
     "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :\n";
   const contactBodyWithModel = buildShopContactBody(contactEmailBody, contactEntry
-    ? {
+      ? {
         seed: String(contactEntry.seed),
         heightMm: contactEntry.heightMm,
         minDiameterMm: contactEntry.minDiameterMm,
         maxDiameterMm: contactEntry.maxDiameterMm,
+        waterproofInsertLabel: contactEntry.waterproofInsertCompatibility.label,
         colorLabel: selectedColor?.label ?? "A choisir",
       }
     : null);
@@ -470,6 +473,7 @@ function App() {
           heightMm: selectedEntry.heightMm,
           minDiameterMm: selectedEntry.minDiameterMm,
           maxDiameterMm: selectedEntry.maxDiameterMm,
+          waterproofInsertLabel: selectedEntry.waterproofInsertCompatibility.label,
           material: selectedEntry.material,
           productPriceCents,
           colorId: selectedColorId,
@@ -772,6 +776,10 @@ function App() {
                   <span className="shop-stat-label">Diamètre maximum</span>
                   <strong>{currentEntry ? `${currentEntry.maxDiameterMm} mm` : "-"}</strong>
                 </div>
+                <div className="shop-stat">
+                  <span className="shop-stat-label">Contenant compatible</span>
+                  <strong>{currentEntry?.waterproofInsertCompatibility.label ?? "-"}</strong>
+                </div>
                 <div className="shop-stat shop-stat-material">
                   <span className="shop-stat-label">Matière</span>
                   <strong>{currentEntry?.material ?? "PLA"}</strong>
@@ -794,6 +802,11 @@ function App() {
               <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
               <input type="hidden" name="minDiameterMm" value={selectedEntry.minDiameterMm} />
               <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
+              <input
+                type="hidden"
+                name="waterproofInsertLabel"
+                value={selectedEntry.waterproofInsertCompatibility.label}
+              />
               <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
               <input type="hidden" name="material" value={selectedEntry.material} />
               <input type="hidden" name="shippingMode" value={selectedShippingOption?.label ?? ""} />
@@ -850,6 +863,10 @@ function App() {
                     <div className="shop-stat">
                       <span className="shop-stat-label">Diamètre maximum</span>
                       <strong>{selectedEntry.maxDiameterMm} mm</strong>
+                    </div>
+                    <div className="shop-stat">
+                      <span className="shop-stat-label">Contenant compatible</span>
+                      <strong>{selectedEntry.waterproofInsertCompatibility.label}</strong>
                     </div>
                   </div>
                 </div>

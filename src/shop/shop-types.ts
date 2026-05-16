@@ -1,4 +1,5 @@
 import type { VaseParameters } from "../engine/types";
+import type { WaterproofInsertCompatibility } from "../engine/insert-compatibility";
 
 export interface ShopVaseEntry {
   id: string;
@@ -8,6 +9,7 @@ export interface ShopVaseEntry {
   heightMm: number;
   minDiameterMm: number;
   maxDiameterMm: number;
+  waterproofInsertCompatibility: WaterproofInsertCompatibility;
   material: "PLA";
   params: VaseParameters;
 }

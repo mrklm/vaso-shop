@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { analyzeWaterproofInsertCompatibility } from "../engine/insert-compatibility";
 import { computeVaseEnvelopeMm } from "../engine/printer-volume";
 import { generateOuterProfilePoints } from "../engine/mesh-builder";
 import type { VaseParameters } from "../engine/types";
@@ -29,6 +30,7 @@ function createEntryFromCurrentVase(): ShopVaseEntry {
     heightMm: clonedParams.heightMm,
     minDiameterMm: Number.isFinite(minDiameterMm) ? Math.round(minDiameterMm) : 0,
     maxDiameterMm: Math.round(Math.max(envelope.width, envelope.depth)),
+    waterproofInsertCompatibility: analyzeWaterproofInsertCompatibility(clonedParams),
     material: "PLA",
     params: clonedParams,
   };
