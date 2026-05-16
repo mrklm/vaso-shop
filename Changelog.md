@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.88] - 2026-05-16
+
+### Modifié
+- Replace l'avertissement PLA sous les caracteristiques du modele dans l'etape 1
+
 ## [1.1.87] - 2026-05-16
 
 ### Modifié

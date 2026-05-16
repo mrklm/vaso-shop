@@ -869,8 +869,6 @@ function App() {
                       <strong>{selectedEntry.waterproofInsertCompatibility.label}</strong>
                     </div>
                   </div>
-                </div>
-                <div className="shop-order-step-actions">
                   <div className="shop-order-note shop-order-note-highlight shop-order-warning">
                     <span className="shop-order-warning-icon" aria-hidden="true">
                       <span>!</span>
@@ -880,6 +878,8 @@ function App() {
                       <p>{shopConfig.messages.warningPla}</p>
                     </div>
                   </div>
+                </div>
+                <div className="shop-order-step-actions">
                   {isModelStepConfirmed ? (
                     <span className="shop-step-status">Modèle validé</span>
                   ) : (
