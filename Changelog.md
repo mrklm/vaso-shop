@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.91] - 2026-05-16
+
+### Modifié
+- Réduit encore la vue contenant et la centre sous le bouton de validation du modele
+
 ## [1.1.90] - 2026-05-16
 
 ### Modifié

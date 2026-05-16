@@ -880,7 +880,7 @@ function App() {
                     </div>
                   </div>
                 </div>
-                <div className="shop-order-step-actions">
+                <div className="shop-order-step-actions shop-order-step-actions-model">
                   {isModelStepConfirmed ? (
                     <span className="shop-step-status">Modèle validé</span>
                   ) : (
@@ -888,10 +888,12 @@ function App() {
                       Je valide ce modèle
                     </button>
                   )}
-                  <InsertView2D
-                    params={selectedEntry.params}
-                    compatibility={selectedEntry.waterproofInsertCompatibility}
-                  />
+                  <div className="shop-insert-view-slot">
+                    <InsertView2D
+                      params={selectedEntry.params}
+                      compatibility={selectedEntry.waterproofInsertCompatibility}
+                    />
+                  </div>
                 </div>
               </article>
 

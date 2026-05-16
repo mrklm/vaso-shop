@@ -715,13 +715,25 @@
   justify-items: stretch;
 }
 
+.shop-order-step-actions-model {
+  align-self: stretch;
+  grid-template-rows: auto 1fr;
+}
+
+.shop-insert-view-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+}
+
 .shop-insert-view-card {
   display: grid;
-  gap: 10px;
-  width: min(100%, 220px);
-  padding: 12px;
+  gap: 8px;
+  width: min(100%, 150px);
+  padding: 10px;
   border: 1px solid rgb(93 58 37 / 10%);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgb(255 255 255 / 38%);
   color: #8f5331;
 }
@@ -741,12 +753,12 @@
   gap: 2px;
   text-align: center;
   color: rgb(38 29 22 / 78%);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   line-height: 1.4;
 }
 
 .shop-insert-view-caption strong {
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   color: #5b4635;
 }
 
