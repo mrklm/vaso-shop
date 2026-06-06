@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -26,7 +28,41 @@ except ImportError:  # pragma: no cover - fallback runtime only
     ImageTk = None
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+CONFIG_RELATIVE_PATH = Path("public") / "config" / "shop-config.json"
+
+
+def find_repo_root() -> Path:
+    candidates: list[Path] = []
+
+    env_root = os.environ.get("VASO_SHOP_ROOT", "").strip()
+    if env_root:
+        candidates.append(Path(env_root))
+
+    candidates.append(Path.cwd())
+
+    script_path = Path(__file__).resolve()
+    if getattr(sys, "frozen", False):
+        executable_path = Path(sys.executable).resolve()
+        candidates.extend(reversed(executable_path.parents))
+    else:
+        candidates.extend(script_path.parents)
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if (resolved / CONFIG_RELATIVE_PATH).exists():
+            return resolved
+
+    return script_path.parents[1]
+
+
+REPO_ROOT = find_repo_root()
 CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"

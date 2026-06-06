@@ -73,3 +73,8 @@ admin/.vaso_admin_settings.json
 # Electron packaging / temp files
 # ─────────────────────────────────────────────
 *.asar
+
+# VASO-Admin packaging
+Vaso-Admin.spec
+releases/
+admin/assets/*.iconset/
