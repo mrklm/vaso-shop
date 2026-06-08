@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.94] - 2026-06-08
+
+### Modifié
+- Injecte le secret GitHub Actions `VITE_MONDIAL_RELAY_BRAND` dans le build GitHub Pages
+
 ## [1.1.93] - 2026-06-08
 
 ### Ajouté
