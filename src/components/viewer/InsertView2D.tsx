@@ -13,7 +13,7 @@ function formatInsertDimensions(
 ): string {
   const bottomDiameter = preset.bottomDiameterMm ?? preset.topDiameterMm;
   if (preset.type === "test_tube") {
-    return "Hauteur 75 mm · Ø 20 mm";
+    return "Hauteur 75 mm · Ø 12 mm";
   }
 
   return `Hauteur ${preset.heightMm - 3} mm · Ø↑ ${preset.topDiameterMm - 3} mm · Ø↓ ${bottomDiameter - 3} mm`;

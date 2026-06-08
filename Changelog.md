@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.95] - 2026-06-09
+
+### Modifié
+- Remplace le tube à essai compatible par un format 75 × 12 mm
+
 ## [1.1.94] - 2026-06-08
 
 ### Modifié

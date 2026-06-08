@@ -52,12 +52,12 @@ export const INSERT_PRESETS: readonly InsertPreset[] = [
     clearanceMm: 3,
   },
   {
-    id: "test-tube-75x20",
-    label: "Tube à essai 75 × 20 mm",
+    id: "test-tube-75x12",
+    label: "Tube à essai 75 × 12 mm",
     type: "test_tube",
     heightMm: 75,
-    topDiameterMm: 21.5,
-    bottomDiameterMm: 21.5,
+    topDiameterMm: 13.5,
+    bottomDiameterMm: 13.5,
     clearanceMm: 1.5,
   },
 ] as const;

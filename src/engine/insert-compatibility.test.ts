@@ -37,7 +37,7 @@ describe("analyzeWaterproofInsertCompatibility", () => {
 
   it("falls back to Tube à essai when the neck is too narrow for cups", () => {
     const params = createTwoProfileVase(120, 40, 30);
-    expect(analyzeWaterproofInsertCompatibility(params).label).toBe("Tube à essai 75 × 20 mm");
+    expect(analyzeWaterproofInsertCompatibility(params).label).toBe("Tube à essai 75 × 12 mm");
   });
 
   it("accepts a profile just above the 12,5 cl dimensions with margin", () => {
@@ -47,6 +47,6 @@ describe("analyzeWaterproofInsertCompatibility", () => {
 
   it("falls back to a smaller insert just below the 12,5 cl dimensions with margin", () => {
     const params = createTwoProfileVase(100.8, 57.6, 71.5);
-    expect(analyzeWaterproofInsertCompatibility(params).label).toBe("Tube à essai 75 × 20 mm");
+    expect(analyzeWaterproofInsertCompatibility(params).label).toBe("Tube à essai 75 × 12 mm");
   });
 });
