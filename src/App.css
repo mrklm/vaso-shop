@@ -1021,6 +1021,29 @@
   min-width: 220px;
 }
 
+.shop-relay-widget-shell {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 12px;
+  border: 1px solid rgb(93 58 37 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 44%);
+}
+
+.shop-relay-widget {
+  min-height: 420px;
+  min-width: 0;
+}
+
+.shop-relay-widget table,
+.shop-relay-widget iframe,
+.shop-relay-widget .leaflet-container {
+  max-width: 100%;
+}
+
 .shop-relay-summary {
   margin-top: 2px;
   border: 1px solid rgb(73 124 101 / 10%);

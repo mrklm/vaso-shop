@@ -7,6 +7,15 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.93] - 2026-06-08
+
+### Ajouté
+- Branche le widget Mondial Relay v4 dans le parcours de commande en point relais
+
+### Modifié
+- Rend le code Brand Mondial Relay configurable via `VITE_MONDIAL_RELAY_BRAND`
+- Réactive le mode de livraison en point relais dans la configuration publique
+
 ## [1.1.92] - 2026-05-16
 
 ### Modifié

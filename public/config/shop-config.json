@@ -279,7 +279,7 @@
     "allowCheckout": true
   },
   "shipping": {
-    "suspendRelay": true,
+    "suspendRelay": false,
     "suspendHomeDelivery": false,
     "unsupportedMessage": "Nous contacter avant commande pour organiser la livraison vers ce pays.",
     "countries": [
