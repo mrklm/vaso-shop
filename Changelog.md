@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.97] - 2026-06-09
+
+### Modifié
+- Replace le tube à essai en haut de l'aperçu en coupe avec un fond arrondi
+- Renomme la couleur Terracotta sans la mention lie de vin
+
 ## [1.1.96] - 2026-06-09
 
 ### Ajouté
