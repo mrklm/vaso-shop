@@ -1,7 +1,43 @@
 import { describe, it, expect } from "vitest";
-import { generateVaseMesh, generateOuterProfilePoints, generateTopOuterContour } from "./mesh-builder";
+import {
+  generateVaseMesh,
+  generateOuterProfilePoints,
+  generateTopOuterContour,
+} from "./mesh-builder";
 import { countBoundaryEdges, countConnectedMeshComponents } from "./mesh-cleanup";
-import { defaultVaseParameters, createProfile } from "./types";
+import { defaultVaseParameters, createProfile, type VaseParameters } from "./types";
+
+function createTwoProfileVase(
+  heightMm: number,
+  bottomOuterDiameterMm: number,
+  topOuterDiameterMm: number,
+): VaseParameters {
+  const params = defaultVaseParameters();
+  params.heightMm = heightMm;
+  params.wallThicknessMm = 2.4;
+  params.bottomThicknessMm = 3;
+  params.radialSamples = 48;
+  params.verticalSamples = 32;
+  params.profiles = [
+    createProfile({ zRatio: 0, diameter: bottomOuterDiameterMm, sides: 64, rotationDeg: 0 }),
+    createProfile({ zRatio: 1, diameter: topOuterDiameterMm, sides: 64, rotationDeg: 0 }),
+  ];
+  return params;
+}
+
+function hasTestTubeSupportVertices(mesh: ReturnType<typeof generateVaseMesh>): boolean {
+  for (let index = 0; index < mesh.vertices.length; index += 3) {
+    const x = mesh.vertices[index];
+    const y = mesh.vertices[index + 1];
+    const z = mesh.vertices[index + 2];
+    const radius = Math.hypot(x, y);
+    if (radius >= 6.8 && radius <= 9.1 && z > 4) {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 describe("generateVaseMesh", () => {
   it("generates a valid mesh from default parameters", () => {
@@ -72,7 +108,7 @@ describe("generateVaseMesh", () => {
   });
 
   it("generates a single closed component for a closed-bottom vase", () => {
-    const params = defaultVaseParameters();
+    const params = createTwoProfileVase(180, 74, 96);
     params.radialSamples = 32;
     params.verticalSamples = 16;
     params.closeBottom = true;
@@ -83,8 +119,24 @@ describe("generateVaseMesh", () => {
     expect(countBoundaryEdges(mesh)).toBe(0);
   });
 
+  it("keeps Eco-Cup-compatible vases free of tube support geometry", () => {
+    const params = createTwoProfileVase(180, 74, 96);
+    const mesh = generateVaseMesh(params);
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(false);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
+  it("adds a closed minimal support when only a test tube fits", () => {
+    const params = createTwoProfileVase(120, 40, 30);
+    const mesh = generateVaseMesh(params);
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(true);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
   it("aligns inner and outer wall layers on the same body z slices", () => {
-    const params = defaultVaseParameters();
+    const params = createTwoProfileVase(180, 74, 96);
     params.radialSamples = 16;
     params.verticalSamples = 8;
     params.bottomThicknessMm = 3;
@@ -99,8 +151,10 @@ describe("generateVaseMesh", () => {
     expect(countsByZ.get(0)).toBe(params.radialSamples + 1);
     expect(countsByZ.get(3)).toBe(params.radialSamples + 1);
 
-    const sharedBodyLayers = [...countsByZ.entries()]
-      .filter(([z, count]) => z > params.bottomThicknessMm && z <= params.heightMm && count === params.radialSamples * 2);
+    const sharedBodyLayers = [...countsByZ.entries()].filter(
+      ([z, count]) =>
+        z > params.bottomThicknessMm && z <= params.heightMm && count === params.radialSamples * 2,
+    );
     expect(sharedBodyLayers.length).toBe(params.verticalSamples - 1);
   });
 

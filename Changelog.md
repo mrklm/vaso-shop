@@ -7,6 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.96] - 2026-06-09
+
+### Ajouté
+- Génère un support haut automatique pour les vases compatibles tube à essai
+
+### Modifié
+- Remplace la structure basse par un anneau de maintien avec trois bras inclinés vers la paroi
+
 ## [1.1.95] - 2026-06-09
 
 ### Modifié
