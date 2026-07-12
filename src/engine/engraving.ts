@@ -31,6 +31,7 @@ const TEXT_MAX_HEIGHT_FACTOR = 0.78;
 const TEXT_LINE_GAP_FACTOR = 0.55;
 const TEXT_SIDE_MARGIN_MM = 1.44;
 const TEXT_CURVE_SEGMENTS = 10;
+const TEXT_RESERVED_CENTER_CLEARANCE_MM = 2;
 const PLANAR_TEXT_SIMPLIFICATION_MM = 0.05;
 
 // Print-safe engraving constants
@@ -49,7 +50,11 @@ interface ComparisonStage {
   sharedTriangleRatio: number;
 }
 
-function traceBoundaryComponents(label: string, mesh: MeshData, tolerance = BOTTOM_FINISH_PLANE_TOLERANCE_MM): void {
+function traceBoundaryComponents(
+  label: string,
+  mesh: MeshData,
+  tolerance = BOTTOM_FINISH_PLANE_TOLERANCE_MM,
+): void {
   const components = describePlanarBoundaryComponentsAtZ(mesh, 0, tolerance)
     .map(
       (component, index) =>
@@ -60,7 +65,11 @@ function traceBoundaryComponents(label: string, mesh: MeshData, tolerance = BOTT
   console.info(`${label}: ${components || "none"}`);
 }
 
-function traceMesh(label: string, mesh: MeshData, tolerance = BOTTOM_FINISH_PLANE_TOLERANCE_MM): void {
+function traceMesh(
+  label: string,
+  mesh: MeshData,
+  tolerance = BOTTOM_FINISH_PLANE_TOLERANCE_MM,
+): void {
   const diagnostics = logMeshDiagnostics(label, mesh, tolerance);
   appendPipelineTrace(
     `${label}:v=${diagnostics.vertexCount},t=${diagnostics.triangleCount},c=${diagnostics.components},nm=${diagnostics.nonManifoldEdges},be=${diagnostics.boundaryEdges},bl=${diagnostics.boundaryLoops},wt=${diagnostics.watertight ? 1 : 0}`,
@@ -97,14 +106,10 @@ function traceMeshComparison(
 function summarizeComparisonTimeline(timeline: ComparisonStage[]): void {
   const firstDifferent = timeline.find((stage) => !stage.identical);
   const firstReverted = firstDifferent
-    ? timeline
-      .slice(timeline.indexOf(firstDifferent) + 1)
-      .find((stage) => stage.identical)
+    ? timeline.slice(timeline.indexOf(firstDifferent) + 1).find((stage) => stage.identical)
     : undefined;
 
-  appendPipelineTrace(
-    `[engraving] first differing stage=${firstDifferent?.label ?? "none"}`,
-  );
+  appendPipelineTrace(`[engraving] first differing stage=${firstDifferent?.label ?? "none"}`);
   appendPipelineTrace(
     `[engraving] first reverted-to-identical stage=${firstReverted?.label ?? "none"}`,
   );
@@ -175,7 +180,9 @@ function buildPrintableLineGeometry(
     const extracted = rawShape.extractPoints(TEXT_CURVE_SEGMENTS);
     const polygon = {
       contour: sanitizePlanarContour(extracted.shape, PLANAR_TEXT_SIMPLIFICATION_MM),
-      holes: extracted.holes.map((hole) => sanitizePlanarContour(hole, PLANAR_TEXT_SIMPLIFICATION_MM)),
+      holes: extracted.holes.map((hole) =>
+        sanitizePlanarContour(hole, PLANAR_TEXT_SIMPLIFICATION_MM),
+      ),
     };
 
     if (polygon.contour.length < 3) {
@@ -186,9 +193,9 @@ function buildPrintableLineGeometry(
 
     const result = printSafe
       ? offsetPlanarPolygon(polygon, OFFSET_DELTA_MM, {
-        minFeatureMm: MIN_FEATURE_MM,
-        sanitizeToleranceMm: PLANAR_TEXT_SIMPLIFICATION_MM,
-      })
+          minFeatureMm: MIN_FEATURE_MM,
+          sanitizeToleranceMm: PLANAR_TEXT_SIMPLIFICATION_MM,
+        })
       : { polygons: [polygon], removedContours: 0, removedHoles: 0 };
 
     removedContours += result.removedContours;
@@ -229,6 +236,7 @@ function buildTextGeometry(
   fitRadius: number,
   printSafeScale = 1,
   printSafe = false,
+  reservedCenterRadius = 0,
 ): THREE.BufferGeometry | null {
   const lines = formatEngravingLines(seed, isSeedModified);
   const lineResults = lines.map((line, index) => ({
@@ -244,9 +252,14 @@ function buildTextGeometry(
   const rawGeometries = lineResults
     .map((result) => result.geometry.geometry)
     .filter((geometry): geometry is THREE.BufferGeometry => geometry !== null);
-  const removedContours = lineResults.reduce((sum, result) => sum + result.geometry.removedContours, 0);
+  const removedContours = lineResults.reduce(
+    (sum, result) => sum + result.geometry.removedContours,
+    0,
+  );
   const removedHoles = lineResults.reduce((sum, result) => sum + result.geometry.removedHoles, 0);
-  appendPipelineTrace(`[engraving] removed contours=${removedContours},removed holes=${removedHoles}`);
+  appendPipelineTrace(
+    `[engraving] removed contours=${removedContours},removed holes=${removedHoles}`,
+  );
   if (rawGeometries.length === 0) return null;
 
   const getLineSize = (geometry: THREE.BufferGeometry, fallbackSize: number) => {
@@ -268,8 +281,10 @@ function buildTextGeometry(
     }
   });
 
-  const referenceLineHeight =
-    getLineSize(rawGeometries[Math.min(1, rawGeometries.length - 1)], lineResults[Math.min(1, lineResults.length - 1)]?.rawSize ?? FONT_LINE_HEIGHT).height;
+  const referenceLineHeight = getLineSize(
+    rawGeometries[Math.min(1, rawGeometries.length - 1)],
+    lineResults[Math.min(1, lineResults.length - 1)]?.rawSize ?? FONT_LINE_HEIGHT,
+  ).height;
   rawGeometries.forEach((geometry, index) => {
     if (index < TEXT_LINE_WIDTH_FACTORS.length) return;
     const { height } = getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT);
@@ -281,11 +296,15 @@ function buildTextGeometry(
   });
 
   const computeLayout = () => {
-    const lineHeights = rawGeometries.map((geometry, index) =>
-      getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT).height);
+    const lineHeights = rawGeometries.map(
+      (geometry, index) =>
+        getLineSize(geometry, lineResults[index]?.rawSize ?? FONT_LINE_HEIGHT).height,
+    );
     const maxLineHeight = lineHeights.length > 0 ? Math.max(...lineHeights) : FONT_LINE_HEIGHT;
     const lineGap = Math.max(0.8, maxLineHeight * TEXT_LINE_GAP_FACTOR);
-    const totalHeight = lineHeights.reduce((sum, height) => sum + height, 0) + lineGap * Math.max(0, lineHeights.length - 1);
+    const totalHeight =
+      lineHeights.reduce((sum, height) => sum + height, 0) +
+      lineGap * Math.max(0, lineHeights.length - 1);
     let currentTop = totalHeight * 0.5;
     const lineCenters = lineHeights.map((lineHeight) => {
       const centerY = currentTop - lineHeight * 0.5;
@@ -338,6 +357,21 @@ function buildTextGeometry(
   }
   const center = centeredBounds.getCenter(new THREE.Vector3());
   merged.translate(-center.x, -center.y, 0);
+
+  if (reservedCenterRadius > 0) {
+    merged.computeBoundingBox();
+    const offsetBounds = merged.boundingBox;
+    if (offsetBounds) {
+      const offsetSize = offsetBounds.getSize(new THREE.Vector3());
+      const maxOffset = fitRadius - offsetSize.y * 0.5 - TEXT_SIDE_MARGIN_MM;
+      const desiredOffset =
+        reservedCenterRadius + offsetSize.y * 0.5 + TEXT_RESERVED_CENTER_CLEARANCE_MM;
+      if (maxOffset > 0 && desiredOffset > 0) {
+        merged.translate(0, -Math.min(maxOffset, desiredOffset), 0);
+      }
+    }
+  }
+
   merged.clearGroups();
   return merged;
 }
@@ -398,11 +432,7 @@ function combineMeshDataParts(parts: MeshData[]): MeshData {
   };
 }
 
-function subdivideBottomCapTriangles(
-  meshData: MeshData,
-  zValue = 0,
-  tolerance = 1e-6,
-): MeshData {
+function subdivideBottomCapTriangles(meshData: MeshData, zValue = 0, tolerance = 1e-6): MeshData {
   const nextVertices = Array.from(meshData.vertices);
   const nextIndices: number[] = [];
 
@@ -431,17 +461,9 @@ function subdivideBottomCapTriangles(
     const cx = meshData.vertices[c * 3];
     const cy = meshData.vertices[c * 3 + 1];
     const centroidIndex = nextVertices.length / 3;
-    nextVertices.push(
-      (ax + bx + cx) / 3,
-      (ay + by + cy) / 3,
-      zValue,
-    );
+    nextVertices.push((ax + bx + cx) / 3, (ay + by + cy) / 3, zValue);
 
-    nextIndices.push(
-      a, b, centroidIndex,
-      b, c, centroidIndex,
-      c, a, centroidIndex,
-    );
+    nextIndices.push(a, b, centroidIndex, b, c, centroidIndex, c, a, centroidIndex);
   }
 
   return {
@@ -456,6 +478,7 @@ function buildAdditiveTextGeometry(
   bottomOuterContour: Float64Array,
   seed: number,
   isSeedModified: boolean,
+  reservedCenterRadius = 0,
 ): THREE.BufferGeometry | null {
   if (!params.closeBottom) {
     appendPipelineTrace("[engraving] skipped: closeBottom=0");
@@ -500,6 +523,7 @@ function buildAdditiveTextGeometry(
     fitRadius,
     compensatedScale,
     params.printSafeEngraving,
+    reservedCenterRadius,
   );
   if (!merged) return null;
 
@@ -528,8 +552,10 @@ function buildAdditiveTextGeometry(
   );
 
   // Estimate min feature size after scaling
-  const estimatedStrokeWidth = (RAW_LINE_SIZES[0] * compensatedScale * offsetScale * xyScale * 0.1); // Rough estimate
-  appendPipelineTrace(`[engraving] estimated min feature=${estimatedStrokeWidth.toFixed(3)}mm ${estimatedStrokeWidth < MIN_FEATURE_MM ? 'INVALID' : 'OK'} for FDM`);
+  const estimatedStrokeWidth = RAW_LINE_SIZES[0] * compensatedScale * offsetScale * xyScale * 0.1; // Rough estimate
+  appendPipelineTrace(
+    `[engraving] estimated min feature=${estimatedStrokeWidth.toFixed(3)}mm ${estimatedStrokeWidth < MIN_FEATURE_MM ? "INVALID" : "OK"} for FDM`,
+  );
 
   merged.scale(xyScale, xyScale, effectiveDepth + ENGRAVING_SURFACE_OVERLAP_MM);
   const innerBottomZ = Math.min(params.bottomThicknessMm, params.heightMm);
@@ -552,6 +578,7 @@ export async function engraveBaseText(
   bottomOuterContour: Float64Array,
   seed: number,
   isSeedModified = false,
+  reservedCenterRadius = 0,
 ): Promise<MeshData> {
   const comparisonTimeline: ComparisonStage[] = [];
   const engravingLines = formatEngravingLines(seed, isSeedModified);
@@ -560,14 +587,37 @@ export async function engraveBaseText(
   console.info(`[engraving] text line 1=${engravingLines[0]}`);
   console.info(`[engraving] text line 2=${engravingLines[1]}`);
   traceMesh("[engraving] input mesh", meshData, PLANAR_PATCH_TOLERANCE_MM);
-  traceMeshComparison("[engraving] compare input vs base", meshData, meshData, PLANAR_PATCH_TOLERANCE_MM, comparisonTimeline);
+  traceMeshComparison(
+    "[engraving] compare input vs base",
+    meshData,
+    meshData,
+    PLANAR_PATCH_TOLERANCE_MM,
+    comparisonTimeline,
+  );
   const font = await loadRobotoFont();
-  const additiveTextGeometry = buildAdditiveTextGeometry(font, params, bottomOuterContour, seed, isSeedModified);
+  const additiveTextGeometry = buildAdditiveTextGeometry(
+    font,
+    params,
+    bottomOuterContour,
+    seed,
+    isSeedModified,
+    reservedCenterRadius,
+  );
   if (!additiveTextGeometry) return meshData;
 
   const refinedBaseMesh = subdivideBottomCapTriangles(meshData);
-  traceMesh("[engraving] after subdivideBottomCapTriangles", refinedBaseMesh, PLANAR_PATCH_TOLERANCE_MM);
-  traceMeshComparison("[engraving] compare subdivided vs base", meshData, refinedBaseMesh, PLANAR_PATCH_TOLERANCE_MM, comparisonTimeline);
+  traceMesh(
+    "[engraving] after subdivideBottomCapTriangles",
+    refinedBaseMesh,
+    PLANAR_PATCH_TOLERANCE_MM,
+  );
+  traceMeshComparison(
+    "[engraving] compare subdivided vs base",
+    meshData,
+    refinedBaseMesh,
+    PLANAR_PATCH_TOLERANCE_MM,
+    comparisonTimeline,
+  );
   const baseGeometry = meshDataToGeometry(refinedBaseMesh);
   const engraved = removeDegenerateTriangles(
     combineMeshDataParts([
@@ -577,8 +627,18 @@ export async function engraveBaseText(
     ADDITIVE_TEXT_DEGENERATE_AREA_EPSILON_MM2,
   );
   traceMesh("[engraving] after additive text merge", engraved, PLANAR_PATCH_TOLERANCE_MM);
-  traceMeshComparison("[engraving] compare after additive text merge vs base", meshData, engraved, PLANAR_PATCH_TOLERANCE_MM, comparisonTimeline);
-  traceBoundaryComponents("[engraving] loops after additive text merge", engraved, PLANAR_PATCH_TOLERANCE_MM);
+  traceMeshComparison(
+    "[engraving] compare after additive text merge vs base",
+    meshData,
+    engraved,
+    PLANAR_PATCH_TOLERANCE_MM,
+    comparisonTimeline,
+  );
+  traceBoundaryComponents(
+    "[engraving] loops after additive text merge",
+    engraved,
+    PLANAR_PATCH_TOLERANCE_MM,
+  );
   const finalBoundaryEdges = countBoundaryEdges(engraved, BOTTOM_FINISH_PLANE_TOLERANCE_MM);
   if (finalBoundaryEdges > 0) {
     const finalBoundaryLoops = countBoundaryLoopsAtZ(engraved, 0, BOTTOM_FINISH_PLANE_TOLERANCE_MM);
@@ -587,7 +647,13 @@ export async function engraveBaseText(
     );
   }
   traceMesh("[engraving] final mesh before export", engraved);
-  traceMeshComparison("[engraving] compare final before export vs base", meshData, engraved, PLANAR_PATCH_TOLERANCE_MM, comparisonTimeline);
+  traceMeshComparison(
+    "[engraving] compare final before export vs base",
+    meshData,
+    engraved,
+    PLANAR_PATCH_TOLERANCE_MM,
+    comparisonTimeline,
+  );
   summarizeComparisonTimeline(comparisonTimeline);
 
   baseGeometry.dispose();

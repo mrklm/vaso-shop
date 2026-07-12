@@ -138,6 +138,17 @@ function buildOrderMetadata(payload, shippingOption, productPriceCents, shipping
     min_diameter_mm: normalizeMetadataValue(payload.minDiameterMm, 32),
     max_diameter_mm: normalizeMetadataValue(payload.maxDiameterMm, 32),
     waterproof_insert_label: normalizeMetadataValue(payload.waterproofInsertLabel, 120),
+    soliflore_choice: normalizeMetadataValue(payload.solifloreChoice, 8),
+    soliflore_choice_label: normalizeMetadataValue(payload.solifloreChoiceLabel, 120),
+    wants_soliflore: normalizeMetadataValue(payload.solifloreChoice === "yes" ? "yes" : "no", 8),
+    force_test_tube_support: normalizeMetadataValue(
+      payload.solifloreChoice === "yes" ? "yes" : "no",
+      8,
+    ),
+    suppress_test_tube_support: normalizeMetadataValue(
+      payload.suppressTestTubeSupport ? "yes" : "no",
+      8,
+    ),
     material: normalizeMetadataValue(payload.material, 32),
     product_price_cents: normalizeMetadataValue(productPriceCents, 40),
     color_id: normalizeMetadataValue(payload.colorId, 64),
@@ -172,6 +183,7 @@ function buildLineItems(params, payload, shippingOption, productPriceCents, ship
     `Vase N° ${payload.seed}`,
     payload.colorLabel,
     `${payload.heightMm} mm`,
+    payload.solifloreChoice === "yes" ? "Soliflore avec tube à essai" : payload.waterproofInsertLabel,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -205,8 +217,10 @@ function validatePayload(payload) {
     "heightMm",
     "minDiameterMm",
     "maxDiameterMm",
+    "waterproofInsertLabel",
     "material",
     "colorLabel",
+    "solifloreChoice",
     "customerFirstName",
     "customerLastName",
     "customerEmail",
@@ -222,6 +236,10 @@ function validatePayload(payload) {
     if (value === null || value === undefined || `${value}`.trim().length === 0) {
       return `Le champ ${field} est requis pour lancer le paiement.`;
     }
+  }
+
+  if (!["yes", "no"].includes(`${payload.solifloreChoice}`)) {
+    return "Le choix soliflore Oui/Non est requis pour lancer le paiement.";
   }
 
   return null;

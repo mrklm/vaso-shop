@@ -327,6 +327,8 @@ interface VaseViewer3DProps {
   colorOpacity?: number;
   colorEmissiveIntensity?: number;
   shadingOverride?: number;
+  forceTestTubeSupport?: boolean;
+  suppressTestTubeSupport?: boolean;
 }
 
 export function VaseViewer3D({
@@ -335,6 +337,8 @@ export function VaseViewer3D({
   colorOpacity = 1,
   colorEmissiveIntensity = 0,
   shadingOverride,
+  forceTestTubeSupport = false,
+  suppressTestTubeSupport = false,
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
@@ -348,7 +352,7 @@ export function VaseViewer3D({
   const clippingHeight = useUIStore((s) => s.clippingHeight);
   const rotationMode = useUIStore((s) => s.rotationMode);
   const rotationSpeed = useUIStore((s) => s.rotationSpeed);
-  const meshData = useVaseMesh(params, seed);
+  const meshData = useVaseMesh(params, seed, forceTestTubeSupport, suppressTestTubeSupport);
   // vaso-shop never exposes editable generation controls, so engraved seed labels stay canonical.
   const showSeedModified = false;
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -464,7 +468,7 @@ export function VaseViewer3D({
         )}
 
         {!isPreview && (
-          <EffectComposer>
+          <EffectComposer enableNormalPass>
             <SSAO radius={0.03} intensity={5} luminanceInfluence={0.3} />
             <ToneMapping mode={ToneMappingMode.AGX} />
           </EffectComposer>

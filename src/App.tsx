@@ -23,6 +23,7 @@ import {
   isShopShippingOptionSuspended,
 } from "./shop/shop-shipping";
 import { useShopStore } from "./shop/shop-store";
+import type { WaterproofInsertCompatibility } from "./engine/insert-compatibility";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
 
@@ -39,6 +40,8 @@ const SHOP_MONDIAL_RELAY_SCRIPT_URL =
 const SHOP_JQUERY_SCRIPT_URL = "https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js";
 const SHOP_LEAFLET_SCRIPT_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
 const SHOP_LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
+const SHOP_SOLIFLORE_TEST_TUBE_LABEL = "Tube à essai 75 × 12 mm";
+const SHOP_NO_WATER_INSERT_LABEL = "Aucun contenant étanche (usage sans eau)";
 const SHOP_COUNTRIES_FOR_ORDER = [
   SHOP_PRIORITY_COUNTRY,
   ...SHOP_COUNTRIES.filter((country) => country !== SHOP_PRIORITY_COUNTRY),
@@ -64,6 +67,8 @@ interface ShopRelaySelection {
   city: string;
   country: string;
 }
+
+type SolifloreChoice = "" | "yes" | "no";
 
 interface MondialRelayParcelShopData {
   Adresse1?: string;
@@ -245,6 +250,7 @@ function App() {
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
+  const [solifloreChoice, setSolifloreChoice] = useState<SolifloreChoice>("");
   const [isModelStepConfirmed, setIsModelStepConfirmed] = useState(false);
   const [isColorStepConfirmed, setIsColorStepConfirmed] = useState(false);
   const [isClientStepConfirmed, setIsClientStepConfirmed] = useState(false);
@@ -341,6 +347,35 @@ function App() {
     : null;
   const orderTotalCents = productPriceCents + shippingPriceCents;
   const orderTotalLabel = formatShopPriceFromCents(orderTotalCents);
+  const isEcoCupCompatible = selectedEntry?.waterproofInsertCompatibility.type === "eco_cup";
+  const isTestTubeCompatible = selectedEntry?.waterproofInsertCompatibility.type === "test_tube";
+  const wantsSoliflore = solifloreChoice === "yes";
+  const hasAnsweredSolifloreQuestion = solifloreChoice !== "";
+  const suppressTestTubeSupport = solifloreChoice === "no" && isTestTubeCompatible;
+  const selectedWaterproofInsertLabel = wantsSoliflore
+    ? `${SHOP_SOLIFLORE_TEST_TUBE_LABEL} (soliflore)`
+    : suppressTestTubeSupport
+      ? SHOP_NO_WATER_INSERT_LABEL
+      : (selectedEntry?.waterproofInsertCompatibility.label ?? "");
+  const selectedWaterproofInsertCompatibility: WaterproofInsertCompatibility | null = selectedEntry
+    ? wantsSoliflore
+      ? {
+          presetId: "test-tube-75x12",
+          label: SHOP_SOLIFLORE_TEST_TUBE_LABEL,
+          type: "test_tube",
+        }
+      : suppressTestTubeSupport
+        ? null
+        : selectedEntry.waterproofInsertCompatibility
+    : null;
+  const solifloreChoiceLabel =
+    solifloreChoice === "yes"
+      ? "Oui, usage soliflore avec tube à essai"
+      : solifloreChoice === "no"
+        ? isTestTubeCompatible
+          ? "Non, pas de support tube à essai"
+          : "Non, contenant étanche compatible"
+        : "";
   const selectedShippingOptionLabel =
     shopConfig && selectedShippingOption
       ? `${formatShippingOptionDisplay(selectedShippingOption.label, selectedShippingOption.provider)} · ${formatShopPriceFromCents(
@@ -502,6 +537,7 @@ function App() {
     setIsColorStepConfirmed(false);
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
+    setSolifloreChoice("");
     setCheckoutError("");
     setIsStartingCheckout(false);
     setRelaySelection(null);
@@ -701,10 +737,25 @@ function App() {
   const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
     `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
 
+  const handleSolifloreChoiceChange = (nextChoice: SolifloreChoice) => {
+    setSolifloreChoice(nextChoice);
+    setIsModelStepConfirmed(false);
+    setIsColorStepConfirmed(false);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+    setCheckoutError("");
+  };
+
   const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!selectedEntry || !shopConfig || !canAccessStripeStep || isStartingCheckout) {
+    if (
+      !selectedEntry ||
+      !shopConfig ||
+      !canAccessStripeStep ||
+      !hasAnsweredSolifloreQuestion ||
+      isStartingCheckout
+    ) {
       return;
     }
 
@@ -723,7 +774,12 @@ function App() {
           heightMm: selectedEntry.heightMm,
           minDiameterMm: selectedEntry.minDiameterMm,
           maxDiameterMm: selectedEntry.maxDiameterMm,
-          waterproofInsertLabel: selectedEntry.waterproofInsertCompatibility.label,
+          waterproofInsertLabel: selectedWaterproofInsertLabel,
+          solifloreChoice,
+          solifloreChoiceLabel,
+          wantsSoliflore,
+          forceTestTubeSupport: wantsSoliflore,
+          suppressTestTubeSupport,
           material: selectedEntry.material,
           productPriceCents,
           colorId: selectedColorId,
@@ -1008,7 +1064,11 @@ function App() {
               </button>
             </div>
             <div className="shop-viewer-frame">
-              <VaseViewer3D colorOverride={SHOP_NEUTRAL_VASE_COLOR} />
+              <VaseViewer3D
+                colorOverride={SHOP_NEUTRAL_VASE_COLOR}
+                forceTestTubeSupport={selectedEntry !== null && wantsSoliflore}
+                suppressTestTubeSupport={suppressTestTubeSupport}
+              />
             </div>
           </div>
 
@@ -1064,7 +1124,16 @@ function App() {
               <input
                 type="hidden"
                 name="waterproofInsertLabel"
-                value={selectedEntry.waterproofInsertCompatibility.label}
+                value={selectedWaterproofInsertLabel}
+              />
+              <input type="hidden" name="solifloreChoice" value={solifloreChoice} />
+              <input type="hidden" name="solifloreChoiceLabel" value={solifloreChoiceLabel} />
+              <input type="hidden" name="wantsSoliflore" value={String(wantsSoliflore)} />
+              <input type="hidden" name="forceTestTubeSupport" value={String(wantsSoliflore)} />
+              <input
+                type="hidden"
+                name="suppressTestTubeSupport"
+                value={String(suppressTestTubeSupport)}
               />
               <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
               <input type="hidden" name="material" value={selectedEntry.material} />
@@ -1141,7 +1210,7 @@ function App() {
                     </div>
                     <div className="shop-stat">
                       <span className="shop-stat-label">Contenant compatible</span>
-                      <strong>{selectedEntry.waterproofInsertCompatibility.label}</strong>
+                      <strong>{selectedWaterproofInsertLabel}</strong>
                     </div>
                   </div>
                   <div className="shop-order-note shop-order-note-highlight shop-order-warning">
@@ -1151,6 +1220,60 @@ function App() {
                     <div className="shop-order-warning-copy">
                       <strong>Attention</strong>
                       <p>{shopConfig.messages.warningPla}</p>
+                      <div className="shop-soliflore-question">
+                        <p id="shop-soliflore-question">
+                          Voulez-vous utiliser ce vase comme soliflore avec un tube à essai ?
+                        </p>
+                        <div
+                          className="shop-soliflore-options"
+                          role="radiogroup"
+                          aria-labelledby="shop-soliflore-question"
+                        >
+                          <label className="shop-soliflore-option">
+                            <input
+                              type="radio"
+                              name="solifloreChoice"
+                              value="yes"
+                              checked={solifloreChoice === "yes"}
+                              onChange={() => handleSolifloreChoiceChange("yes")}
+                            />
+                            <span>
+                              <strong>Oui</strong>
+                              <small>
+                                Usage soliflore : VASO prévoit un support pour tube à essai.
+                              </small>
+                            </span>
+                          </label>
+                          <label className="shop-soliflore-option">
+                            <input
+                              type="radio"
+                              name="solifloreChoice"
+                              value="no"
+                              checked={solifloreChoice === "no"}
+                              onChange={() => handleSolifloreChoiceChange("no")}
+                            />
+                            <span>
+                              <strong>Non</strong>
+                              <small>
+                                {isTestTubeCompatible
+                                  ? "Si vous choisissez de ne pas générer de support tube à essai, il ne sera pas possible d'utiliser le vase avec de l'eau."
+                                  : `VASO utilise le contenant étanche compatible indiqué${
+                                      isEcoCupCompatible
+                                        ? ", par exemple l'Eco-Cup lorsque les dimensions le permettent."
+                                        : "."
+                                    }`}
+                              </small>
+                            </span>
+                          </label>
+                        </div>
+                        <p className="shop-soliflore-help">
+                          {isEcoCupCompatible
+                            ? "Même si un Eco-Cup est compatible, Oui transforme l'usage du vase en soliflore."
+                            : isTestTubeCompatible
+                              ? "Oui conserve le support tube à essai prévu pour l'usage soliflore. Non retire cette solution de contenant."
+                              : "VASO vérifie toujours qu'une solution de contenant est associée au vase."}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1162,15 +1285,18 @@ function App() {
                       className="shop-button shop-button-accent"
                       type="button"
                       onClick={() => setIsModelStepConfirmed(true)}
+                      disabled={!hasAnsweredSolifloreQuestion}
                     >
                       Je valide ce modèle
                     </button>
                   )}
                   <div className="shop-insert-view-slot">
-                    <InsertView2D
-                      params={selectedEntry.params}
-                      compatibility={selectedEntry.waterproofInsertCompatibility}
-                    />
+                    {selectedWaterproofInsertCompatibility ? (
+                      <InsertView2D
+                        params={selectedEntry.params}
+                        compatibility={selectedWaterproofInsertCompatibility}
+                      />
+                    ) : null}
                   </div>
                 </div>
               </article>
@@ -1254,6 +1380,8 @@ function App() {
                           colorOpacity={selectedColor?.opacity ?? 1}
                           colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
                           shadingOverride={selectedColor?.previewShading}
+                          forceTestTubeSupport={wantsSoliflore}
+                          suppressTestTubeSupport={suppressTestTubeSupport}
                         />
                       </div>
                       <div className="shop-color-preview-note">
@@ -1618,6 +1746,8 @@ function App() {
                         Vase N° {selectedEntry.seed} · {selectedEntry.heightMm} mm ·{" "}
                         {selectedEntry.minDiameterMm} à {selectedEntry.maxDiameterMm} mm
                       </p>
+                      <p>{solifloreChoiceLabel || "Usage soliflore à confirmer"}</p>
+                      <p>Contenant : {selectedWaterproofInsertLabel}</p>
                     </div>
                     <div className="shop-order-note">
                       <strong>Couleur</strong>

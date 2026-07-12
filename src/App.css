@@ -1003,6 +1003,67 @@
   gap: 6px;
 }
 
+.shop-soliflore-question {
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.shop-soliflore-question > p {
+  color: rgb(38 29 22 / 78%);
+}
+
+.shop-soliflore-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.shop-soliflore-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgb(93 58 37 / 12%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 42%);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.shop-soliflore-option:has(input:checked) {
+  border-color: rgb(73 124 101 / 38%);
+  background: rgb(247 250 244 / 82%);
+  box-shadow: 0 12px 22px rgb(73 124 101 / 9%);
+}
+
+.shop-soliflore-option input {
+  margin-top: 3px;
+  accent-color: #497c65;
+}
+
+.shop-soliflore-option span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.shop-soliflore-option strong {
+  font-size: 0.88rem;
+}
+
+.shop-soliflore-option small,
+.shop-soliflore-help {
+  color: rgb(38 29 22 / 62%);
+  font-size: 0.78rem;
+  line-height: 1.42;
+}
+
 .shop-legal-note {
   border: 1px solid rgb(73 124 101 / 10%);
   background:
@@ -1285,6 +1346,7 @@
   .shop-order-form-grid,
   .shop-order-summary-wide,
   .shop-order-confirm-grid,
+  .shop-soliflore-options,
   .shop-color-swatches {
     grid-template-columns: 1fr;
   }

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { generateVaseMesh } from "../engine/mesh-builder";
 import { useVaseStore } from "./vase-store";
 import { useUIStore } from "./ui-store";
 
@@ -72,6 +73,25 @@ describe("vaseStore", () => {
     expect(seedAfter).not.toBe(seedBefore);
     expect(useVaseStore.getState().isSeedModified).toBe(false);
   });
+
+  it("generates renderable preview meshes after repeated randomization", () => {
+    for (let index = 0; index < 12; index += 1) {
+      useVaseStore.getState().randomize();
+      const { params, seed } = useVaseStore.getState();
+      const previewParams = {
+        ...params,
+        radialSamples: Math.min(params.radialSamples, 72),
+        verticalSamples: Math.min(params.verticalSamples, 96),
+      };
+
+      const mesh = generateVaseMesh(previewParams);
+      expect(mesh.vertices.length, `seed ${seed}`).toBeGreaterThan(0);
+      expect(mesh.indices.length, `seed ${seed}`).toBeGreaterThan(0);
+      for (let vertexIndex = 0; vertexIndex < mesh.vertices.length; vertexIndex += 1) {
+        expect(Number.isFinite(mesh.vertices[vertexIndex]), `seed ${seed}`).toBe(true);
+      }
+    }
+  }, 10000);
 
   it("setTextureMode updates texture mode", () => {
     useVaseStore.getState().setTextureMode("Double texture");

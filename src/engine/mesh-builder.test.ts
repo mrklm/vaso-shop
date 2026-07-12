@@ -26,17 +26,27 @@ function createTwoProfileVase(
 }
 
 function hasTestTubeSupportVertices(mesh: ReturnType<typeof generateVaseMesh>): boolean {
+  return getTestTubeSupportZRange(mesh) !== null;
+}
+
+function getTestTubeSupportZRange(
+  mesh: ReturnType<typeof generateVaseMesh>,
+): { minZ: number; maxZ: number } | null {
+  let minZ = Number.POSITIVE_INFINITY;
+  let maxZ = Number.NEGATIVE_INFINITY;
+
   for (let index = 0; index < mesh.vertices.length; index += 3) {
     const x = mesh.vertices[index];
     const y = mesh.vertices[index + 1];
     const z = mesh.vertices[index + 2];
     const radius = Math.hypot(x, y);
-    if (radius >= 6.8 && radius <= 9.1 && z > 4) {
-      return true;
+    if (radius >= 7.3 && radius <= 9.7 && z > 2.5) {
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
     }
   }
 
-  return false;
+  return Number.isFinite(minZ) && Number.isFinite(maxZ) ? { minZ, maxZ } : null;
 }
 
 describe("generateVaseMesh", () => {
@@ -127,11 +137,30 @@ describe("generateVaseMesh", () => {
     expect(countBoundaryEdges(mesh)).toBe(0);
   });
 
+  it("can force tube support geometry for an Eco-Cup-compatible soliflore", () => {
+    const params = createTwoProfileVase(180, 74, 96);
+    const mesh = generateVaseMesh(params, { forceTestTubeSupport: true });
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(true);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
   it("adds a closed minimal support when only a test tube fits", () => {
     const params = createTwoProfileVase(120, 40, 30);
     const mesh = generateVaseMesh(params);
+    const supportRange = getTestTubeSupportZRange(mesh);
 
-    expect(hasTestTubeSupportVertices(mesh)).toBe(true);
+    expect(supportRange).not.toBeNull();
+    expect(supportRange?.minZ).toBeCloseTo(params.bottomThicknessMm, 0);
+    expect(supportRange?.maxZ).toBeGreaterThan(params.heightMm - 14);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
+  it("can suppress tube support geometry when a test-tube-compatible vase is ordered without water use", () => {
+    const params = createTwoProfileVase(120, 40, 30);
+    const mesh = generateVaseMesh(params, { suppressTestTubeSupport: true });
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(false);
     expect(countBoundaryEdges(mesh)).toBe(0);
   });
 

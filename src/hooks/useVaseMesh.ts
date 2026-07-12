@@ -6,7 +6,12 @@ import { generateVaseMesh } from "../engine/mesh-builder";
  * Hook that generates mesh data from vase parameters.
  * Uses reduced resolution for preview performance.
  */
-export function useVaseMesh(params: VaseParameters, seed: number): MeshData | null {
+export function useVaseMesh(
+  params: VaseParameters,
+  seed: number,
+  forceTestTubeSupport = false,
+  suppressTestTubeSupport = false,
+): MeshData | null {
   return useMemo(() => {
     void seed;
     try {
@@ -15,7 +20,10 @@ export function useVaseMesh(params: VaseParameters, seed: number): MeshData | nu
         radialSamples: Math.min(params.radialSamples, 72),
         verticalSamples: Math.min(params.verticalSamples, 96),
       };
-      return generateVaseMesh(previewParams);
+      return generateVaseMesh(previewParams, {
+        forceTestTubeSupport,
+        suppressTestTubeSupport,
+      });
     } catch (e) {
       console.warn("Mesh generation failed:", e);
       return null;
@@ -33,6 +41,8 @@ export function useVaseMesh(params: VaseParameters, seed: number): MeshData | nu
     params.textureZoom2,
     params.openTop,
     params.closeBottom,
+    forceTestTubeSupport,
+    suppressTestTubeSupport,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     JSON.stringify(params.profiles),
   ]);

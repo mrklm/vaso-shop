@@ -7,6 +7,15 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.98] - 2026-07-12
+
+### Ajouté
+- Ajoute le choix obligatoire d'usage soliflore avec support tube à essai dans la validation du modèle
+
+### Modifié
+- Remplace le support tube par une bague fendue en trois sections et décale la gravure du N° de vase
+- Fiabilise l'affichage 3D du vase lors des générations successives
+
 ## [1.1.97] - 2026-06-09
 
 ### Modifié
