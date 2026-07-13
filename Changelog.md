@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.99] - 2026-07-13
+
+### Modifié
+- Replace les inscriptions des vases avec support tube à essai sur le fond intérieur, au-dessus et au-dessous du support.
+
 ## [1.1.98] - 2026-07-12
 
 ### Ajouté

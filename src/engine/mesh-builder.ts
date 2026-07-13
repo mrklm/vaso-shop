@@ -36,6 +36,7 @@ const TEST_TUBE_SUPPORT_SLOT_COUNT = 3;
 const TEST_TUBE_SUPPORT_SLOT_ANGLE_RAD = Math.PI / 9;
 const TEST_TUBE_SUPPORT_SEGMENTS_PER_SECTION = 18;
 const TEST_TUBE_SUPPORT_WALL_MARGIN_MM = 0.8;
+const TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM = 2.5;
 
 function shouldKeepFacetEdgeSeamIdentity(profiles: VaseParameters["profiles"]): boolean {
   const sideCount = profiles[0]?.sides ?? 0;
@@ -609,7 +610,7 @@ export async function generateVaseMeshWithEngraving(
     appendPipelineTrace(
       `[mesh-builder] base mesh:v=${mesh.vertices.length / 3},t=${mesh.indices.length / 3}`,
     );
-    const shouldReserveSupportCenter =
+    const hasTestTubeSupport =
       !options.suppressTestTubeSupport &&
       (options.forceTestTubeSupport ||
         analyzeWaterproofInsertCompatibility(params).type === "test_tube");
@@ -619,7 +620,12 @@ export async function generateVaseMeshWithEngraving(
       outerContours[0],
       seed,
       isSeedModified,
-      shouldReserveSupportCenter ? TEST_TUBE_SUPPORT_OUTER_RADIUS_MM : 0,
+      {
+        surface: "inner",
+        reservedCenterRadius: hasTestTubeSupport
+          ? TEST_TUBE_SUPPORT_OUTER_RADIUS_MM + TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM
+          : 0,
+      },
     );
     const difference = getMeshDifferenceDiagnostics(mesh, engravedMesh);
     appendPipelineTrace(
