@@ -14,7 +14,7 @@ interface InsertView2DProps {
 function formatInsertDimensions(preset: (typeof INSERT_PRESETS)[number]): string {
   const bottomDiameter = preset.bottomDiameterMm ?? preset.topDiameterMm;
   if (preset.type === "test_tube") {
-    return "Hauteur 75 mm · Ø 12 mm";
+    return "Hauteur 75 mm · Ø 12 mm · fond plat";
   }
 
   return `Hauteur ${preset.heightMm - 3} mm · Ø↑ ${preset.topDiameterMm - 3} mm · Ø↓ ${bottomDiameter - 3} mm`;
@@ -83,19 +83,13 @@ export function InsertView2D({ params, compatibility }: InsertView2DProps) {
   const insertTopY = height - margin - (insertTopZ / maxZ) * plotHeight;
   const insertPath =
     preset.type === "test_tube"
-      ? (() => {
-          const roundedBottomRadiusMm = Math.min(insertTopRadius, (insertTopZ - insertBottomZ) / 2);
-          const roundedBottomTopZ = insertBottomZ + roundedBottomRadiusMm;
-          const roundedBottomTopY = height - margin - (roundedBottomTopZ / maxZ) * plotHeight;
-
-          return [
-            `M${insertLeftTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
-            `L${insertLeftBottomX.toFixed(1)},${roundedBottomTopY.toFixed(1)}`,
-            `Q${(width / 2).toFixed(1)},${insertBottomY.toFixed(1)} ${insertRightBottomX.toFixed(1)},${roundedBottomTopY.toFixed(1)}`,
-            `L${insertRightTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
-            "Z",
-          ].join(" ");
-        })()
+      ? [
+          `M${insertLeftBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
+          `L${insertLeftTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
+          `L${insertRightTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
+          `L${insertRightBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
+          "Z",
+        ].join(" ")
       : [
           `M${insertLeftBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
           `L${insertLeftTopX.toFixed(1)},${insertTopY.toFixed(1)}`,

@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.102] - 2026-08-11
+
+### Modifié
+- Affiche le tube à essai avec une base plate dans la visualisation en coupe.
+- Clarifie la mention du support pour tube à essai en verre dans la validation du modèle.
+
 ## [1.1.101] - 2026-08-11
 
 ### Modifié

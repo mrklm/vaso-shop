@@ -1240,7 +1240,7 @@ function App() {
                             <span>
                               <strong>Oui</strong>
                               <small>
-                                Usage soliflore : VASO prévoit un support pour tube à essai.
+                                Usage soliflore : VASO prévoit un support pour tube à essai en verre.
                               </small>
                             </span>
                           </label>
@@ -1269,9 +1269,7 @@ function App() {
                         <p className="shop-soliflore-help">
                           {isEcoCupCompatible
                             ? "Même si un Eco-Cup est compatible, Oui transforme l'usage du vase en soliflore."
-                            : isTestTubeCompatible
-                              ? "Oui conserve le support tube à essai prévu pour l'usage soliflore. Non retire cette solution de contenant."
-                              : "VASO vérifie toujours qu'une solution de contenant est associée au vase."}
+                            : "VASO vérifie toujours qu'une solution de contenant est associée au vase."}
                         </p>
                       </div>
                     </div>
