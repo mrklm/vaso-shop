@@ -7,6 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.101] - 2026-08-11
+
+### Modifié
+- Aligne les contenants tube à essai sur les formats 100 mm et 120 mm en diamètre 25,4 mm.
+- Corrige les supports tube à essai compensés pour qu'ils partent de la base du vase.
+- Remplace la signature de gravure par le N° de vase et masque les caractères situés sous le support.
+- Aligne la prévisualisation boutique sur la gravure exportée pour les vases avec support tube à essai.
+
 ## [1.1.100] - 2026-07-13
 
 ### Modifié

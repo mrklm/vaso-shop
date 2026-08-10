@@ -27,9 +27,11 @@ const PREVIEW_TEXT_BASE_FONT_SIZES = [108, 96, 96] as const;
 const PREVIEW_TEXT_LINE_WIDTH_FACTORS = [0.98, 0.98] as const;
 const PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR = 0.92;
 const PREVIEW_TEXT_SIDE_MARGIN_PX = 29;
-const PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM = 9.5;
-const PREVIEW_TEST_TUBE_SUPPORT_TEXT_CLEARANCE_MM = 4;
-const PREVIEW_SUPPORT_TEXT_SCALE = 0.68;
+const PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM = 16.2;
+const PREVIEW_TEST_TUBE_SUPPORT_TEXT_CLEARANCE_MM = 0.7;
+const PREVIEW_SUPPORT_BAR_HALF_WIDTH_MM = 2.1;
+const PREVIEW_SUPPORT_RING_INNER_OFFSET_MM = 2.4;
+const PREVIEW_SUPPORT_RING_TOUCH_MARGIN_MM = 0.35;
 
 function fitPreviewText(
   context: CanvasRenderingContext2D,
@@ -41,6 +43,43 @@ function fitPreviewText(
   const measuredWidth = context.measureText(text).width;
   if (measuredWidth <= 0) return baseFontSize;
   return (baseFontSize * targetWidth) / measuredWidth;
+}
+
+interface PreviewBounds {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+function previewBoundsIntersectsSupport(bounds: PreviewBounds, supportRadiusPx: number): boolean {
+  const centerX = (bounds.minX + bounds.maxX) * 0.5;
+  const centerY = (bounds.minY + bounds.maxY) * 0.5;
+  const halfX = (bounds.maxX - bounds.minX) * 0.5;
+  const halfY = (bounds.maxY - bounds.minY) * 0.5;
+  const centerRadius = Math.hypot(centerX, centerY);
+  const halfDiagonal = Math.hypot(halfX, halfY);
+  const radialMin = Math.max(0, centerRadius - halfDiagonal);
+  const radialMax = centerRadius + halfDiagonal;
+  const ringInnerRadius = Math.max(
+    0,
+    supportRadiusPx -
+      PREVIEW_SUPPORT_RING_INNER_OFFSET_MM *
+        (supportRadiusPx / PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM),
+  );
+  const ringOuterRadius =
+    supportRadiusPx +
+    PREVIEW_SUPPORT_RING_TOUCH_MARGIN_MM *
+      (supportRadiusPx / PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM);
+  const barHalfWidth =
+    PREVIEW_SUPPORT_BAR_HALF_WIDTH_MM *
+    (supportRadiusPx / PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM);
+
+  return (
+    (radialMin <= ringOuterRadius && radialMax >= ringInnerRadius) ||
+    (Math.abs(centerX) <= barHalfWidth + halfX && Math.abs(centerY) <= supportRadiusPx + halfY) ||
+    (Math.abs(centerY) <= barHalfWidth + halfY && Math.abs(centerX) <= supportRadiusPx + halfX)
+  );
 }
 
 function computePreviewBottomFitRadius(params: VaseParameters): number {
@@ -93,54 +132,79 @@ function PreviewEngravingOverlay(
     context.fillStyle = "rgba(28,28,28,0.45)";
 
     const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
 
     if (placement === "support") {
-      const supportLines = lines.slice(0, 2);
       const heightMm = fitRadius * PREVIEW_SUPPORT_TEXT_SIZE_FACTOR;
+      const pxPerMm = canvas.height / heightMm;
       const supportRadiusPx =
         (PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM +
           PREVIEW_TEST_TUBE_SUPPORT_TEXT_CLEARANCE_MM) *
-        (canvas.height / heightMm);
-      const availableBandHeight = Math.max(0, canvas.height * 0.5 - supportRadiusPx - 18);
-      if (availableBandHeight <= 20) return null;
+        pxPerMm;
 
-      supportLines.forEach((line, index) => {
+      const lineFontSizes = lines.map((line, index) => {
         const baseFontSize =
-          PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[0];
-        const fittedWidthSize = fitPreviewText(
-          context,
-          line,
-          baseFontSize,
-          canvas.width * 0.78 * PREVIEW_SUPPORT_TEXT_SCALE,
+          PREVIEW_TEXT_BASE_FONT_SIZES[index] ??
+          PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1];
+        const widthFactor =
+          PREVIEW_TEXT_LINE_WIDTH_FACTORS[index] ??
+          PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1] * 0.55;
+        return fitPreviewText(context, line, baseFontSize, canvas.width * widthFactor);
+      });
+      const referenceFontSize =
+        lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
+      for (let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length; index < lineFontSizes.length; index += 1) {
+        const targetWidth =
+          canvas.width *
+          PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
+        lineFontSizes[index] = Math.min(
+          referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR,
+          fitPreviewText(context, lines[index], referenceFontSize, targetWidth),
         );
-        let fontSize = Math.min(
-          fittedWidthSize,
-          availableBandHeight * 0.68 * PREVIEW_SUPPORT_TEXT_SCALE,
-        );
-        const direction = index === 0 ? -1 : 1;
-        let lineCenterY = canvas.height * 0.5 + direction * (supportRadiusPx + fontSize * 0.72);
+      }
 
-        const previewRadiusY = canvas.height * 0.41;
-        const dy = lineCenterY - canvas.height * 0.5;
-        const halfChordFactor = Math.sqrt(Math.max(0, 1 - (dy / previewRadiusY) ** 2));
-        const allowedWidth = Math.max(
-          0,
-          canvas.width * 0.84 * PREVIEW_SUPPORT_TEXT_SCALE * halfChordFactor -
-            PREVIEW_TEXT_SIDE_MARGIN_PX * 2,
-        );
-        if (allowedWidth > 0) {
-          context.font = `700 ${fontSize}px Arial`;
-          const measuredWidth = context.measureText(line).width;
-          if (measuredWidth > allowedWidth) {
-            fontSize *= allowedWidth / measuredWidth;
-            lineCenterY = canvas.height * 0.5 + direction * (supportRadiusPx + fontSize * 0.72);
-          }
-        }
+      const maxHeight = canvas.height * 0.82;
+      const lineGap = Math.max(20, Math.max(...lineFontSizes) * PREVIEW_TEXT_LINE_GAP_FACTOR);
+      const totalHeight =
+        lineFontSizes.reduce((sum, fontSize) => sum + fontSize, 0) +
+        lineGap * Math.max(0, lineFontSizes.length - 1);
+      const yScale = totalHeight > maxHeight ? maxHeight / totalHeight : 1;
+      let currentY =
+        centerY -
+        (lineFontSizes.reduce((sum, fontSize) => sum + fontSize * yScale, 0) +
+          lineGap * yScale * Math.max(0, lineFontSizes.length - 1)) *
+          0.5;
 
+      lines.forEach((line, lineIndex) => {
+        const fontSize = (lineFontSizes[lineIndex] ?? PREVIEW_TEXT_BASE_FONT_SIZES[0]) * yScale;
+        const lineCenterY = currentY + fontSize * 0.5;
+        currentY += fontSize + lineGap * yScale;
         context.font = `700 ${fontSize}px Arial`;
         context.lineWidth = Math.max(4, fontSize * 0.09);
-        context.strokeText(line, centerX, lineCenterY);
-        context.fillText(line, centerX, lineCenterY);
+
+        const chars = Array.from(line);
+        const widths = chars.map((char) =>
+          char === " " ? fontSize * 0.38 : context.measureText(char).width);
+        const lineWidth = widths.reduce((sum, width) => sum + width, 0);
+        let cursorX = -lineWidth * 0.5;
+
+        chars.forEach((char, charIndex) => {
+          const charWidth = widths[charIndex] ?? fontSize * 0.5;
+          const charCenterX = cursorX + charWidth * 0.5;
+          cursorX += charWidth;
+          if (char === " ") return;
+
+          const bounds = {
+            minX: charCenterX - charWidth * 0.5,
+            maxX: charCenterX + charWidth * 0.5,
+            minY: lineCenterY - centerY - fontSize * 0.48,
+            maxY: lineCenterY - centerY + fontSize * 0.48,
+          };
+          if (previewBoundsIntersectsSupport(bounds, supportRadiusPx)) return;
+
+          context.strokeText(char, centerX + charCenterX, lineCenterY);
+          context.fillText(char, centerX + charCenterX, lineCenterY);
+        });
       });
 
       const nextTexture = new THREE.CanvasTexture(canvas);
@@ -163,7 +227,13 @@ function PreviewEngravingOverlay(
     });
     const referenceFontSize = lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
     for (let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length; index < lineFontSizes.length; index += 1) {
-      lineFontSizes[index] = referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR;
+      const targetWidth =
+        canvas.width *
+        PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
+      lineFontSizes[index] = Math.min(
+        referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR,
+        fitPreviewText(context, lines[index], referenceFontSize, targetWidth),
+      );
     }
     const maxHeight = canvas.height * 0.82;
     const computeLayout = (fontSizes: number[]) => {

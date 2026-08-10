@@ -19,31 +19,39 @@ import {
   limitContourStepFromPrevious,
   computeInnerContour,
 } from "./constraints";
-import { getMeshDifferenceDiagnostics, logMeshDiagnostics } from "./mesh-cleanup";
-import { analyzeWaterproofInsertCompatibility } from "./insert-compatibility";
+import {
+  getMeshDifferenceDiagnostics,
+  logMeshDiagnostics,
+  removeDegenerateTriangles,
+} from "./mesh-cleanup";
+import {
+  analyzeWaterproofInsertCompatibility,
+  getInsertPresetById,
+  getPreferredTestTubePreset,
+  getTestTubePlacement,
+} from "./insert-compatibility";
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "test";
 const ENGRAVING_PIPELINE_MARKER = `Vaso Engraving ${APP_VERSION}`;
 const FACETED_SEAM_MAX_PROFILE_SIDES = 12;
 const SEAM_BACK_ANGLE_RAD = -Math.PI / 2;
-const TEST_TUBE_SUPPORT_INNER_RADIUS_MM = 7.5;
+const TEST_TUBE_SUPPORT_INNER_RADIUS_MM = 14.2;
 const TEST_TUBE_SUPPORT_THICKNESS_MM = 2;
 const TEST_TUBE_SUPPORT_OUTER_RADIUS_MM =
   TEST_TUBE_SUPPORT_INNER_RADIUS_MM + TEST_TUBE_SUPPORT_THICKNESS_MM;
-const TEST_TUBE_SUPPORT_TOP_INSET_MM = 12;
-const TEST_TUBE_SUPPORT_MIN_HEIGHT_MM = 38;
 const TEST_TUBE_SUPPORT_SLOT_COUNT = 3;
 const TEST_TUBE_SUPPORT_SLOT_ANGLE_RAD = Math.PI / 9;
 const TEST_TUBE_SUPPORT_SEGMENTS_PER_SECTION = 18;
 const TEST_TUBE_SUPPORT_WALL_MARGIN_MM = 0.8;
-const TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM = 2.5;
+const TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM = 0.3;
+const TEST_TUBE_PEDESTAL_BAR_THICKNESS_MM = 2.4;
 
 function shouldKeepFacetEdgeSeamIdentity(profiles: VaseParameters["profiles"]): boolean {
-  const sideCount = profiles[0]?.sides ?? 0;
+  if (profiles.length === 0) return false;
+  const firstSides = profiles[0].sides;
   return (
-    sideCount >= 3 &&
-    sideCount <= FACETED_SEAM_MAX_PROFILE_SIDES &&
-    profiles.every((profile) => profile.sides === sideCount)
+    firstSides <= FACETED_SEAM_MAX_PROFILE_SIDES &&
+    profiles.every((profile) => profile.sides === firstSides)
   );
 }
 
@@ -388,6 +396,60 @@ function addSegmentedTubeSupport(
   }
 }
 
+function addBox(
+  verts: number[],
+  faces: number[],
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  minZ: number,
+  maxZ: number,
+) {
+  if (maxX <= minX || maxY <= minY || maxZ <= minZ) return;
+
+  const start = verts.length / 3;
+  verts.push(
+    minX, minY, minZ,
+    maxX, minY, minZ,
+    maxX, maxY, minZ,
+    minX, maxY, minZ,
+    minX, minY, maxZ,
+    maxX, minY, maxZ,
+    maxX, maxY, maxZ,
+    minX, maxY, maxZ,
+  );
+
+  faces.push(
+    start, start + 1, start + 2,
+    start, start + 2, start + 3,
+    start + 4, start + 6, start + 5,
+    start + 4, start + 7, start + 6,
+    start, start + 4, start + 1,
+    start + 1, start + 4, start + 5,
+    start + 1, start + 5, start + 2,
+    start + 2, start + 5, start + 6,
+    start + 2, start + 6, start + 3,
+    start + 3, start + 6, start + 7,
+    start + 3, start + 7, start,
+    start, start + 7, start + 4,
+  );
+}
+
+function addCrossPedestal(
+  verts: number[],
+  faces: number[],
+  radius: number,
+  zBottom: number,
+  zTop: number,
+) {
+  if (zTop <= zBottom + 0.5) return;
+
+  const halfThickness = TEST_TUBE_PEDESTAL_BAR_THICKNESS_MM / 2;
+  addBox(verts, faces, -radius, radius, -halfThickness, halfThickness, zBottom, zTop);
+  addBox(verts, faces, -halfThickness, halfThickness, -radius, radius, zBottom, zTop);
+}
+
 function canFitCenteredTestTubeSupport(
   params: VaseParameters,
   zValues: readonly number[],
@@ -420,7 +482,6 @@ function addTestTubeSupportIfNeeded(
   params: VaseParameters,
   verts: number[],
   faces: number[],
-  zInnerBottom: number,
   options: GenerateVaseMeshOptions = {},
 ) {
   if (options.suppressTestTubeSupport) {
@@ -432,14 +493,16 @@ function addTestTubeSupportIfNeeded(
     return;
   }
 
-  const supportBottomZ = zInnerBottom;
-  const supportTopZ = Math.min(
-    params.heightMm - 1,
-    Math.max(
-      supportBottomZ + TEST_TUBE_SUPPORT_MIN_HEIGHT_MM,
-      params.heightMm - TEST_TUBE_SUPPORT_TOP_INSET_MM,
-    ),
-  );
+  const preset = options.forceTestTubeSupport
+    ? getPreferredTestTubePreset(params.heightMm)
+    : getInsertPresetById(compatibility.presetId);
+  if (!preset) {
+    return;
+  }
+
+  const placement = getTestTubePlacement(params, preset);
+  const supportBottomZ = placement.supportBottomZ;
+  const supportTopZ = placement.supportTopZ;
 
   if (supportTopZ <= supportBottomZ) {
     return;
@@ -454,6 +517,14 @@ function addTestTubeSupportIfNeeded(
   if (!canFitCenteredTestTubeSupport(params, fitSamples, TEST_TUBE_SUPPORT_OUTER_RADIUS_MM)) {
     return;
   }
+
+  addCrossPedestal(
+    verts,
+    faces,
+    TEST_TUBE_SUPPORT_OUTER_RADIUS_MM,
+    placement.pedestalBottomZ,
+    placement.pedestalTopZ,
+  );
 
   addSegmentedTubeSupport(
     verts,
@@ -584,12 +655,12 @@ function generateVaseMeshInternal(
     }
   }
 
-  addTestTubeSupportIfNeeded(params, verts, faces, zInnerBottom, options);
+  addTestTubeSupportIfNeeded(params, verts, faces, options);
 
-  return {
+  return removeDegenerateTriangles({
     vertices: new Float32Array(verts),
     indices: new Uint32Array(faces),
-  };
+  });
 }
 
 export async function generateVaseMeshWithEngraving(
@@ -620,12 +691,9 @@ export async function generateVaseMeshWithEngraving(
       outerContours[0],
       seed,
       isSeedModified,
-      {
-        surface: "inner",
-        reservedCenterRadius: hasTestTubeSupport
-          ? TEST_TUBE_SUPPORT_OUTER_RADIUS_MM + TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM
-          : 0,
-      },
+      hasTestTubeSupport
+        ? TEST_TUBE_SUPPORT_OUTER_RADIUS_MM + TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM
+        : 0,
     );
     const difference = getMeshDifferenceDiagnostics(mesh, engravedMesh);
     appendPipelineTrace(

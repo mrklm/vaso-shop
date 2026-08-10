@@ -1,10 +1,16 @@
 import { describe, it, expect } from "vitest";
+import robotoFontJson from "../../public/fonts/Roboto.json?raw";
 import {
   generateVaseMesh,
+  generateVaseMeshWithEngraving,
   generateOuterProfilePoints,
   generateTopOuterContour,
 } from "./mesh-builder";
-import { countBoundaryEdges, countConnectedMeshComponents } from "./mesh-cleanup";
+import {
+  countBoundaryEdges,
+  countConnectedMeshComponents,
+  countNonManifoldEdges,
+} from "./mesh-cleanup";
 import { defaultVaseParameters, createProfile, type VaseParameters } from "./types";
 
 function createTwoProfileVase(
@@ -40,7 +46,7 @@ function getTestTubeSupportZRange(
     const y = mesh.vertices[index + 1];
     const z = mesh.vertices[index + 2];
     const radius = Math.hypot(x, y);
-    if (radius >= 7.3 && radius <= 9.7 && z > 2.5) {
+    if (radius >= 14 && radius <= 16.4 && z > 2.5) {
       minZ = Math.min(minZ, z);
       maxZ = Math.max(maxZ, z);
     }
@@ -146,22 +152,59 @@ describe("generateVaseMesh", () => {
   });
 
   it("adds a closed minimal support when only a test tube fits", () => {
-    const params = createTwoProfileVase(120, 40, 30);
+    const params = createTwoProfileVase(125, 52, 42);
     const mesh = generateVaseMesh(params);
     const supportRange = getTestTubeSupportZRange(mesh);
 
     expect(supportRange).not.toBeNull();
     expect(supportRange?.minZ).toBeCloseTo(params.bottomThicknessMm, 0);
-    expect(supportRange?.maxZ).toBeGreaterThan(params.heightMm - 14);
+    expect(supportRange?.maxZ).toBeGreaterThan(params.bottomThicknessMm + 38);
     expect(countBoundaryEdges(mesh)).toBe(0);
+    expect(countNonManifoldEdges(mesh)).toBe(0);
   });
 
   it("can suppress tube support geometry when a test-tube-compatible vase is ordered without water use", () => {
-    const params = createTwoProfileVase(120, 40, 30);
+    const params = createTwoProfileVase(125, 52, 42);
     const mesh = generateVaseMesh(params, { suppressTestTubeSupport: true });
 
     expect(hasTestTubeSupportVertices(mesh)).toBe(false);
     expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
+  it("keeps engraved text readable around the test tube support", async () => {
+    const params = createTwoProfileVase(125, 52, 42);
+    params.radialSamples = 72;
+    const fontJson = JSON.parse(robotoFontJson);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(fontJson), { status: 200 });
+
+    let mesh: Awaited<ReturnType<typeof generateVaseMeshWithEngraving>>;
+    try {
+      mesh = await generateVaseMeshWithEngraving(params, 12345678);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+    const engravingOuterPoints: Array<{ x: number; y: number }> = [];
+
+    for (let index = 0; index < mesh.vertices.length; index += 3) {
+      const x = mesh.vertices[index];
+      const y = mesh.vertices[index + 1];
+      const z = mesh.vertices[index + 2];
+      const radius = Math.hypot(x, y);
+      if (
+        z > params.bottomThicknessMm + 0.05 &&
+        z < params.bottomThicknessMm + 1.2 &&
+        radius > 16.8
+      ) {
+        engravingOuterPoints.push({ x, y });
+      }
+    }
+
+    const xs = engravingOuterPoints.map((point) => point.x);
+    const ys = engravingOuterPoints.map((point) => point.y);
+    expect(engravingOuterPoints.length).toBeGreaterThan(100);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(30);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(30);
   });
 
   it("aligns inner and outer wall layers on the same body z slices", () => {
@@ -266,9 +309,11 @@ describe("generateTopOuterContour", () => {
     const params = defaultVaseParameters();
     params.radialSamples = 48;
     params.verticalSamples = 2;
+    params.textureMode = "Texture imposée";
+    params.textureType = "Cannelures";
     params.profiles = [
       createProfile({ zRatio: 0, diameter: 80, sides: 6, rotationDeg: 0 }),
-      createProfile({ zRatio: 1, diameter: 60, sides: 6, rotationDeg: 30 }),
+      createProfile({ zRatio: 1, diameter: 80, sides: 6, rotationDeg: 30 }),
     ];
 
     const contour = generateTopOuterContour(params);
