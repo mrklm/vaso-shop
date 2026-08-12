@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.104] - 2026-08-12
+
+### Modifié
+- Retire la mention des contenants compatibles du bloc Attention pour la réserver au bloc soliflore.
+
 ## [1.1.103] - 2026-08-12
 
 ### Modifié
