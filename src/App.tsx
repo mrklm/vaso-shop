@@ -1220,57 +1220,60 @@ function App() {
                     <div className="shop-order-warning-copy">
                       <strong>Attention</strong>
                       <p>{shopConfig.messages.warningPla}</p>
-                      <div className="shop-soliflore-question">
-                        <p id="shop-soliflore-question">
-                          Voulez-vous utiliser ce vase comme soliflore avec un tube à essai ?
-                        </p>
-                        <div
-                          className="shop-soliflore-options"
-                          role="radiogroup"
-                          aria-labelledby="shop-soliflore-question"
-                        >
-                          <label className="shop-soliflore-option">
-                            <input
-                              type="radio"
-                              name="solifloreChoice"
-                              value="yes"
-                              checked={solifloreChoice === "yes"}
-                              onChange={() => handleSolifloreChoiceChange("yes")}
-                            />
-                            <span>
-                              <strong>Oui</strong>
-                              <small>
-                                Usage soliflore : VASO prévoit un support pour tube à essai en verre.
-                              </small>
-                            </span>
-                          </label>
-                          <label className="shop-soliflore-option">
-                            <input
-                              type="radio"
-                              name="solifloreChoice"
-                              value="no"
-                              checked={solifloreChoice === "no"}
-                              onChange={() => handleSolifloreChoiceChange("no")}
-                            />
-                            <span>
-                              <strong>Non</strong>
-                              <small>
-                                {isTestTubeCompatible
-                                  ? "Si vous choisissez de ne pas générer de support tube à essai, il ne sera pas possible d'utiliser le vase avec de l'eau."
-                                  : `VASO utilise le contenant étanche compatible indiqué${
-                                      isEcoCupCompatible
-                                        ? ", par exemple l'Eco-Cup lorsque les dimensions le permettent."
-                                        : "."
-                                    }`}
-                              </small>
-                            </span>
-                          </label>
-                        </div>
-                        <p className="shop-soliflore-help">
-                          {isEcoCupCompatible
-                            ? "Même si un Eco-Cup est compatible, Oui transforme l'usage du vase en soliflore."
-                            : "VASO vérifie toujours qu'une solution de contenant est associée au vase."}
-                        </p>
+                    </div>
+                  </div>
+                  <div className="shop-order-note shop-order-note-highlight shop-soliflore-panel">
+                    <div className="shop-soliflore-question">
+                      <p id="shop-soliflore-question">
+                        VASO indique à droite si un contenant est compatible avec le vase généré :
+                        Eco-Cup 50 cl, Eco-Cup 25 cl ou Eco-Cup 12,5 cl. Si le vase est trop petit
+                        pour le plus petit Eco-Cup, VASO peut passer en mode soliflore et intégrer
+                        des supports pour accueillir un tube à essai.
+                      </p>
+                      <p className="shop-soliflore-question-title">
+                        Voulez-vous utiliser ce vase comme soliflore avec un tube à essai ?
+                      </p>
+                      <div
+                        className="shop-soliflore-options"
+                        role="radiogroup"
+                        aria-labelledby="shop-soliflore-question"
+                      >
+                        <label className="shop-soliflore-option">
+                          <input
+                            type="radio"
+                            name="solifloreChoice"
+                            value="yes"
+                            checked={solifloreChoice === "yes"}
+                            onChange={() => handleSolifloreChoiceChange("yes")}
+                          />
+                          <span>
+                            <strong>Oui</strong>
+                            <small>
+                              Usage soliflore : VASO prévoit un support pour tube à essai en verre.
+                            </small>
+                          </span>
+                        </label>
+                        <label className="shop-soliflore-option">
+                          <input
+                            type="radio"
+                            name="solifloreChoice"
+                            value="no"
+                            checked={solifloreChoice === "no"}
+                            onChange={() => handleSolifloreChoiceChange("no")}
+                          />
+                          <span>
+                            <strong>Non</strong>
+                            <small>
+                              {isTestTubeCompatible
+                                ? "Le vase sera utilisé sans support tube à essai et ne pourra pas contenir d'eau directement."
+                                : `VASO utilisera le contenant étanche compatible indiqué${
+                                    isEcoCupCompatible
+                                      ? ", par exemple l'Eco-Cup lorsque les dimensions le permettent."
+                                      : "."
+                                  }`}
+                            </small>
+                          </span>
+                        </label>
                       </div>
                     </div>
                   </div>

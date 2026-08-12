@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.103] - 2026-08-12
+
+### Modifié
+- Scinde l'avertissement PLA et le choix soliflore en deux blocs distincts dans la validation du modèle.
+- Clarifie le texte sur les contenants compatibles Eco-Cup et le passage en mode soliflore avec tube à essai.
+
 ## [1.1.102] - 2026-08-11
 
 ### Modifié

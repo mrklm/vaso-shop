@@ -1003,14 +1003,25 @@
   gap: 6px;
 }
 
+.shop-soliflore-panel {
+  display: block;
+  border-color: rgb(73 124 101 / 13%);
+  background:
+    radial-gradient(circle at top left, rgb(73 124 101 / 7%), transparent 42%),
+    linear-gradient(180deg, rgb(250 249 244 / 96%), rgb(241 237 229 / 96%));
+}
+
 .shop-soliflore-question {
   display: grid;
   gap: 10px;
-  margin-top: 6px;
 }
 
 .shop-soliflore-question > p {
   color: rgb(38 29 22 / 78%);
+}
+
+.shop-soliflore-question-title {
+  font-weight: 800;
 }
 
 .shop-soliflore-options {
