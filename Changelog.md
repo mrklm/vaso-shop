@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.106] - 2026-08-14
+
+### Modifié
+- Replace les illustrations des contenants dans la colonne titre de la validation du modèle avec un défilement automatique.
+
 ## [1.1.105] - 2026-08-14
 
 ### Ajouté

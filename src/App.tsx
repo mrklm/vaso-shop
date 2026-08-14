@@ -1184,25 +1184,25 @@ function App() {
                   <div>
                     <p className="shop-panel-title">Validation du modele</p>
                     <h3>Confirmez le vase selectionne</h3>
+                    <div className="shop-container-illustrations" aria-label="Contenants compatibles">
+                      <figure>
+                        <img
+                          src="/images/containers/eco-cup-50cl.jpg"
+                          alt="Eco-Cup 50 cl"
+                          loading="lazy"
+                        />
+                        <figcaption>Eco-Cup 50 cl</figcaption>
+                      </figure>
+                      <figure>
+                        <img
+                          src="/images/containers/tube-a-essai.jpg"
+                          alt="Tube à essai"
+                          loading="lazy"
+                        />
+                        <figcaption>Tube à essai</figcaption>
+                      </figure>
+                    </div>
                   </div>
-                </div>
-                <div className="shop-container-illustrations" aria-label="Contenants compatibles">
-                  <figure>
-                    <img
-                      src="/images/containers/eco-cup-50cl.jpg"
-                      alt="Eco-Cup 50 cl"
-                      loading="lazy"
-                    />
-                    <figcaption>Eco-Cup 50 cl</figcaption>
-                  </figure>
-                  <figure>
-                    <img
-                      src="/images/containers/tube-a-essai.jpg"
-                      alt="Tube à essai"
-                      loading="lazy"
-                    />
-                    <figcaption>Tube à essai</figcaption>
-                  </figure>
                 </div>
                 <div className="shop-order-step-content">
                   <p>
