@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.109] - 2026-08-14
+
+### Modifié
+- Adoucit la transition du carrousel des contenants avec un fondu croisé plus lent et un mouvement discret.
+
 ## [1.1.108] - 2026-08-14
 
 ### Ajouté
