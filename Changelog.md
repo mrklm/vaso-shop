@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.105] - 2026-08-14
+
+### Ajouté
+- Ajoute les illustrations JPG des contenants Eco-Cup 50 cl et tube à essai dans la validation du modèle.
+
 ## [1.1.104] - 2026-08-12
 
 ### Modifié
