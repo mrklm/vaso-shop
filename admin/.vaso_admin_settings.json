@@ -1,5 +1,5 @@
 {
-  "theme": "[Clair] Miellerie La Divette",
-  "orders_api_url": "https://vaso-shop.netlify.app/.netlify/functions/list-orders",
+  "theme": "[Pouêt] Chewing-gum Océan",
+  "orders_api_url": "",
   "skip_netlify_deploy": true
 }

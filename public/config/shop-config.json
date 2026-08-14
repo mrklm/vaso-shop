@@ -202,10 +202,6 @@
   ],
   "heroImages": [
     {
-      "path": "images/hero/1.jpg",
-      "enabled": true
-    },
-    {
       "path": "images/hero/2.jpg",
       "enabled": true
     },
@@ -215,10 +211,6 @@
     },
     {
       "path": "images/hero/4.jpg",
-      "enabled": true
-    },
-    {
-      "path": "images/hero/5.jpg",
       "enabled": true
     },
     {
