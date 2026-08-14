@@ -253,6 +253,7 @@ function App() {
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
+  const [containerIllustrationIndex, setContainerIllustrationIndex] = useState(0);
   const [solifloreChoice, setSolifloreChoice] = useState<SolifloreChoice>("");
   const [isModelStepConfirmed, setIsModelStepConfirmed] = useState(false);
   const [isColorStepConfirmed, setIsColorStepConfirmed] = useState(false);
@@ -288,19 +289,15 @@ function App() {
     [shopConfig],
   );
   const containerIllustrations = useMemo(
-    () => [
-      {
-        src: resolveShopConfigAssetPath("images/containers/eco-cup-50cl.jpg"),
-        alt: "Eco-Cup 50 cl",
-        label: "Eco-Cup 50 cl",
-      },
-      {
-        src: resolveShopConfigAssetPath("images/containers/tube-a-essai.jpg"),
-        alt: "Tube à essai",
-        label: "Tube à essai",
-      },
-    ],
-    [],
+    () =>
+      (shopConfig?.containerImages ?? [])
+        .filter((image) => image.enabled)
+        .map((image) => ({
+          src: resolveShopConfigAssetPath(image.path),
+          alt: image.alt || image.label,
+          label: image.label,
+        })),
+    [shopConfig],
   );
   const currentHeroGalleryImage = heroGalleryImages[heroGalleryIndex] ?? null;
   const previousHeroGalleryImage =
@@ -550,6 +547,23 @@ function App() {
     heroGalleryPreviewClearMs,
     heroGalleryTransitionMs,
   ]);
+
+  useEffect(() => {
+    if (containerIllustrations.length <= 1) {
+      setContainerIllustrationIndex(0);
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setContainerIllustrationIndex((currentIndex) => (
+        currentIndex + 1
+      ) % containerIllustrations.length);
+    }, 6000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [containerIllustrations]);
 
   useEffect(() => {
     if (!selectedEntry) {
@@ -1208,8 +1222,11 @@ function App() {
                     <p className="shop-panel-title">Validation du modele</p>
                     <h3>Confirmez le vase selectionne</h3>
                     <div className="shop-container-illustrations" aria-label="Contenants compatibles">
-                      {containerIllustrations.map((illustration) => (
-                        <figure key={illustration.src}>
+                      {containerIllustrations.map((illustration, index) => (
+                        <figure
+                          key={illustration.src}
+                          className={index === containerIllustrationIndex ? "active" : undefined}
+                        >
                           <img src={illustration.src} alt={illustration.alt} loading="lazy" />
                           <figcaption>{illustration.label}</figcaption>
                         </figure>

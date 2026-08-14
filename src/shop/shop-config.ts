@@ -26,6 +26,13 @@ export interface ShopHeroImage {
   enabled: boolean;
 }
 
+export interface ShopContainerImage {
+  path: string;
+  label: string;
+  alt: string;
+  enabled: boolean;
+}
+
 export interface ShopHeroGalleryConfig {
   transitionMs: number;
   fadeInMs: number;
@@ -94,6 +101,7 @@ export interface ShopPublicConfig {
   printerVolume: ShopPrinterVolumeConfig;
   colors: ShopColor[];
   heroImages: ShopHeroImage[];
+  containerImages: ShopContainerImage[];
   heroGallery: ShopHeroGalleryConfig;
   messages: ShopMessagesConfig;
   shopStatus: ShopStatusConfig;
@@ -212,6 +220,31 @@ function normalizeHeroImage(value: unknown): ShopHeroImage | null {
   };
 }
 
+function normalizeContainerImage(value: unknown): ShopContainerImage | null {
+  if (typeof value === "string" && value.trim()) {
+    const path = value.trim();
+    return { path, label: "", alt: "", enabled: true };
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const path = normalizeString(value.path).trim();
+  if (!path) {
+    return null;
+  }
+
+  const label = normalizeString(value.label).trim();
+  const alt = normalizeString(value.alt).trim();
+  return {
+    path,
+    label: label || alt,
+    alt: alt || label || "Contenant compatible",
+    enabled: normalizeBoolean(value.enabled, true),
+  };
+}
+
 function normalizeShippingOption(value: unknown): ShopShippingOption | null {
   if (!isRecord(value)) {
     return null;
@@ -282,6 +315,22 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
   const rawStatus = isRecord(rawConfig.shopStatus) ? rawConfig.shopStatus : {};
   const rawShipping = isRecord(rawConfig.shipping) ? rawConfig.shipping : {};
   const rawHeroGallery = isRecord(rawConfig.heroGallery) ? rawConfig.heroGallery : {};
+  const rawContainerImages = Array.isArray(rawConfig.containerImages)
+    ? rawConfig.containerImages
+    : [
+        {
+          path: "images/containers/eco-cup-50cl.jpg",
+          label: "Eco-Cup 50 cl",
+          alt: "Eco-Cup 50 cl",
+          enabled: true,
+        },
+        {
+          path: "images/containers/tube-a-essai.jpg",
+          label: "Tube à essai",
+          alt: "Tube à essai",
+          enabled: true,
+        },
+      ];
   const statusState = normalizeStatusState(rawStatus.state);
   const printerProfiles = Array.isArray(rawPrinterVolume.profiles)
     ? rawPrinterVolume.profiles
@@ -323,6 +372,9 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
           .map((image) => normalizeHeroImage(image))
           .filter((image): image is ShopHeroImage => image !== null)
       : [],
+    containerImages: rawContainerImages
+      .map((image) => normalizeContainerImage(image))
+      .filter((image): image is ShopContainerImage => image !== null),
     heroGallery: {
       transitionMs: Math.max(
         1000,

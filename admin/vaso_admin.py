@@ -65,8 +65,9 @@ def find_repo_root() -> Path:
 REPO_ROOT = find_repo_root()
 CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
+CONTAINERS_DIR = REPO_ROOT / "public" / "images" / "containers"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
-PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "admin"]
+PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "public/images/containers", "admin"]
 DEFAULT_ORDERS_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/list-orders"
 DEFAULT_DISCORD_TEST_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/send-discord-test"
 DEFAULT_HERO_TRANSITION_MS = 8200
@@ -188,6 +189,13 @@ class VasoAdminApp(tk.Tk):
         self.shipping_suspend_relay_var = tk.BooleanVar()
         self.shipping_suspend_home_var = tk.BooleanVar()
         self.shipping_lead_time_var = tk.StringVar()
+        self.shipping_country_var = tk.StringVar()
+        self.shipping_option_id_var = tk.StringVar()
+        self.shipping_option_label_var = tk.StringVar()
+        self.shipping_option_provider_var = tk.StringVar()
+        self.shipping_option_euros_var = tk.StringVar()
+        self.shipping_option_cents_var = tk.StringVar()
+        self.shipping_option_preview_var = tk.StringVar()
         self.temporary_notice_var = tk.StringVar()
         self.contact_prompt_var = tk.StringVar()
         self.contact_button_label_var = tk.StringVar()
@@ -215,6 +223,11 @@ class VasoAdminApp(tk.Tk):
         self.hero_fade_in_ms_var = tk.StringVar()
         self.hero_fade_out_ms_var = tk.StringVar()
         self.hero_preview_status_var = tk.StringVar(value="Selectionnez une image hero")
+        self.container_enabled_var = tk.BooleanVar()
+        self.container_path_var = tk.StringVar()
+        self.container_label_var = tk.StringVar()
+        self.container_alt_var = tk.StringVar()
+        self.container_preview_status_var = tk.StringVar(value="Selectionnez une photo de contenant")
 
         self.commit_message_var = tk.StringVar(value=self.build_default_commit_message())
         self.skip_netlify_deploy_var = tk.BooleanVar(
@@ -232,7 +245,9 @@ class VasoAdminApp(tk.Tk):
 
         self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
         self.hero_preview_photo = None
+        self.container_preview_photo = None
         self.hero_preview_temp_path = Path(tempfile.gettempdir()) / "vaso-admin-hero-preview.png"
+        self.container_preview_temp_path = Path(tempfile.gettempdir()) / "vaso-admin-container-preview.png"
         self.hero_preview_cycle_after_id = None
         self.hero_preview_frame_after_id = None
         self.hero_preview_is_animating = False
@@ -240,6 +255,8 @@ class VasoAdminApp(tk.Tk):
 
         self.price_euros_var.trace_add("write", lambda *_args: self.update_price_preview())
         self.price_cents_var.trace_add("write", lambda *_args: self.update_price_preview())
+        self.shipping_option_euros_var.trace_add("write", lambda *_args: self.update_shipping_price_preview())
+        self.shipping_option_cents_var.trace_add("write", lambda *_args: self.update_shipping_price_preview())
 
         self.build_ui()
         self.populate_form()
@@ -309,28 +326,34 @@ class VasoAdminApp(tk.Tk):
 
         self.general_frame = ttk.Frame(notebook, padding=8)
         self.pricing_frame = ttk.Frame(notebook, padding=8)
+        self.shipping_frame = ttk.Frame(notebook, padding=8)
         self.contact_frame = ttk.Frame(notebook, padding=8)
         self.printer_frame = ttk.Frame(notebook, padding=8)
         self.colors_frame = ttk.Frame(notebook, padding=8)
         self.hero_frame = ttk.Frame(notebook, padding=8)
+        self.containers_frame = ttk.Frame(notebook, padding=8)
         self.orders_frame = ttk.Frame(notebook, padding=8)
         self.publish_frame = ttk.Frame(notebook, padding=8)
 
         notebook.add(self.general_frame, text="Boutique")
         notebook.add(self.pricing_frame, text="Tarifs")
+        notebook.add(self.shipping_frame, text="Livraison")
         notebook.add(self.contact_frame, text="Contact courriel")
         notebook.add(self.printer_frame, text="Imprimante")
         notebook.add(self.colors_frame, text="Couleurs")
         notebook.add(self.hero_frame, text="Hero")
+        notebook.add(self.containers_frame, text="Contenants")
         notebook.add(self.orders_frame, text="Commandes")
         notebook.add(self.publish_frame, text="Publication")
 
         self.build_general_tab()
         self.build_pricing_tab()
+        self.build_shipping_tab()
         self.build_contact_tab()
         self.build_printer_tab()
         self.build_colors_tab()
         self.build_hero_tab()
+        self.build_containers_tab()
         self.build_orders_tab()
         self.build_publish_tab()
 
@@ -342,11 +365,18 @@ class VasoAdminApp(tk.Tk):
             self.warning_text,
             self.color_preview_note_text,
             self.contact_email_body_text,
-            self.shipping_unsupported_text,
             self.orders_detail_text,
             self.output_text,
+            self.shipping_unsupported_text,
         ]
-        self.tk_listbox_widgets = [self.colors_listbox, self.hero_listbox, self.orders_listbox]
+        self.tk_listbox_widgets = [
+            self.colors_listbox,
+            self.hero_listbox,
+            self.orders_listbox,
+            self.shipping_countries_listbox,
+            self.shipping_options_listbox,
+            self.containers_listbox,
+        ]
 
     def build_general_tab(self) -> None:
         frame = self.general_frame
@@ -496,10 +526,6 @@ class VasoAdminApp(tk.Tk):
             state="readonly",
         ).pack(side="left")
 
-        ttk.Label(pricing_block, text="Message pays non geres").grid(row=1, column=0, sticky="nw", pady=(12, 0))
-        self.shipping_unsupported_text = tk.Text(pricing_block, height=2, wrap="word", width=56)
-        self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=(12, 0))
-
         discord_test_frame = ttk.LabelFrame(frame, text="Test message alerte commande Discord", padding=14)
         discord_test_frame.grid(row=2, column=0, sticky="n", pady=(0, 8))
         discord_test_frame.columnconfigure(0, weight=1)
@@ -520,6 +546,111 @@ class VasoAdminApp(tk.Tk):
             command=self.send_discord_test_message,
         )
         self.discord_test_button.grid(row=1, column=0, sticky="w")
+
+    def build_shipping_tab(self) -> None:
+        frame = self.shipping_frame
+        frame.columnconfigure(0, weight=0)
+        frame.columnconfigure(1, weight=0)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        countries_panel = ttk.Frame(frame)
+        countries_panel.grid(row=0, column=0, sticky="nsw", padx=(0, 12))
+        countries_panel.rowconfigure(1, weight=1)
+
+        ttk.Label(countries_panel, text="Pays").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.shipping_countries_listbox = tk.Listbox(countries_panel, width=28, exportselection=False)
+        self.shipping_countries_listbox.grid(row=1, column=0, sticky="nsew")
+        self.shipping_countries_listbox.bind(
+            "<<ListboxSelect>>",
+            lambda _event: self.load_selected_shipping_country(),
+        )
+
+        country_buttons = ttk.Frame(countries_panel)
+        country_buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(country_buttons, text="Ajouter", command=self.add_shipping_country).grid(row=0, column=0, sticky="ew")
+        ttk.Button(country_buttons, text="Supprimer", command=self.remove_shipping_country).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(country_buttons, text="Monter", command=lambda: self.move_shipping_country(-1)).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(country_buttons, text="Descendre", command=lambda: self.move_shipping_country(1)).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
+
+        options_panel = ttk.Frame(frame)
+        options_panel.grid(row=0, column=1, sticky="nsw", padx=(0, 12))
+        options_panel.rowconfigure(1, weight=1)
+
+        ttk.Label(options_panel, text="Modes").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.shipping_options_listbox = tk.Listbox(options_panel, width=34, exportselection=False)
+        self.shipping_options_listbox.grid(row=1, column=0, sticky="nsew")
+        self.shipping_options_listbox.bind(
+            "<<ListboxSelect>>",
+            lambda _event: self.load_selected_shipping_option(),
+        )
+
+        option_buttons = ttk.Frame(options_panel)
+        option_buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(option_buttons, text="Ajouter", command=self.add_shipping_option).grid(row=0, column=0, sticky="ew")
+        ttk.Button(option_buttons, text="Supprimer", command=self.remove_shipping_option).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(option_buttons, text="Monter", command=lambda: self.move_shipping_option(-1)).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(option_buttons, text="Descendre", command=lambda: self.move_shipping_option(1)).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
+
+        editor = ttk.Frame(frame)
+        editor.grid(row=0, column=2, sticky="nsew")
+        editor.columnconfigure(1, weight=1)
+
+        ttk.Label(editor, text="Pays").grid(row=0, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.shipping_country_var).grid(row=0, column=1, sticky="ew", pady=4)
+        ttk.Button(editor, text="Appliquer pays", command=self.apply_shipping_country_changes).grid(
+            row=0,
+            column=2,
+            sticky="e",
+            padx=(8, 0),
+        )
+
+        ttk.Label(editor, text="Type").grid(row=1, column=0, sticky="w")
+        ttk.Combobox(
+            editor,
+            textvariable=self.shipping_option_id_var,
+            values=["relay", "home"],
+            state="readonly",
+        ).grid(row=1, column=1, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Libelle").grid(row=2, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.shipping_option_label_var).grid(row=2, column=1, columnspan=2, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Transporteur").grid(row=3, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.shipping_option_provider_var).grid(row=3, column=1, columnspan=2, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Prix").grid(row=4, column=0, sticky="w")
+        price_row = ttk.Frame(editor)
+        price_row.grid(row=4, column=1, columnspan=2, sticky="w", pady=4)
+        ttk.Entry(price_row, textvariable=self.shipping_option_euros_var, width=8).pack(side="left")
+        ttk.Label(price_row, text="€").pack(side="left", padx=(6, 4))
+        ttk.Label(price_row, text=",").pack(side="left", padx=(0, 4))
+        ttk.Entry(price_row, textvariable=self.shipping_option_cents_var, width=4).pack(side="left")
+        ttk.Label(price_row, text="Apercu").pack(side="left", padx=(16, 6))
+        ttk.Entry(
+            price_row,
+            textvariable=self.shipping_option_preview_var,
+            width=14,
+            state="readonly",
+        ).pack(side="left")
+
+        ttk.Button(editor, text="Appliquer mode", command=self.apply_shipping_option_changes).grid(
+            row=5,
+            column=1,
+            columnspan=2,
+            sticky="e",
+            pady=(8, 16),
+        )
+
+        ttk.Label(editor, text="Message pays non geres").grid(row=6, column=0, sticky="nw")
+        self.shipping_unsupported_text = tk.Text(editor, height=3, wrap="word")
+        self.shipping_unsupported_text.grid(row=6, column=1, columnspan=2, sticky="ew", pady=4)
+
+    def get_shipping_config(self) -> dict:
+        shipping = self.config_data.setdefault("shipping", {})
+        if not isinstance(shipping.get("countries"), list):
+            shipping["countries"] = []
+        return shipping
 
     def build_colors_tab(self) -> None:
         frame = self.colors_frame
@@ -733,6 +864,78 @@ class VasoAdminApp(tk.Tk):
             wraplength=HERO_PREVIEW_SIZE[0],
         ).grid(row=2, column=0, sticky="n")
 
+    def build_containers_tab(self) -> None:
+        frame = self.containers_frame
+        frame.columnconfigure(0, weight=0)
+        frame.columnconfigure(1, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        list_panel = ttk.Frame(frame)
+        list_panel.grid(row=0, column=0, sticky="nsw", padx=(0, 18))
+        list_panel.rowconfigure(1, weight=1)
+
+        ttk.Label(list_panel, text="Photos contenants").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.containers_listbox = tk.Listbox(list_panel, width=42, exportselection=False)
+        self.containers_listbox.grid(row=1, column=0, sticky="nsew")
+        self.containers_listbox.bind("<<ListboxSelect>>", lambda _event: self.load_selected_container_image())
+
+        container_buttons = ttk.Frame(list_panel)
+        container_buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(container_buttons, text="Ajouter", command=self.add_container_images).grid(row=0, column=0, sticky="ew")
+        ttk.Button(container_buttons, text="Supprimer", command=self.remove_container_image).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(container_buttons, text="Monter", command=lambda: self.move_container_image(-1)).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(container_buttons, text="Descendre", command=lambda: self.move_container_image(1)).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
+
+        editor = ttk.Frame(frame)
+        editor.grid(row=0, column=1, sticky="nsew")
+        editor.columnconfigure(1, weight=1)
+
+        ttk.Label(editor, text="Chemin publie").grid(row=0, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.container_path_var).grid(row=0, column=1, sticky="ew", pady=4)
+        ttk.Checkbutton(editor, text="Photo active", variable=self.container_enabled_var).grid(
+            row=1,
+            column=1,
+            sticky="w",
+            pady=4,
+        )
+        ttk.Label(editor, text="Libelle").grid(row=2, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.container_label_var).grid(row=2, column=1, sticky="ew", pady=4)
+        ttk.Label(editor, text="Texte alternatif").grid(row=3, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.container_alt_var).grid(row=3, column=1, sticky="ew", pady=4)
+        ttk.Button(editor, text="Appliquer les changements", command=self.apply_container_changes).grid(
+            row=4,
+            column=1,
+            sticky="e",
+            pady=(8, 14),
+        )
+
+        self.container_preview_surface = tk.Frame(
+            editor,
+            width=HERO_PREVIEW_SIZE[0],
+            height=HERO_PREVIEW_SIZE[1],
+            bd=0,
+            highlightthickness=1,
+        )
+        self.container_preview_surface.grid(row=5, column=0, columnspan=2, pady=(4, 8))
+        self.container_preview_surface.grid_propagate(False)
+
+        self.container_preview_label = tk.Label(
+            self.container_preview_surface,
+            text="Selectionnez une photo de contenant",
+            anchor="center",
+            justify="center",
+            relief="flat",
+            compound="center",
+            wraplength=HERO_PREVIEW_SIZE[0] - 24,
+        )
+        self.container_preview_label.pack(fill="both", expand=True)
+        ttk.Label(
+            editor,
+            textvariable=self.container_preview_status_var,
+            justify="left",
+            wraplength=HERO_PREVIEW_SIZE[0],
+        ).grid(row=6, column=0, columnspan=2, sticky="n")
+
     def build_orders_tab(self) -> None:
         frame = self.orders_frame
         frame.columnconfigure(1, weight=1)
@@ -896,11 +1099,13 @@ class VasoAdminApp(tk.Tk):
         self.hero_fade_in_ms_var.set(str(hero_gallery.get("fadeInMs", DEFAULT_HERO_FADE_IN_MS)))
         self.hero_fade_out_ms_var.set(str(hero_gallery.get("fadeOutMs", DEFAULT_HERO_FADE_OUT_MS)))
 
+        self.refresh_shipping_countries_listbox()
         self.refresh_colors_listbox()
         self.refresh_hero_listbox()
+        self.refresh_containers_listbox()
 
     def collect_form(self) -> None:
-        existing_shipping_countries = self.config_data.get("shipping", {}).get("countries", [])
+        existing_shipping_countries = self.get_shipping_config().get("countries", [])
         self.config_data["shopStatus"] = {
             "state": SHOP_STATUS_CODES_BY_LABEL.get(
                 self.status_state_display_var.get().strip(),
@@ -964,17 +1169,297 @@ class VasoAdminApp(tk.Tk):
         except ValueError:
             self.price_preview_var.set("Saisie invalide")
 
-    def parse_shipping_countries(self) -> list[dict]:
-        raw_json = self.shipping_countries_text.get("1.0", "end").strip()
+    def parse_shipping_option_price_cents(self) -> int:
+        euros = self.parse_int(self.shipping_option_euros_var.get(), "prix livraison en euros")
+        cents = self.parse_int(self.shipping_option_cents_var.get(), "prix livraison en centimes")
+        if euros < 0:
+            raise ValueError("Le prix livraison en euros ne peut pas être négatif.")
+        if cents < 0 or cents > 99:
+            raise ValueError("Les centimes livraison doivent être compris entre 0 et 99.")
+        return euros * 100 + cents
+
+    def update_shipping_price_preview(self) -> None:
         try:
-            parsed = json.loads(raw_json or "[]")
-        except json.JSONDecodeError as error:
-            raise ValueError(f"JSON livraison invalide : {error}") from error
+            self.shipping_option_preview_var.set(
+                self.format_price_preview(self.parse_shipping_option_price_cents())
+            )
+        except ValueError:
+            self.shipping_option_preview_var.set("Saisie invalide")
 
-        if not isinstance(parsed, list):
-            raise ValueError("La grille livraison doit etre une liste JSON.")
+    def get_selected_shipping_country_index(self) -> int | None:
+        selection = self.shipping_countries_listbox.curselection()
+        if not selection:
+            return None
 
-        return parsed
+        return selection[0]
+
+    def get_selected_shipping_option_index(self) -> int | None:
+        selection = self.shipping_options_listbox.curselection()
+        if not selection:
+            return None
+
+        return selection[0]
+
+    def refresh_shipping_countries_listbox(self) -> None:
+        countries = self.get_shipping_config().get("countries", [])
+        current_selection = self.get_selected_shipping_country_index()
+
+        self.shipping_countries_listbox.delete(0, "end")
+        for country in countries:
+            option_count = len(country.get("options", [])) if isinstance(country, dict) else 0
+            country_name = country.get("country", "") if isinstance(country, dict) else ""
+            self.shipping_countries_listbox.insert("end", f"{country_name} ({option_count})")
+
+        if not countries:
+            self.shipping_country_var.set("")
+            self.refresh_shipping_options_listbox()
+            return
+
+        selected_index = min(current_selection or 0, len(countries) - 1)
+        self.shipping_countries_listbox.selection_set(selected_index)
+        self.load_selected_shipping_country()
+
+    def load_selected_shipping_country(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            self.shipping_country_var.set("")
+            self.refresh_shipping_options_listbox()
+            return
+
+        country = countries[country_index]
+        self.shipping_country_var.set(country.get("country", ""))
+        if not isinstance(country.get("options"), list):
+            country["options"] = []
+        self.refresh_shipping_options_listbox()
+
+    def apply_shipping_country_changes(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            return
+
+        country_name = self.shipping_country_var.get().strip()
+        if not country_name:
+            messagebox.showerror("VASO-Admin", "Le nom du pays est obligatoire.")
+            return
+
+        if any(
+            index != country_index and country.get("country", "").strip().lower() == country_name.lower()
+            for index, country in enumerate(countries)
+            if isinstance(country, dict)
+        ):
+            messagebox.showerror("VASO-Admin", f"Le pays existe deja : {country_name}")
+            return
+
+        countries[country_index]["country"] = country_name
+        self.refresh_shipping_countries_listbox()
+        self.shipping_countries_listbox.selection_clear(0, "end")
+        self.shipping_countries_listbox.selection_set(country_index)
+        self.load_selected_shipping_country()
+        self.log(f"Pays livraison mis a jour : {country_name}")
+
+    def add_shipping_country(self) -> None:
+        countries = self.get_shipping_config().setdefault("countries", [])
+        existing_names = {
+            country.get("country", "").strip()
+            for country in countries
+            if isinstance(country, dict) and country.get("country", "").strip()
+        }
+        base_name = "Nouveau pays"
+        counter = 1
+        candidate = base_name
+        while candidate in existing_names:
+            counter += 1
+            candidate = f"{base_name} {counter}"
+
+        countries.append({"country": candidate, "options": []})
+        self.refresh_shipping_countries_listbox()
+        self.shipping_countries_listbox.selection_clear(0, "end")
+        self.shipping_countries_listbox.selection_set(len(countries) - 1)
+        self.load_selected_shipping_country()
+        self.log(f"Pays livraison ajoute : {candidate}")
+
+    def remove_shipping_country(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            return
+
+        country = countries.pop(country_index)
+        self.refresh_shipping_countries_listbox()
+        self.log(f"Pays livraison supprime : {country.get('country', '')}")
+
+    def move_shipping_country(self, direction: int) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None:
+            return
+
+        target_index = country_index + direction
+        if target_index < 0 or target_index >= len(countries):
+            return
+
+        countries[country_index], countries[target_index] = countries[target_index], countries[country_index]
+        self.refresh_shipping_countries_listbox()
+        self.shipping_countries_listbox.selection_clear(0, "end")
+        self.shipping_countries_listbox.selection_set(target_index)
+        self.load_selected_shipping_country()
+
+    def refresh_shipping_options_listbox(self) -> None:
+        self.shipping_options_listbox.delete(0, "end")
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            self.clear_shipping_option_form()
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        for option in options:
+            label = option.get("label", "")
+            provider = option.get("provider", "")
+            price = self.format_price_preview(int(option.get("priceCents", 0)))
+            self.shipping_options_listbox.insert("end", f"{option.get('id', '')} · {label} · {provider} · {price}")
+
+        if options:
+            self.shipping_options_listbox.selection_set(0)
+            self.load_selected_shipping_option()
+        else:
+            self.clear_shipping_option_form()
+
+    def clear_shipping_option_form(self) -> None:
+        self.shipping_option_id_var.set("relay")
+        self.shipping_option_label_var.set("")
+        self.shipping_option_provider_var.set("")
+        self.shipping_option_euros_var.set("0")
+        self.shipping_option_cents_var.set("00")
+        self.update_shipping_price_preview()
+
+    def load_selected_shipping_option(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            self.clear_shipping_option_form()
+            return
+
+        options = countries[country_index].get("options", [])
+        if option_index >= len(options):
+            self.clear_shipping_option_form()
+            return
+
+        option = options[option_index]
+        price_cents = int(option.get("priceCents", 0))
+        self.shipping_option_id_var.set(option.get("id", "relay"))
+        self.shipping_option_label_var.set(option.get("label", ""))
+        self.shipping_option_provider_var.set(option.get("provider", ""))
+        self.shipping_option_euros_var.set(str(price_cents // 100))
+        self.shipping_option_cents_var.set(f"{price_cents % 100:02d}")
+        self.update_shipping_price_preview()
+
+    def apply_shipping_option_changes(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        if option_index >= len(options):
+            return
+
+        option_id = self.shipping_option_id_var.get().strip()
+        if option_id not in {"relay", "home"}:
+            messagebox.showerror("VASO-Admin", "Le type livraison doit etre relay ou home.")
+            return
+
+        if any(
+            index != option_index and option.get("id") == option_id
+            for index, option in enumerate(options)
+            if isinstance(option, dict)
+        ):
+            messagebox.showerror("VASO-Admin", f"Le mode {option_id} existe deja pour ce pays.")
+            return
+
+        try:
+            price_cents = self.parse_shipping_option_price_cents()
+        except ValueError as error:
+            messagebox.showerror("VASO-Admin", str(error))
+            return
+
+        options[option_index] = {
+            "id": option_id,
+            "label": self.shipping_option_label_var.get().strip() or (
+                "Point relais" if option_id == "relay" else "Livraison à domicile"
+            ),
+            "provider": self.shipping_option_provider_var.get().strip(),
+            "priceCents": price_cents,
+        }
+        self.refresh_shipping_options_listbox()
+        self.shipping_options_listbox.selection_clear(0, "end")
+        self.shipping_options_listbox.selection_set(option_index)
+        self.load_selected_shipping_option()
+        self.log("Mode livraison mis a jour")
+
+    def add_shipping_option(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        existing_ids = {option.get("id") for option in options if isinstance(option, dict)}
+        option_id = "relay" if "relay" not in existing_ids else "home"
+        if option_id in existing_ids:
+            messagebox.showinfo("VASO-Admin", "Ce pays possede deja les modes relay et home.")
+            return
+
+        options.append(
+            {
+                "id": option_id,
+                "label": "Point relais" if option_id == "relay" else "Livraison à domicile",
+                "provider": "Mondial Relay" if option_id == "relay" else "Mondial Relay Domicile",
+                "priceCents": 0,
+            }
+        )
+        self.refresh_shipping_options_listbox()
+        self.shipping_options_listbox.selection_clear(0, "end")
+        self.shipping_options_listbox.selection_set(len(options) - 1)
+        self.load_selected_shipping_option()
+        self.log("Mode livraison ajoute")
+
+    def remove_shipping_option(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        if option_index >= len(options):
+            return
+
+        option = options.pop(option_index)
+        self.refresh_shipping_options_listbox()
+        self.log(f"Mode livraison supprime : {option.get('id', '')}")
+
+    def move_shipping_option(self, direction: int) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        target_index = option_index + direction
+        if target_index < 0 or target_index >= len(options):
+            return
+
+        options[option_index], options[target_index] = options[target_index], options[option_index]
+        self.refresh_shipping_options_listbox()
+        self.shipping_options_listbox.selection_clear(0, "end")
+        self.shipping_options_listbox.selection_set(target_index)
+        self.load_selected_shipping_option()
 
     def ensure_printer_volume_config(self) -> dict:
         printer_volume = self.config_data.get("printerVolume")
@@ -1543,6 +2028,8 @@ class VasoAdminApp(tk.Tk):
         try:
             if self.hero_preview_temp_path.exists():
                 self.hero_preview_temp_path.unlink()
+            if self.container_preview_temp_path.exists():
+                self.container_preview_temp_path.unlink()
         except OSError:
             pass
         self.destroy()
@@ -1582,6 +2069,208 @@ class VasoAdminApp(tk.Tk):
         self.hero_listbox.selection_clear(0, "end")
         self.hero_listbox.selection_set(target_index)
         self.load_selected_hero_image()
+
+    def ensure_container_images_config(self) -> list[dict]:
+        container_images = self.config_data.get("containerImages")
+        if isinstance(container_images, list):
+            return container_images
+
+        default_images = [
+            {
+                "path": "images/containers/eco-cup-50cl.jpg",
+                "label": "Eco-Cup 50 cl",
+                "alt": "Eco-Cup 50 cl",
+                "enabled": True,
+            },
+            {
+                "path": "images/containers/tube-a-essai.jpg",
+                "label": "Tube à essai",
+                "alt": "Tube à essai",
+                "enabled": True,
+            },
+        ]
+        self.config_data["containerImages"] = default_images
+        return default_images
+
+    def refresh_containers_listbox(self) -> None:
+        self.containers_listbox.delete(0, "end")
+        for container_image in self.ensure_container_images_config():
+            status = "ON" if container_image.get("enabled", True) else "OFF"
+            label = container_image.get("label", "") or container_image.get("path", "")
+            self.containers_listbox.insert("end", f"{status} · {label}")
+
+        if self.containers_listbox.size():
+            self.containers_listbox.selection_set(0)
+            self.load_selected_container_image()
+        else:
+            self.container_path_var.set("")
+            self.container_label_var.set("")
+            self.container_alt_var.set("")
+            self.container_enabled_var.set(False)
+            self.update_selected_container_preview()
+
+    def load_selected_container_image(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            self.container_path_var.set("")
+            self.container_label_var.set("")
+            self.container_alt_var.set("")
+            self.container_enabled_var.set(False)
+            self.update_selected_container_preview()
+            return
+
+        container_image = self.ensure_container_images_config()[selection[0]]
+        self.container_path_var.set(container_image.get("path", ""))
+        self.container_label_var.set(container_image.get("label", ""))
+        self.container_alt_var.set(container_image.get("alt", ""))
+        self.container_enabled_var.set(bool(container_image.get("enabled", True)))
+        self.update_selected_container_preview()
+
+    def apply_container_changes(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        container_image = self.ensure_container_images_config()[selection[0]]
+        label = self.container_label_var.get().strip()
+        alt = self.container_alt_var.get().strip()
+        container_image["path"] = self.container_path_var.get().strip()
+        container_image["label"] = label
+        container_image["alt"] = alt or label
+        container_image["enabled"] = bool(self.container_enabled_var.get())
+        self.refresh_containers_listbox()
+        self.containers_listbox.selection_set(selection[0])
+        self.load_selected_container_image()
+        self.log("Photo contenant mise a jour")
+
+    def add_container_images(self) -> None:
+        selected_paths = filedialog.askopenfilenames(
+            title="Ajouter des photos de contenants",
+            filetypes=[
+                ("Images", "*.png *.jpg *.jpeg *.webp *.avif"),
+                ("Tous les fichiers", "*.*"),
+            ],
+        )
+        if not selected_paths:
+            return
+
+        CONTAINERS_DIR.mkdir(parents=True, exist_ok=True)
+        container_images = self.ensure_container_images_config()
+        for source in selected_paths:
+            source_path = Path(source)
+            target_path = self.unique_container_target(source_path.name)
+            shutil.copy2(source_path, target_path)
+            label = target_path.stem.replace("-", " ").replace("_", " ").strip().title()
+            container_images.append(
+                {
+                    "path": f"images/containers/{target_path.name}",
+                    "label": label,
+                    "alt": label,
+                    "enabled": True,
+                }
+            )
+
+        self.refresh_containers_listbox()
+        self.containers_listbox.selection_clear(0, "end")
+        self.containers_listbox.selection_set(len(container_images) - 1)
+        self.load_selected_container_image()
+        self.log(f"{len(selected_paths)} photo(s) de contenant ajoutee(s)")
+
+    def unique_container_target(self, file_name: str) -> Path:
+        target_path = CONTAINERS_DIR / file_name
+        stem = target_path.stem
+        suffix = target_path.suffix
+        counter = 2
+        while target_path.exists():
+            target_path = CONTAINERS_DIR / f"{stem}-{counter}{suffix}"
+            counter += 1
+        return target_path
+
+    def remove_container_image(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        container_image = self.ensure_container_images_config().pop(selection[0])
+        relative_path = container_image.get("path", "")
+        absolute_path = self.resolve_public_asset_path(relative_path)
+        if absolute_path.is_file() and absolute_path.is_relative_to(CONTAINERS_DIR):
+            try:
+                absolute_path.unlink()
+            except OSError:
+                pass
+
+        self.refresh_containers_listbox()
+        self.log(f"Photo contenant supprimee : {relative_path}")
+
+    def move_container_image(self, direction: int) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        index = selection[0]
+        target_index = index + direction
+        container_images = self.ensure_container_images_config()
+        if target_index < 0 or target_index >= len(container_images):
+            return
+
+        container_images[index], container_images[target_index] = container_images[target_index], container_images[index]
+        self.refresh_containers_listbox()
+        self.containers_listbox.selection_clear(0, "end")
+        self.containers_listbox.selection_set(target_index)
+        self.load_selected_container_image()
+
+    def get_selected_container_path(self) -> Path | None:
+        relative_path = self.container_path_var.get().strip()
+        if not relative_path:
+            return None
+
+        return self.resolve_public_asset_path(relative_path)
+
+    def display_container_preview_image(self, image: Image.Image | None, status: str, title: str = "") -> None:
+        if image is None:
+            self.container_preview_photo = None
+            self.container_preview_label.configure(image="", text=title or "Apercu indisponible")
+            self.container_preview_status_var.set(status)
+            return
+
+        if ImageTk is not None:
+            preview_photo = ImageTk.PhotoImage(image)
+        else:
+            image.save(self.container_preview_temp_path, format="PNG")
+            preview_photo = tk.PhotoImage(file=str(self.container_preview_temp_path))
+        self.container_preview_photo = preview_photo
+        self.container_preview_label.configure(image=preview_photo, text="")
+        self.container_preview_status_var.set(status)
+
+    def update_selected_container_preview(self) -> None:
+        if Image is None or ImageOps is None:
+            self.display_container_preview_image(
+                None,
+                "Pillow n'est pas installe. Lancez : python3 -m pip install -r admin/requirements.txt",
+                title="Pillow requis",
+            )
+            return
+
+        image_path = self.get_selected_container_path()
+        if image_path is None:
+            self.display_container_preview_image(None, "Selectionnez une photo de contenant pour afficher son apercu.")
+            return
+
+        image = self.load_preview_image(image_path)
+        if image is None:
+            self.display_container_preview_image(
+                None,
+                f"Impossible de charger {image_path.name}.",
+                title=image_path.name,
+            )
+            return
+
+        enabled_label = "active" if self.container_enabled_var.get() else "inactive"
+        self.display_container_preview_image(
+            image,
+            f"Apercu : {image_path.name} ({enabled_label})",
+        )
 
     def reload_from_disk(self) -> None:
         self.stop_hero_preview_animation()
@@ -2042,6 +2731,19 @@ class VasoAdminApp(tk.Tk):
             pady=10,
         )
         self.hero_preview_surface.configure(
+            bg=theme["PANEL"],
+            highlightbackground=theme["ACCENT"],
+            highlightcolor=theme["ACCENT"],
+        )
+        self.container_preview_label.configure(
+            bg=theme["FIELD"],
+            fg=theme["FIELD_FG"],
+            highlightbackground=theme["PANEL"],
+            highlightcolor=theme["ACCENT"],
+            padx=10,
+            pady=10,
+        )
+        self.container_preview_surface.configure(
             bg=theme["PANEL"],
             highlightbackground=theme["ACCENT"],
             highlightcolor=theme["ACCENT"],

@@ -15,8 +15,10 @@ python3 admin/vaso_admin.py
 - edition de `public/config/shop-config.json`
 - gestion des tarifs S / M / L
 - gestion du statut boutique et des messages
+- gestion des pays, modes et frais de livraison
 - activation, ordre et edition des couleurs PLA
 - gestion de la liste hero publiee dans `public/images/hero/`
+- gestion des photos de contenants publiees dans `public/images/containers/`
 - consultation des commandes payees via l'onglet `Commandes`
 - publication Git via `git add`, `git commit` et `git push`
 

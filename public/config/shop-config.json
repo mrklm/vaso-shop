@@ -251,6 +251,20 @@
     "fadeInMs": 3200,
     "fadeOutMs": 3200
   },
+  "containerImages": [
+    {
+      "path": "images/containers/eco-cup-50cl.jpg",
+      "label": "Eco-Cup 50 cl",
+      "alt": "Eco-Cup 50 cl",
+      "enabled": true
+    },
+    {
+      "path": "images/containers/tube-a-essai.jpg",
+      "label": "Tube à essai",
+      "alt": "Tube à essai",
+      "enabled": true
+    }
+  ],
   "messages": {
     "shippingLeadTime": "Expédition sous 5 à 7 jours",
     "temporaryNotice": "",
