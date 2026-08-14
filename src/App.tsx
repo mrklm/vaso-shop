@@ -23,7 +23,10 @@ import {
   isShopShippingOptionSuspended,
 } from "./shop/shop-shipping";
 import { useShopStore } from "./shop/shop-store";
-import type { WaterproofInsertCompatibility } from "./engine/insert-compatibility";
+import {
+  getPreferredTestTubePreset,
+  type WaterproofInsertCompatibility,
+} from "./engine/insert-compatibility";
 import vasoMark from "./assets/shop/vaso-mark.png";
 import "./App.css";
 
@@ -284,6 +287,21 @@ function App() {
         .map((image) => resolveShopConfigAssetPath(image.path)),
     [shopConfig],
   );
+  const containerIllustrations = useMemo(
+    () => [
+      {
+        src: resolveShopConfigAssetPath("images/containers/eco-cup-50cl.jpg"),
+        alt: "Eco-Cup 50 cl",
+        label: "Eco-Cup 50 cl",
+      },
+      {
+        src: resolveShopConfigAssetPath("images/containers/tube-a-essai.jpg"),
+        alt: "Tube à essai",
+        label: "Tube à essai",
+      },
+    ],
+    [],
+  );
   const currentHeroGalleryImage = heroGalleryImages[heroGalleryIndex] ?? null;
   const previousHeroGalleryImage =
     heroGalleryPreviousIndex === null
@@ -359,15 +377,20 @@ function App() {
       : (selectedEntry?.waterproofInsertCompatibility.label ?? "");
   const selectedWaterproofInsertCompatibility: WaterproofInsertCompatibility | null = selectedEntry
     ? wantsSoliflore
-      ? {
-          presetId: "test-tube-75x12",
-          label: SHOP_SOLIFLORE_TEST_TUBE_LABEL,
-          type: "test_tube",
-        }
+      ? (() => {
+          const testTubePreset = getPreferredTestTubePreset(selectedEntry.params.heightMm);
+          return {
+            presetId: testTubePreset.id,
+            label: SHOP_SOLIFLORE_TEST_TUBE_LABEL,
+            type: "test_tube" as const,
+          };
+        })()
       : suppressTestTubeSupport
         ? null
         : selectedEntry.waterproofInsertCompatibility
     : null;
+  const displayedWaterproofInsertCompatibility =
+    selectedWaterproofInsertCompatibility ?? selectedEntry?.waterproofInsertCompatibility ?? null;
   const solifloreChoiceLabel =
     solifloreChoice === "yes"
       ? "Oui, usage soliflore avec tube à essai"
@@ -1185,22 +1208,12 @@ function App() {
                     <p className="shop-panel-title">Validation du modele</p>
                     <h3>Confirmez le vase selectionne</h3>
                     <div className="shop-container-illustrations" aria-label="Contenants compatibles">
-                      <figure>
-                        <img
-                          src="/images/containers/eco-cup-50cl.jpg"
-                          alt="Eco-Cup 50 cl"
-                          loading="lazy"
-                        />
-                        <figcaption>Eco-Cup 50 cl</figcaption>
-                      </figure>
-                      <figure>
-                        <img
-                          src="/images/containers/tube-a-essai.jpg"
-                          alt="Tube à essai"
-                          loading="lazy"
-                        />
-                        <figcaption>Tube à essai</figcaption>
-                      </figure>
+                      {containerIllustrations.map((illustration) => (
+                        <figure key={illustration.src}>
+                          <img src={illustration.src} alt={illustration.alt} loading="lazy" />
+                          <figcaption>{illustration.label}</figcaption>
+                        </figure>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1225,10 +1238,6 @@ function App() {
                     <div className="shop-stat">
                       <span className="shop-stat-label">Diamètre maximum</span>
                       <strong>{selectedEntry.maxDiameterMm} mm</strong>
-                    </div>
-                    <div className="shop-stat">
-                      <span className="shop-stat-label">Contenant compatible</span>
-                      <strong>{selectedWaterproofInsertLabel}</strong>
                     </div>
                   </div>
                   <div className="shop-order-note shop-order-note-highlight shop-order-warning">
@@ -1286,7 +1295,7 @@ function App() {
                                 ? "Le vase sera utilisé sans support tube à essai et ne pourra pas contenir d'eau directement."
                                 : `VASO utilisera le contenant étanche compatible indiqué${
                                     isEcoCupCompatible
-                                      ? ", par exemple l'Eco-Cup lorsque les dimensions le permettent."
+                                      ? ", par exemple un Eco-Cup lorsque les dimensions le permettent."
                                       : "."
                                   }`}
                             </small>
@@ -1309,11 +1318,15 @@ function App() {
                       Je valide ce modèle
                     </button>
                   )}
+                  <div className="shop-stat shop-insert-compatible-stat">
+                    <span className="shop-stat-label">Contenant compatible</span>
+                    <strong>{selectedWaterproofInsertLabel}</strong>
+                  </div>
                   <div className="shop-insert-view-slot">
-                    {selectedWaterproofInsertCompatibility ? (
+                    {displayedWaterproofInsertCompatibility ? (
                       <InsertView2D
                         params={selectedEntry.params}
-                        compatibility={selectedWaterproofInsertCompatibility}
+                        compatibility={displayedWaterproofInsertCompatibility}
                       />
                     ) : null}
                   </div>

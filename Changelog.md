@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.107] - 2026-08-14
+
+### Modifié
+- Ajuste l'alignement et le rythme du carrousel des contenants dans la validation du modèle.
+- Place le bouton de validation au-dessus du contenant compatible et conserve le schéma affiché pour les choix soliflore Oui et Non.
+
 ## [1.1.106] - 2026-08-14
 
 ### Modifié
