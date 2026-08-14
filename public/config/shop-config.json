@@ -259,9 +259,9 @@
       "enabled": true
     },
     {
-      "path": "images/containers/tube-a-essai.jpg",
-      "label": "Tube à essai",
-      "alt": "Tube à essai",
+      "path": "images/containers/Eco-Cup 25cl.png",
+      "label": "Eco Cup 25Cl",
+      "alt": "Eco Cup 25Cl",
       "enabled": true
     },
     {
@@ -271,9 +271,9 @@
       "enabled": true
     },
     {
-      "path": "images/containers/Eco-Cup 25cl.png",
-      "label": "Eco Cup 25Cl",
-      "alt": "Eco Cup 25Cl",
+      "path": "images/containers/tube-a-essai.jpg",
+      "label": "Tube à essai",
+      "alt": "Tube à essai",
       "enabled": true
     }
   ],

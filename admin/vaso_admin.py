@@ -227,6 +227,7 @@ class VasoAdminApp(tk.Tk):
         self.container_path_var = tk.StringVar()
         self.container_label_var = tk.StringVar()
         self.container_alt_var = tk.StringVar()
+        self.container_order_var = tk.StringVar()
         self.container_preview_status_var = tk.StringVar(value="Selectionnez une photo de contenant")
 
         self.commit_message_var = tk.StringVar(value=self.build_default_commit_message())
@@ -902,8 +903,25 @@ class VasoAdminApp(tk.Tk):
         ttk.Entry(editor, textvariable=self.container_label_var).grid(row=2, column=1, sticky="ew", pady=4)
         ttk.Label(editor, text="Texte alternatif").grid(row=3, column=0, sticky="w")
         ttk.Entry(editor, textvariable=self.container_alt_var).grid(row=3, column=1, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Position d'affichage").grid(row=4, column=0, sticky="w")
+        container_order_controls = ttk.Frame(editor)
+        container_order_controls.grid(row=4, column=1, sticky="w", pady=4)
+        ttk.Spinbox(
+            container_order_controls,
+            from_=1,
+            to=999,
+            width=6,
+            textvariable=self.container_order_var,
+            command=self.apply_container_order,
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Button(
+            container_order_controls,
+            text="Appliquer l'ordre",
+            command=self.apply_container_order,
+        ).grid(row=0, column=1, sticky="w", padx=(8, 0))
         ttk.Button(editor, text="Appliquer les changements", command=self.apply_container_changes).grid(
-            row=4,
+            row=5,
             column=1,
             sticky="e",
             pady=(8, 14),
@@ -916,7 +934,7 @@ class VasoAdminApp(tk.Tk):
             bd=0,
             highlightthickness=1,
         )
-        self.container_preview_surface.grid(row=5, column=0, columnspan=2, pady=(4, 8))
+        self.container_preview_surface.grid(row=6, column=0, columnspan=2, pady=(4, 8))
         self.container_preview_surface.grid_propagate(False)
 
         self.container_preview_label = tk.Label(
@@ -934,7 +952,7 @@ class VasoAdminApp(tk.Tk):
             textvariable=self.container_preview_status_var,
             justify="left",
             wraplength=HERO_PREVIEW_SIZE[0],
-        ).grid(row=6, column=0, columnspan=2, sticky="n")
+        ).grid(row=7, column=0, columnspan=2, sticky="n")
 
     def build_orders_tab(self) -> None:
         frame = self.orders_frame
@@ -2083,6 +2101,18 @@ class VasoAdminApp(tk.Tk):
                 "enabled": True,
             },
             {
+                "path": "images/containers/Eco-Cup 25cl.png",
+                "label": "Eco Cup 25Cl",
+                "alt": "Eco Cup 25Cl",
+                "enabled": True,
+            },
+            {
+                "path": "images/containers/Eco-cup 12,5 cl.png",
+                "label": "Eco Cup 12,5 Cl",
+                "alt": "Eco Cup 12,5 Cl",
+                "enabled": True,
+            },
+            {
                 "path": "images/containers/tube-a-essai.jpg",
                 "label": "Tube à essai",
                 "alt": "Tube à essai",
@@ -2106,6 +2136,7 @@ class VasoAdminApp(tk.Tk):
             self.container_path_var.set("")
             self.container_label_var.set("")
             self.container_alt_var.set("")
+            self.container_order_var.set("")
             self.container_enabled_var.set(False)
             self.update_selected_container_preview()
 
@@ -2115,6 +2146,7 @@ class VasoAdminApp(tk.Tk):
             self.container_path_var.set("")
             self.container_label_var.set("")
             self.container_alt_var.set("")
+            self.container_order_var.set("")
             self.container_enabled_var.set(False)
             self.update_selected_container_preview()
             return
@@ -2123,6 +2155,7 @@ class VasoAdminApp(tk.Tk):
         self.container_path_var.set(container_image.get("path", ""))
         self.container_label_var.set(container_image.get("label", ""))
         self.container_alt_var.set(container_image.get("alt", ""))
+        self.container_order_var.set(str(selection[0] + 1))
         self.container_enabled_var.set(bool(container_image.get("enabled", True)))
         self.update_selected_container_preview()
 
@@ -2214,11 +2247,39 @@ class VasoAdminApp(tk.Tk):
         if target_index < 0 or target_index >= len(container_images):
             return
 
-        container_images[index], container_images[target_index] = container_images[target_index], container_images[index]
+        self.reorder_container_image(index, target_index)
+
+    def apply_container_order(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        container_images = self.ensure_container_images_config()
+        try:
+            target_position = int(self.container_order_var.get())
+        except ValueError:
+            messagebox.showerror("Ordre invalide", "Indiquez une position sous forme de nombre.")
+            self.container_order_var.set(str(selection[0] + 1))
+            return
+
+        target_index = max(0, min(target_position - 1, len(container_images) - 1))
+        self.reorder_container_image(selection[0], target_index)
+
+    def reorder_container_image(self, index: int, target_index: int) -> None:
+        container_images = self.ensure_container_images_config()
+        if index == target_index or index < 0 or target_index < 0:
+            self.container_order_var.set(str(index + 1))
+            return
+        if index >= len(container_images) or target_index >= len(container_images):
+            return
+
+        container_image = container_images.pop(index)
+        container_images.insert(target_index, container_image)
         self.refresh_containers_listbox()
         self.containers_listbox.selection_clear(0, "end")
         self.containers_listbox.selection_set(target_index)
         self.load_selected_container_image()
+        self.log(f"Ordre des contenants mis a jour : position {target_index + 1}")
 
     def get_selected_container_path(self) -> Path | None:
         relative_path = self.container_path_var.get().strip()

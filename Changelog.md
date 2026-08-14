@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.108] - 2026-08-14
+
+### Ajouté
+- Ajoute un réglage de position d'affichage des contenants dans VASO Admin local.
+- Définit l'ordre par défaut du carrousel des contenants : Eco-Cup 50 cl, Eco-Cup 25 cl, Eco-Cup 12,5 cl, puis tube à essai.
+
 ## [1.1.107] - 2026-08-14
 
 ### Modifié

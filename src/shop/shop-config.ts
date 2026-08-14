@@ -325,6 +325,18 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
           enabled: true,
         },
         {
+          path: "images/containers/Eco-Cup 25cl.png",
+          label: "Eco Cup 25Cl",
+          alt: "Eco Cup 25Cl",
+          enabled: true,
+        },
+        {
+          path: "images/containers/Eco-cup 12,5 cl.png",
+          label: "Eco Cup 12,5 Cl",
+          alt: "Eco Cup 12,5 Cl",
+          enabled: true,
+        },
+        {
           path: "images/containers/tube-a-essai.jpg",
           label: "Tube à essai",
           alt: "Tube à essai",
