@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import { MAX_SEED } from "../engine/engraving-text";
+import {
+  enforceMinimumTestTubeCompatibility,
+  MIN_TEST_TUBE_VASE_HEIGHT_MM,
+} from "../engine/insert-compatibility";
 import { clampParamsToBuildVolume, type BuildVolume } from "../engine/printer-volume";
 import type {
   VaseParameters,
@@ -107,7 +111,7 @@ function randomizeParams(
     sidesMax = 10;
   let rotMin = 0,
     rotMax = 60;
-  let heightMin = 100,
+  let heightMin = MIN_TEST_TUBE_VASE_HEIGHT_MM,
     heightMax = 250;
 
   switch (style) {
@@ -187,7 +191,8 @@ function randomizeParams(
       break;
   }
 
-  const height = triangular(rng, heightMin, heightMax, (heightMin + heightMax) / 2);
+  const safeHeightMin = Math.max(MIN_TEST_TUBE_VASE_HEIGHT_MM, heightMin);
+  const height = triangular(rng, safeHeightMin, heightMax, (safeHeightMin + heightMax) / 2);
 
   // Generate profiles
   const profiles: Profile[] = [];
@@ -258,14 +263,14 @@ function randomizeParams(
     }
   }
 
-  return {
+  return enforceMinimumTestTubeCompatibility({
     ...currentParams,
     heightMm: Math.round(height),
     profiles,
     textureMode,
     textureType,
     textureZoom,
-  };
+  });
 }
 
 function getActiveBuildVolume(): BuildVolume {
@@ -279,10 +284,13 @@ function getActiveBuildVolume(): BuildVolume {
 }
 
 function constrainToActiveBuildVolume(params: VaseParameters): VaseParameters {
+  const safeParams = enforceMinimumTestTubeCompatibility(params);
   if (!useUIStore.getState().enforcePrinterVolume) {
-    return params;
+    return safeParams;
   }
-  return clampParamsToBuildVolume(params, getActiveBuildVolume());
+  return enforceMinimumTestTubeCompatibility(
+    clampParamsToBuildVolume(safeParams, getActiveBuildVolume()),
+  );
 }
 
 const INITIAL_SEED = Math.floor(Math.random() * (MAX_SEED + 1));

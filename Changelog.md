@@ -7,6 +7,19 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.111] - 2026-08-15
+
+### Modifié
+- Clarifie les libellés des options de contenants pour indiquer que chaque vase VASO reste prévu pour un contenant étanche compatible.
+- Précise que le mode soliflore force l'ajout du support tube à essai dans le STL, même lorsqu'un Eco-Cup est compatible.
+
+## [1.1.110] - 2026-08-14
+
+### Modifié
+- Applique une enveloppe minimale compatible tube à essai à tous les vases générés et réglés manuellement.
+- Relève la hauteur minimale des paramètres à 115 mm pour garantir l'usage soliflore.
+- Calibre l'ouverture haute minimale pour tube à essai à 29 mm pour un tube de 25 mm.
+
 ## [1.1.109] - 2026-08-14
 
 ### Modifié

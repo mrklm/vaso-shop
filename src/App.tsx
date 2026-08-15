@@ -43,8 +43,8 @@ const SHOP_MONDIAL_RELAY_SCRIPT_URL =
 const SHOP_JQUERY_SCRIPT_URL = "https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js";
 const SHOP_LEAFLET_SCRIPT_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
 const SHOP_LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
-const SHOP_SOLIFLORE_TEST_TUBE_LABEL = "Tube à essai 75 × 12 mm";
-const SHOP_NO_WATER_INSERT_LABEL = "Aucun contenant étanche (usage sans eau)";
+const SHOP_SOLIFLORE_TEST_TUBE_LABEL = "Tube à essai 25 mm";
+const SHOP_TEST_TUBE_WITHOUT_SUPPORT_LABEL = "Tube à essai compatible (support STL non généré)";
 const SHOP_COUNTRIES_FOR_ORDER = [
   SHOP_PRIORITY_COUNTRY,
   ...SHOP_COUNTRIES.filter((country) => country !== SHOP_PRIORITY_COUNTRY),
@@ -370,7 +370,7 @@ function App() {
   const selectedWaterproofInsertLabel = wantsSoliflore
     ? `${SHOP_SOLIFLORE_TEST_TUBE_LABEL} (soliflore)`
     : suppressTestTubeSupport
-      ? SHOP_NO_WATER_INSERT_LABEL
+      ? SHOP_TEST_TUBE_WITHOUT_SUPPORT_LABEL
       : (selectedEntry?.waterproofInsertCompatibility.label ?? "");
   const selectedWaterproofInsertCompatibility: WaterproofInsertCompatibility | null = selectedEntry
     ? wantsSoliflore
@@ -390,10 +390,10 @@ function App() {
     selectedWaterproofInsertCompatibility ?? selectedEntry?.waterproofInsertCompatibility ?? null;
   const solifloreChoiceLabel =
     solifloreChoice === "yes"
-      ? "Oui, usage soliflore avec tube à essai"
+      ? "Oui, mode soliflore avec support tube dans le STL"
       : solifloreChoice === "no"
         ? isTestTubeCompatible
-          ? "Non, pas de support tube à essai"
+          ? "Non, tube compatible sans support STL généré"
           : "Non, contenant étanche compatible"
         : "";
   const selectedShippingOptionLabel =
@@ -1269,13 +1269,12 @@ function App() {
                   <div className="shop-order-note shop-order-note-highlight shop-soliflore-panel">
                     <div className="shop-soliflore-question">
                       <p id="shop-soliflore-question">
-                        VASO indique à droite si un contenant est compatible avec le vase généré :
-                        Eco-Cup 50 cl, Eco-Cup 25 cl ou Eco-Cup 12,5 cl. Si le vase est trop petit
-                        pour le plus petit Eco-Cup, VASO peut passer en mode soliflore et intégrer
-                        des supports pour accueillir un tube à essai.
+                        Chaque vase VASO est prévu pour un contenant étanche compatible. Selon ses
+                        dimensions, il utilise un Eco-Cup 50 cl, 25 cl, 12,5 cl, ou un tube à essai
+                        25 mm en mode soliflore avec une ouverture haute utile minimale de 29 mm.
                       </p>
                       <p className="shop-soliflore-question-title">
-                        Voulez-vous utiliser ce vase comme soliflore avec un tube à essai ?
+                        Voulez-vous générer ce vase en mode soliflore avec support tube à essai ?
                       </p>
                       <div
                         className="shop-soliflore-options"
@@ -1293,7 +1292,8 @@ function App() {
                           <span>
                             <strong>Oui</strong>
                             <small>
-                              Usage soliflore : VASO prévoit un support pour tube à essai en verre.
+                              VASO ajoute le support physique pour tube à essai dans le STL, même si
+                              le vase est compatible Eco-Cup.
                             </small>
                           </span>
                         </label>
@@ -1309,7 +1309,7 @@ function App() {
                             <strong>Non</strong>
                             <small>
                               {isTestTubeCompatible
-                                ? "Le vase sera utilisé sans support tube à essai et ne pourra pas contenir d'eau directement."
+                                ? "Le vase reste compatible avec un tube à essai, sans support physique ajouté au STL."
                                 : `VASO utilisera le contenant étanche compatible indiqué${
                                     isEcoCupCompatible
                                       ? ", par exemple un Eco-Cup lorsque les dimensions le permettent."
