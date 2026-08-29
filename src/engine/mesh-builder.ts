@@ -13,7 +13,7 @@ import {
   interpolateContours,
   regularPolygonVertices,
 } from "./geometry";
-import { applyTexture } from "./textures";
+import { applyTexture, getLowPolyMeshResolution } from "./textures";
 import {
   maxSupportlessRadialStep,
   limitContourStepFromPrevious,
@@ -29,7 +29,9 @@ import {
   getInsertPresetById,
   getPreferredTestTubePreset,
   getTestTubePlacement,
+  type InsertPreset,
 } from "./insert-compatibility";
+import { engraveBaseText } from "./engraving";
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "test";
 const ENGRAVING_PIPELINE_MARKER = `Vaso Engraving ${APP_VERSION}`;
@@ -45,6 +47,21 @@ const TEST_TUBE_SUPPORT_SEGMENTS_PER_SECTION = 18;
 const TEST_TUBE_SUPPORT_WALL_MARGIN_MM = 0.8;
 const TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM = 0.3;
 const TEST_TUBE_PEDESTAL_BAR_THICKNESS_MM = 2.4;
+
+interface GenerateVaseMeshOptions {
+  includeTestTubeSupport?: boolean;
+  forceTestTubeSupport?: boolean;
+  suppressTestTubeSupport?: boolean;
+  customTestTubePreset?: InsertPreset;
+}
+
+function hasActiveTexture(params: VaseParameters): boolean {
+  if (params.textureMode === "Pas de texture") return false;
+  if (params.textureMode === "Double texture") {
+    return params.textureType !== "Aucune" || params.textureType2 !== "Aucune";
+  }
+  return params.textureType !== "Aucune";
+}
 
 function shouldKeepFacetEdgeSeamIdentity(profiles: VaseParameters["profiles"]): boolean {
   if (profiles.length === 0) return false;
@@ -83,14 +100,6 @@ function computeSharedFacetSeamVertexIndex(profiles: VaseParameters["profiles"])
   }
 
   return bestIndex;
-}
-
-function hasActiveTexture(params: VaseParameters): boolean {
-  if (params.textureMode === "Pas de texture") return false;
-  if (params.textureMode === "Double texture") {
-    return params.textureType !== "Aucune" || params.textureType2 !== "Aucune";
-  }
-  return params.textureType !== "Aucune";
 }
 
 function linspace(start: number, end: number, count: number): Float64Array {
@@ -410,29 +419,69 @@ function addBox(
 
   const start = verts.length / 3;
   verts.push(
-    minX, minY, minZ,
-    maxX, minY, minZ,
-    maxX, maxY, minZ,
-    minX, maxY, minZ,
-    minX, minY, maxZ,
-    maxX, minY, maxZ,
-    maxX, maxY, maxZ,
-    minX, maxY, maxZ,
+    minX,
+    minY,
+    minZ,
+    maxX,
+    minY,
+    minZ,
+    maxX,
+    maxY,
+    minZ,
+    minX,
+    maxY,
+    minZ,
+    minX,
+    minY,
+    maxZ,
+    maxX,
+    minY,
+    maxZ,
+    maxX,
+    maxY,
+    maxZ,
+    minX,
+    maxY,
+    maxZ,
   );
 
   faces.push(
-    start, start + 1, start + 2,
-    start, start + 2, start + 3,
-    start + 4, start + 6, start + 5,
-    start + 4, start + 7, start + 6,
-    start, start + 4, start + 1,
-    start + 1, start + 4, start + 5,
-    start + 1, start + 5, start + 2,
-    start + 2, start + 5, start + 6,
-    start + 2, start + 6, start + 3,
-    start + 3, start + 6, start + 7,
-    start + 3, start + 7, start,
-    start, start + 7, start + 4,
+    start,
+    start + 1,
+    start + 2,
+    start,
+    start + 2,
+    start + 3,
+    start + 4,
+    start + 6,
+    start + 5,
+    start + 4,
+    start + 7,
+    start + 6,
+    start,
+    start + 4,
+    start + 1,
+    start + 1,
+    start + 4,
+    start + 5,
+    start + 1,
+    start + 5,
+    start + 2,
+    start + 2,
+    start + 5,
+    start + 6,
+    start + 2,
+    start + 6,
+    start + 3,
+    start + 3,
+    start + 6,
+    start + 7,
+    start + 3,
+    start + 7,
+    start,
+    start,
+    start + 7,
+    start + 4,
   );
 }
 
@@ -473,18 +522,13 @@ function canFitCenteredTestTubeSupport(
   return true;
 }
 
-export interface GenerateVaseMeshOptions {
-  forceTestTubeSupport?: boolean;
-  suppressTestTubeSupport?: boolean;
-}
-
 function addTestTubeSupportIfNeeded(
   params: VaseParameters,
   verts: number[],
   faces: number[],
   options: GenerateVaseMeshOptions = {},
 ) {
-  if (options.suppressTestTubeSupport) {
+  if (options.includeTestTubeSupport === false || options.suppressTestTubeSupport) {
     return;
   }
 
@@ -492,13 +536,14 @@ function addTestTubeSupportIfNeeded(
   if (!options.forceTestTubeSupport && compatibility.type !== "test_tube") {
     return;
   }
-
   const preset = options.forceTestTubeSupport
-    ? getPreferredTestTubePreset(params.heightMm)
+    ? (options.customTestTubePreset ?? getPreferredTestTubePreset(params.heightMm))
     : getInsertPresetById(compatibility.presetId);
   if (!preset) {
     return;
   }
+  const supportInnerRadius = Math.max(5, preset.topDiameterMm / 2 + preset.clearanceMm);
+  const supportOuterRadius = supportInnerRadius + TEST_TUBE_SUPPORT_THICKNESS_MM;
 
   const placement = getTestTubePlacement(params, preset);
   const supportBottomZ = placement.supportBottomZ;
@@ -514,14 +559,14 @@ function addTestTubeSupportIfNeeded(
     supportBottomZ + (supportTopZ - supportBottomZ) * 0.66,
     supportTopZ,
   ];
-  if (!canFitCenteredTestTubeSupport(params, fitSamples, TEST_TUBE_SUPPORT_OUTER_RADIUS_MM)) {
+  if (!canFitCenteredTestTubeSupport(params, fitSamples, supportOuterRadius)) {
     return;
   }
 
   addCrossPedestal(
     verts,
     faces,
-    TEST_TUBE_SUPPORT_OUTER_RADIUS_MM,
+    supportOuterRadius,
     placement.pedestalBottomZ,
     placement.pedestalTopZ,
   );
@@ -529,14 +574,42 @@ function addTestTubeSupportIfNeeded(
   addSegmentedTubeSupport(
     verts,
     faces,
-    TEST_TUBE_SUPPORT_INNER_RADIUS_MM,
-    TEST_TUBE_SUPPORT_OUTER_RADIUS_MM,
+    supportInnerRadius,
+    supportOuterRadius,
     supportBottomZ,
     supportTopZ,
     TEST_TUBE_SUPPORT_SLOT_COUNT,
     TEST_TUBE_SUPPORT_SLOT_ANGLE_RAD,
     TEST_TUBE_SUPPORT_SEGMENTS_PER_SECTION,
   );
+}
+
+function addFlatInnerBottomCap(
+  verts: number[],
+  faces: number[],
+  innerBottomStart: number,
+  segments: number,
+  zInnerBottom: number,
+) {
+  const innerCenter = verts.length / 3;
+  verts.push(0, 0, zInnerBottom);
+  for (let i = 0; i < segments; i++) {
+    const a = innerBottomStart + i;
+    const b = innerBottomStart + ((i + 1) % segments);
+    faces.push(innerCenter, a, b);
+  }
+}
+
+function addInnerBottomCap(
+  params: VaseParameters,
+  verts: number[],
+  faces: number[],
+  innerBottomStart: number,
+  zInnerBottom: number,
+  options: GenerateVaseMeshOptions,
+) {
+  addFlatInnerBottomCap(verts, faces, innerBottomStart, params.radialSamples, zInnerBottom);
+  addTestTubeSupportIfNeeded(params, verts, faces, options);
 }
 
 /**
@@ -553,14 +626,17 @@ function generateVaseMeshInternal(
   params: VaseParameters,
   options: GenerateVaseMeshOptions = {},
 ): MeshData {
-  validateParams(params);
+  const lowPolyResolution = getLowPolyMeshResolution(params);
+  const meshParams = lowPolyResolution ? { ...params, ...lowPolyResolution } : params;
 
-  const ringSize = params.radialSamples;
-  const layers = params.verticalSamples;
+  validateParams(meshParams);
 
-  const zOuter = linspace(0, params.heightMm, layers);
-  const zInnerBottom = Math.min(params.bottomThicknessMm, params.heightMm);
-  const outerContours = generateSupportSafeOuterContours(params, zOuter);
+  const ringSize = meshParams.radialSamples;
+  const layers = meshParams.verticalSamples;
+
+  const zOuter = linspace(0, meshParams.heightMm, layers);
+  const zInnerBottom = Math.min(meshParams.bottomThicknessMm, meshParams.heightMm);
+  const outerContours = generateSupportSafeOuterContours(meshParams, zOuter);
   const { zInner, sourceContours: innerSourceContours } = buildInnerWallSourceContours(
     outerContours,
     zOuter,
@@ -586,7 +662,7 @@ function generateVaseMeshInternal(
 
   // Inner wall vertices
   for (let layer = 0; layer < zInner.length; layer++) {
-    const innerContour = computeInnerContour(innerSourceContours[layer], params.wallThicknessMm);
+    const innerContour = computeInnerContour(innerSourceContours[layer], meshParams.wallThicknessMm);
     const ringStart = verts.length / 3;
     const z = zInner[layer];
     for (let i = 0; i < ringSize; i++) {
@@ -634,7 +710,7 @@ function generateVaseMeshInternal(
   }
 
   // Bottom cap
-  if (params.closeBottom) {
+  if (meshParams.closeBottom) {
     const outerBottom = outerRingStarts[0];
     const outerCenter = verts.length / 3;
     verts.push(0, 0, 0);
@@ -646,16 +722,15 @@ function generateVaseMeshInternal(
 
     // Inner bottom floor cap
     const innerBottom = innerRingStarts[0];
-    const innerCenter = verts.length / 3;
-    verts.push(0, 0, zInnerBottom);
-    for (let i = 0; i < ringSize; i++) {
-      const a = innerBottom + i;
-      const b = innerBottom + ((i + 1) % ringSize);
-      faces.push(innerCenter, a, b);
-    }
+    addInnerBottomCap(
+      meshParams,
+      verts,
+      faces,
+      innerBottom,
+      zInnerBottom,
+      options,
+    );
   }
-
-  addTestTubeSupportIfNeeded(params, verts, faces, options);
 
   return removeDegenerateTriangles({
     vertices: new Float32Array(verts),
@@ -673,26 +748,31 @@ export async function generateVaseMeshWithEngraving(
   resetPipelineTrace();
 
   try {
-    const { engraveBaseText } = await import("./engraving");
-    const zOuter = linspace(0, params.heightMm, params.verticalSamples);
-    const outerContours = generateSupportSafeOuterContours(params, zOuter);
+    const lowPolyResolution = getLowPolyMeshResolution(params);
+    const meshParams = lowPolyResolution ? { ...params, ...lowPolyResolution } : params;
+    const zOuter = linspace(0, meshParams.heightMm, meshParams.verticalSamples);
+    const outerContours = generateSupportSafeOuterContours(meshParams, zOuter);
     const mesh = generateVaseMeshInternal(params, options);
     logMeshDiagnostics("[mesh-builder] base mesh", mesh);
     appendPipelineTrace(
       `[mesh-builder] base mesh:v=${mesh.vertices.length / 3},t=${mesh.indices.length / 3}`,
     );
-    const hasTestTubeSupport =
+    const shouldReserveSupportCenter =
+      options.includeTestTubeSupport !== false &&
       !options.suppressTestTubeSupport &&
       (options.forceTestTubeSupport ||
         analyzeWaterproofInsertCompatibility(params).type === "test_tube");
+    const supportOuterRadius = options.customTestTubePreset
+      ? options.customTestTubePreset.topDiameterMm / 2 + options.customTestTubePreset.clearanceMm + TEST_TUBE_SUPPORT_THICKNESS_MM
+      : TEST_TUBE_SUPPORT_OUTER_RADIUS_MM;
     const engravedMesh = await engraveBaseText(
       mesh,
       params,
       outerContours[0],
       seed,
       isSeedModified,
-      hasTestTubeSupport
-        ? TEST_TUBE_SUPPORT_OUTER_RADIUS_MM + TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM
+      shouldReserveSupportCenter
+        ? supportOuterRadius + TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM
         : 0,
     );
     const difference = getMeshDifferenceDiagnostics(mesh, engravedMesh);

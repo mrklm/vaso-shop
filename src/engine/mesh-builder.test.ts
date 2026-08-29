@@ -6,6 +6,7 @@ import {
   generateOuterProfilePoints,
   generateTopOuterContour,
 } from "./mesh-builder";
+import { buildSTLBuffer } from "./exporter";
 import {
   countBoundaryEdges,
   countConnectedMeshComponents,
@@ -171,7 +172,7 @@ describe("generateVaseMesh", () => {
     expect(countBoundaryEdges(mesh)).toBe(0);
   });
 
-  it("keeps engraved text readable around the test tube support", async () => {
+  it("engraves the vase number under the base when the test tube support is present", async () => {
     const params = createTwoProfileVase(125, 52, 42);
     params.radialSamples = 72;
     const fontJson = JSON.parse(robotoFontJson);
@@ -184,28 +185,52 @@ describe("generateVaseMesh", () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
-    const engravingOuterPoints: Array<{ x: number; y: number }> = [];
+    const undersideEngravingPoints: Array<{ x: number; y: number }> = [];
 
     for (let index = 0; index < mesh.vertices.length; index += 3) {
       const x = mesh.vertices[index];
       const y = mesh.vertices[index + 1];
       const z = mesh.vertices[index + 2];
-      const radius = Math.hypot(x, y);
       if (
-        z > params.bottomThicknessMm + 0.05 &&
-        z < params.bottomThicknessMm + 1.2 &&
-        radius > 16.8
+        z > 0.04 &&
+        z < 0.75 &&
+        Math.abs(x) < 24 &&
+        Math.abs(y) < 8
       ) {
-        engravingOuterPoints.push({ x, y });
+        undersideEngravingPoints.push({ x, y });
       }
     }
 
-    const xs = engravingOuterPoints.map((point) => point.x);
-    const ys = engravingOuterPoints.map((point) => point.y);
-    expect(engravingOuterPoints.length).toBeGreaterThan(100);
-    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(30);
-    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(30);
-  });
+    const xs = undersideEngravingPoints.map((point) => point.x);
+    const ys = undersideEngravingPoints.map((point) => point.y);
+    expect(undersideEngravingPoints.length).toBeGreaterThan(100);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(25);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(3);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+    expect(buildSTLBuffer(mesh).byteLength).toBeGreaterThan(84);
+  }, 20000);
+
+  it("keeps underside engraving watertight on low-poly test-tube vases", async () => {
+    const params = createTwoProfileVase(180, 60, 42);
+    params.radialSamples = 96;
+    params.verticalSamples = 120;
+    params.textureMode = "Texture imposée";
+    params.textureType = "LowPoly";
+    params.textureZoom = "Moyen";
+    const fontJson = JSON.parse(robotoFontJson);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(fontJson), { status: 200 });
+
+    let mesh: Awaited<ReturnType<typeof generateVaseMeshWithEngraving>>;
+    try {
+      mesh = await generateVaseMeshWithEngraving(params, 60774141, true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(countBoundaryEdges(mesh)).toBe(0);
+    expect(buildSTLBuffer(mesh).byteLength).toBeGreaterThan(84);
+  }, 30000);
 
   it("aligns inner and outer wall layers on the same body z slices", () => {
     const params = createTwoProfileVase(180, 74, 96);

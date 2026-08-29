@@ -7,6 +7,24 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.112] - 2026-08-29
+
+### Ajouté
+- Synchronise le moteur Vaso avec Vaso Web 1.0.80 pour générer une vraie texture LowPoly en géométrie facettée.
+
+### Modifié
+- Affiche automatiquement les vases LowPoly avec des faces plates dans l'aperçu 3D boutique.
+- Conserve les options boutique de forçage et de suppression du support tube à essai avec le moteur mis à jour.
+
+### Corrigé
+- Déplace la gravure des vases avec support tube à essai sous la face extérieure de la base, en soustraction de matière.
+- Préserve la finesse de la gravure extérieure sous la base sur les vases LowPoly.
+- Corrige le raccord du patch de gravure LowPoly pour conserver un STL étanche à l'export.
+
+### Tests
+- Ajoute un test d'export LowPoly avec support tube à essai et numéro de vase modifié.
+- Met à jour les tests de gravure pour valider le numéro sous la base.
+
 ## [1.1.111] - 2026-08-15
 
 ### Modifié

@@ -12,6 +12,7 @@ import { useVaseMesh } from "../../hooks/useVaseMesh";
 import { buildProfileContour } from "../../engine/geometry";
 import { formatEngravingLines } from "../../engine/engraving-text";
 import { analyzeWaterproofInsertCompatibility } from "../../engine/insert-compatibility";
+import { usesLowPolyTexture } from "../../engine/textures";
 import type { VaseParameters } from "../../engine/types";
 
 const ROTATE_SPEED = 0.05;
@@ -510,7 +511,7 @@ export function VaseViewer3D({
   const resolvedEmissiveIntensity = Math.min(0.5, Math.max(0, colorEmissiveIntensity));
   const resolvedShading = Math.min(100, Math.max(0, shadingOverride ?? shading));
   const resolvedWireframe = isPreview ? false : wireframe;
-  const resolvedFlatShading = isPreview ? false : flatShading;
+  const resolvedFlatShading = flatShading || usesLowPolyTexture(params);
   const resolvedRotationMode = isPreview ? "vase" : rotationMode;
   const resolvedRotationSpeed = isPreview ? 0.35 : rotationSpeed;
   const hasTestTubeSupport = useMemo(
