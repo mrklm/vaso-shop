@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.114] - 2026-08-30
+
+### Modifié
+- Déplace les boutons de validation des étapes de commande vers le bas de chaque carte d'étape.
+- Conserve l'alignement horizontal des actions tout en rendant la progression plus visible après lecture du contenu.
+
 ## [1.1.113] - 2026-08-30
 
 ### Corrigé

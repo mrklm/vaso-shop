@@ -1323,18 +1323,6 @@ function App() {
                   </div>
                 </div>
                 <div className="shop-order-step-actions shop-order-step-actions-model">
-                  {isModelStepConfirmed ? (
-                    <span className="shop-step-status">Modèle validé</span>
-                  ) : (
-                    <button
-                      className="shop-button shop-button-accent"
-                      type="button"
-                      onClick={() => setIsModelStepConfirmed(true)}
-                      disabled={!hasAnsweredSolifloreQuestion}
-                    >
-                      Je valide ce modèle
-                    </button>
-                  )}
                   <div className="shop-stat shop-insert-compatible-stat">
                     <span className="shop-stat-label">Contenant compatible</span>
                     <strong>{selectedWaterproofInsertLabel}</strong>
@@ -1347,6 +1335,18 @@ function App() {
                       />
                     ) : null}
                   </div>
+                  {isModelStepConfirmed ? (
+                    <span className="shop-step-status">Modèle validé</span>
+                  ) : (
+                    <button
+                      className="shop-button shop-button-accent"
+                      type="button"
+                      onClick={() => setIsModelStepConfirmed(true)}
+                      disabled={!hasAnsweredSolifloreQuestion}
+                    >
+                      Je valide ce modèle
+                    </button>
+                  )}
                 </div>
               </article>
 
@@ -1401,19 +1401,6 @@ function App() {
                   </div>
                 </div>
                 <div className="shop-order-step-actions">
-                  {isColorStepConfirmed ? (
-                    <span className="shop-step-status">Couleur validee</span>
-                  ) : canAccessColorStep ? (
-                    <button
-                      className="shop-button shop-button-accent"
-                      type="button"
-                      onClick={() => setIsColorStepConfirmed(true)}
-                    >
-                      Je valide cette couleur
-                    </button>
-                  ) : (
-                    <span className="shop-step-hint">Validez d'abord le modele</span>
-                  )}
                   {canAccessColorStep && (
                     <div className="shop-color-preview-card">
                       <span className="shop-panel-title">Aperçu 3D couleur</span>
@@ -1437,6 +1424,19 @@ function App() {
                         {shopConfig.messages.colorPreviewNote}
                       </div>
                     </div>
+                  )}
+                  {isColorStepConfirmed ? (
+                    <span className="shop-step-status">Couleur validee</span>
+                  ) : canAccessColorStep ? (
+                    <button
+                      className="shop-button shop-button-accent"
+                      type="button"
+                      onClick={() => setIsColorStepConfirmed(true)}
+                    >
+                      Je valide cette couleur
+                    </button>
+                  ) : (
+                    <span className="shop-step-hint">Validez d'abord le modele</span>
                   )}
                 </div>
               </article>

@@ -653,7 +653,7 @@
   display: grid;
   grid-template-columns: minmax(220px, 0.52fr) minmax(0, 1fr) minmax(250px, 0.58fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
   padding: 18px;
   border: 1px solid rgb(93 58 37 / 10%);
   border-radius: 22px;
@@ -777,14 +777,15 @@
 .shop-order-step-actions {
   display: grid;
   gap: 10px;
-  align-content: start;
+  align-content: end;
   justify-items: stretch;
+  align-self: stretch;
 }
 
 .shop-order-step-actions-model {
   align-self: stretch;
   justify-items: center;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr auto;
 }
 
 .shop-insert-compatible-stat {
@@ -840,7 +841,7 @@
 }
 
 .shop-order-step-actions-final {
-  align-content: space-between;
+  align-content: end;
 }
 
 .shop-step-status,
