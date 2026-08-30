@@ -7,6 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.116] - 2026-08-30
+
+### Ajouté
+- Ajoute des miniatures de vases réelles dans le panier à partir de la capture 3D du modèle sélectionné.
+
+### Modifié
+- Ajuste le cadrage des miniatures pour mieux conserver le vase entier dans le cadre du panier.
+
 ## [1.1.115] - 2026-08-30
 
 ### Ajouté

@@ -95,6 +95,7 @@ interface ShopCartItem {
   colorId: string;
   colorLabel: string;
   colorHex: string;
+  thumbnailDataUrl?: string;
   quantity: number;
 }
 
@@ -215,6 +216,11 @@ function readStoredCartItems(): ShopCartItem[] {
         heightMm: Number(item.heightMm) || 0,
         minDiameterMm: Number(item.minDiameterMm) || 0,
         maxDiameterMm: Number(item.maxDiameterMm) || 0,
+        thumbnailDataUrl:
+          typeof item.thumbnailDataUrl === "string" &&
+          item.thumbnailDataUrl.startsWith("data:image/")
+            ? item.thumbnailDataUrl
+            : undefined,
         quantity: normalizeCartQuantity(item.quantity),
       }));
   } catch {
@@ -232,6 +238,56 @@ function writeStoredCartItems(items: ShopCartItem[]) {
   } catch {
     // Le panier reste utilisable en session si le navigateur refuse le stockage.
   }
+}
+
+async function createCartThumbnail(
+  captureViewerImage: (() => Promise<string | null>) | null,
+): Promise<string | null> {
+  if (!captureViewerImage || typeof window === "undefined") {
+    return null;
+  }
+
+  const imageDataUrl = await captureViewerImage();
+  if (!imageDataUrl) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const size = 220;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        resolve(imageDataUrl);
+        return;
+      }
+
+      const sourceSize = Math.min(image.naturalWidth, image.naturalHeight);
+      const sourceX = (image.naturalWidth - sourceSize) / 2;
+      const sourceY = (image.naturalHeight - sourceSize) / 2;
+      const targetPadding = 24;
+      const targetSize = size - targetPadding * 2;
+      context.fillStyle = "#f4efe6";
+      context.fillRect(0, 0, size, size);
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
+        targetPadding,
+        targetPadding,
+        targetSize,
+        targetSize,
+      );
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    image.onerror = () => resolve(null);
+    image.src = imageDataUrl;
+  });
 }
 
 function getCartInsertDetails(
@@ -394,6 +450,7 @@ function App() {
   const setRotationMode = useUIStore((s) => s.setRotationMode);
   const setAutoRotate = useUIStore((s) => s.setAutoRotate);
   const setVaseColor = useUIStore((s) => s.setVaseColor);
+  const captureViewerImage = useUIStore((s) => s.captureViewerImage);
   const applyPrinterVolumeConfig = useUIStore((s) => s.applyPrinterVolumeConfig);
   const generateNext = useShopStore((s) => s.generateNext);
   const goPrevious = useShopStore((s) => s.goPrevious);
@@ -1003,11 +1060,12 @@ function App() {
     }, 80);
   };
 
-  const handleAddSelectedVaseToCart = () => {
+  const handleAddSelectedVaseToCart = async () => {
     if (!selectedEntry || !selectedColor || !hasAnsweredSolifloreQuestion) {
       return;
     }
 
+    const thumbnailDataUrl = await createCartThumbnail(captureViewerImage);
     const selectedSolifloreChoice = effectiveSolifloreChoice === "yes" ? "yes" : "no";
     const insertDetails = getCartInsertDetails(
       selectedEntry.waterproofInsertCompatibility,
@@ -1033,6 +1091,7 @@ function App() {
       colorId: selectedColor.id,
       colorLabel: selectedColor.label,
       colorHex: selectedColor.hex,
+      thumbnailDataUrl: thumbnailDataUrl ?? undefined,
       quantity: 1,
     };
     const nextItemKey = buildCartItemKey(nextItem);
@@ -1040,7 +1099,13 @@ function App() {
     setCartItems((currentItems) => {
       if (cartItemBeingEditedId) {
         return currentItems.map((item) =>
-          item.id === cartItemBeingEditedId ? { ...nextItem, quantity: item.quantity } : item,
+          item.id === cartItemBeingEditedId
+            ? {
+                ...nextItem,
+                quantity: item.quantity,
+                thumbnailDataUrl: nextItem.thumbnailDataUrl ?? item.thumbnailDataUrl,
+              }
+            : item,
         );
       }
 
@@ -1488,7 +1553,12 @@ function App() {
                   {cartItems.map((item) => (
                     <article key={item.id} className="shop-cart-item">
                       <div className="shop-cart-item-thumb">
-                        <img src={cartIcon} alt="" aria-hidden="true" />
+                        <img
+                          className={item.thumbnailDataUrl ? "shop-cart-item-thumbnail" : undefined}
+                          src={item.thumbnailDataUrl ?? cartIcon}
+                          alt={item.thumbnailDataUrl ? `Miniature du vase N° ${item.seed}` : ""}
+                          aria-hidden={item.thumbnailDataUrl ? undefined : true}
+                        />
                         <span
                           className="shop-cart-item-color"
                           style={{ backgroundColor: item.colorHex }}
@@ -1604,6 +1674,7 @@ function App() {
                 colorOverride={SHOP_NEUTRAL_VASE_COLOR}
                 forceTestTubeSupport={selectedEntry !== null && wantsSoliflore}
                 suppressTestTubeSupport={suppressTestTubeSupport}
+                captureToStore={!selectedEntry}
               />
             </div>
           </div>
@@ -1899,6 +1970,7 @@ function App() {
                           <div className="shop-color-preview-viewer">
                             <VaseViewer3D
                               mode="preview"
+                              captureToStore
                               colorOverride={
                                 selectedColor?.previewHex ??
                                 selectedColor?.hex ??

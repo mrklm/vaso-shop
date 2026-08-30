@@ -87,7 +87,8 @@ function computePreviewBottomFitRadius(params: VaseParameters): number {
   const bottomProfiles = [...params.profiles]
     .filter((profile) => profile.zRatio === 0)
     .sort((a, b) => a.zRatio - b.zRatio);
-  const bottomProfile = bottomProfiles[0] ?? [...params.profiles].sort((a, b) => a.zRatio - b.zRatio)[0];
+  const bottomProfile =
+    bottomProfiles[0] ?? [...params.profiles].sort((a, b) => a.zRatio - b.zRatio)[0];
   if (!bottomProfile) return 0;
 
   const contour = buildProfileContour(bottomProfile, Math.min(params.radialSamples, 64));
@@ -100,19 +101,17 @@ function computePreviewBottomFitRadius(params: VaseParameters): number {
   return Math.max(0, minRadius - PREVIEW_TEXT_FIT_MARGIN_MM);
 }
 
-function PreviewEngravingOverlay(
-  {
-    params,
-    seed,
-    isSeedModified,
-    placement = "bottom",
-  }: {
-    params: VaseParameters;
-    seed: number;
-    isSeedModified: boolean;
-    placement?: "bottom" | "support";
-  },
-) {
+function PreviewEngravingOverlay({
+  params,
+  seed,
+  isSeedModified,
+  placement = "bottom",
+}: {
+  params: VaseParameters;
+  seed: number;
+  isSeedModified: boolean;
+  placement?: "bottom" | "support";
+}) {
   const lines = useMemo(() => formatEngravingLines(seed, isSeedModified), [isSeedModified, seed]);
   const fitRadius = useMemo(() => computePreviewBottomFitRadius(params), [params]);
 
@@ -139,8 +138,7 @@ function PreviewEngravingOverlay(
       const heightMm = fitRadius * PREVIEW_SUPPORT_TEXT_SIZE_FACTOR;
       const pxPerMm = canvas.height / heightMm;
       const supportRadiusPx =
-        (PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM +
-          PREVIEW_TEST_TUBE_SUPPORT_TEXT_CLEARANCE_MM) *
+        (PREVIEW_TEST_TUBE_SUPPORT_OUTER_RADIUS_MM + PREVIEW_TEST_TUBE_SUPPORT_TEXT_CLEARANCE_MM) *
         pxPerMm;
 
       const lineFontSizes = lines.map((line, index) => {
@@ -154,7 +152,11 @@ function PreviewEngravingOverlay(
       });
       const referenceFontSize =
         lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
-      for (let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length; index < lineFontSizes.length; index += 1) {
+      for (
+        let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length;
+        index < lineFontSizes.length;
+        index += 1
+      ) {
         const targetWidth =
           canvas.width *
           PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
@@ -185,7 +187,8 @@ function PreviewEngravingOverlay(
 
         const chars = Array.from(line);
         const widths = chars.map((char) =>
-          char === " " ? fontSize * 0.38 : context.measureText(char).width);
+          char === " " ? fontSize * 0.38 : context.measureText(char).width,
+        );
         const lineWidth = widths.reduce((sum, width) => sum + width, 0);
         let cursorX = -lineWidth * 0.5;
 
@@ -217,20 +220,28 @@ function PreviewEngravingOverlay(
     const lineFontSizes = lines.map((line, index) => {
       const widthFactor = PREVIEW_TEXT_LINE_WIDTH_FACTORS[index];
       if (widthFactor === undefined) {
-        return PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1];
+        return (
+          PREVIEW_TEXT_BASE_FONT_SIZES[index] ??
+          PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1]
+        );
       }
       return fitPreviewText(
         context,
         line,
-        PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1],
+        PREVIEW_TEXT_BASE_FONT_SIZES[index] ??
+          PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1],
         canvas.width * widthFactor,
       );
     });
-    const referenceFontSize = lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
-    for (let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length; index < lineFontSizes.length; index += 1) {
+    const referenceFontSize =
+      lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
+    for (
+      let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length;
+      index < lineFontSizes.length;
+      index += 1
+    ) {
       const targetWidth =
-        canvas.width *
-        PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
+        canvas.width * PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
       lineFontSizes[index] = Math.min(
         referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR,
         fitPreviewText(context, lines[index], referenceFontSize, targetWidth),
@@ -266,8 +277,11 @@ function PreviewEngravingOverlay(
       const baseWidth =
         canvas.width *
         (PREVIEW_TEXT_LINE_WIDTH_FACTORS[index] ??
-          (PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1] * 0.55));
-      const allowedWidth = Math.max(0, baseWidth * halfChordFactor - PREVIEW_TEXT_SIDE_MARGIN_PX * 2);
+          PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1] * 0.55);
+      const allowedWidth = Math.max(
+        0,
+        baseWidth * halfChordFactor - PREVIEW_TEXT_SIDE_MARGIN_PX * 2,
+      );
       if (allowedWidth <= 0) return fontSize;
       context.font = `700 ${fontSize}px Arial`;
       const measuredWidth = context.measureText(lines[index]).width;
@@ -310,11 +324,7 @@ function PreviewEngravingOverlay(
   const y = params.bottomThicknessMm - params.heightMm / 2 + PREVIEW_TEXT_Y_OFFSET;
 
   return (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, y, 0]}
-      renderOrder={2}
-    >
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]} renderOrder={2}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial
         map={texture}
@@ -330,7 +340,11 @@ function PreviewEngravingOverlay(
   );
 }
 
-function KeyboardControls({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
+function KeyboardControls({
+  controlsRef,
+}: {
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+}) {
   const { camera } = useThree();
 
   useEffect(() => {
@@ -476,6 +490,7 @@ interface VaseViewer3DProps {
   shadingOverride?: number;
   forceTestTubeSupport?: boolean;
   suppressTestTubeSupport?: boolean;
+  captureToStore?: boolean;
 }
 
 export function VaseViewer3D({
@@ -486,6 +501,7 @@ export function VaseViewer3D({
   shadingOverride,
   forceTestTubeSupport = false,
   suppressTestTubeSupport = false,
+  captureToStore,
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
@@ -506,6 +522,7 @@ export function VaseViewer3D({
   const lastTapRef = useRef(0);
   const paramsKey = JSON.stringify(params);
   const isPreview = mode === "preview";
+  const shouldCaptureToStore = captureToStore ?? !isPreview;
   const resolvedColor = colorOverride ?? vaseColor;
   const resolvedOpacity = Math.min(1, Math.max(0.08, colorOpacity));
   const resolvedEmissiveIntensity = Math.min(0.5, Math.max(0, colorEmissiveIntensity));
@@ -602,6 +619,8 @@ export function VaseViewer3D({
 
         {/* <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={300} blur={2} far={200} /> */}
 
+        {shouldCaptureToStore && <ScreenshotBridge />}
+
         {!isPreview && (
           <>
             <OrbitControls
@@ -611,13 +630,14 @@ export function VaseViewer3D({
               minDistance={50}
               maxDistance={500}
             />
-            <ScreenshotBridge />
             <KeyboardControls controlsRef={controlsRef} />
             <Autoplay controlsRef={controlsRef} paramsKey={paramsKey} rotationMode={rotationMode} />
           </>
         )}
 
-        {!isPreview && showClipping && <ClippingPlane heightPercent={clippingHeight} maxHeight={params.heightMm} />}
+        {!isPreview && showClipping && (
+          <ClippingPlane heightPercent={clippingHeight} maxHeight={params.heightMm} />
+        )}
         {!isPreview && showGrid && (
           <gridHelper
             args={[300, 30, "#333333", "#333333"]}
