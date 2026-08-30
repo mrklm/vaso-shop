@@ -7,6 +7,19 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.115] - 2026-08-30
+
+### Ajouté
+- Ajoute un panier persistant avec quantité, suppression, modification du contenant et modification de la couleur.
+- Ajoute une icône de panier dédiée et les visuels Atelier Vaso dans l'écran d'accueil.
+
+### Modifié
+- Revoit le parcours boutique pour intégrer le panier avant les coordonnées et le paiement.
+- Adapte la sélection du contenant selon la compatibilité réelle du vase : soliflore imposé ou choix Eco-Cup / soliflore.
+- Clarifie les dimensions dans le panier avec les libellés hauteur et diamètre.
+- Ajuste les textes, espacements et boutons des écrans d'accueil, de contenant, de couleur et de coordonnées.
+- Prépare le paiement Stripe et le webhook à recevoir plusieurs articles dans une même commande.
+
 ## [1.1.114] - 2026-08-30
 
 ### Modifié

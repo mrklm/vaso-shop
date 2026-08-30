@@ -119,6 +119,56 @@ function buildOrderReference(seed) {
   return `VSO-${seedLabel}-${timeLabel}`;
 }
 
+function normalizeCheckoutItem(rawItem) {
+  if (!rawItem || typeof rawItem !== "object") {
+    return null;
+  }
+
+  return {
+    seed: rawItem.seed,
+    version: rawItem.version,
+    heightMm: rawItem.heightMm,
+    minDiameterMm: rawItem.minDiameterMm,
+    maxDiameterMm: rawItem.maxDiameterMm,
+    waterproofInsertLabel: rawItem.waterproofInsertLabel,
+    solifloreChoice: rawItem.solifloreChoice,
+    solifloreChoiceLabel: rawItem.solifloreChoiceLabel,
+    wantsSoliflore: rawItem.forceTestTubeSupport ? true : rawItem.wantsSoliflore === true,
+    forceTestTubeSupport: rawItem.forceTestTubeSupport === true,
+    suppressTestTubeSupport: rawItem.suppressTestTubeSupport === true,
+    material: rawItem.material,
+    colorId: rawItem.colorId,
+    colorLabel: rawItem.colorLabel,
+    quantity: Math.min(99, Math.max(1, Math.trunc(Number(rawItem.quantity) || 1))),
+  };
+}
+
+function getCheckoutItems(payload) {
+  if (Array.isArray(payload?.items)) {
+    return payload.items.map(normalizeCheckoutItem).filter(Boolean).slice(0, 12);
+  }
+
+  const legacyItem = normalizeCheckoutItem({
+    seed: payload?.seed,
+    version: payload?.version,
+    heightMm: payload?.heightMm,
+    minDiameterMm: payload?.minDiameterMm,
+    maxDiameterMm: payload?.maxDiameterMm,
+    waterproofInsertLabel: payload?.waterproofInsertLabel,
+    solifloreChoice: payload?.solifloreChoice,
+    solifloreChoiceLabel: payload?.solifloreChoiceLabel,
+    wantsSoliflore: payload?.wantsSoliflore,
+    forceTestTubeSupport: payload?.forceTestTubeSupport,
+    suppressTestTubeSupport: payload?.suppressTestTubeSupport,
+    material: payload?.material,
+    colorId: payload?.colorId,
+    colorLabel: payload?.colorLabel,
+    quantity: 1,
+  });
+
+  return legacyItem ? [legacyItem] : [];
+}
+
 function appendMetadata(params, scope, metadata) {
   Object.entries(metadata).forEach(([key, value]) => {
     if (!value) {
@@ -129,30 +179,47 @@ function appendMetadata(params, scope, metadata) {
   });
 }
 
-function buildOrderMetadata(payload, shippingOption, productPriceCents, shippingPriceCents, orderTotalCents, orderReference) {
+function buildOrderMetadata(
+  payload,
+  items,
+  shippingOption,
+  productPriceCents,
+  shippingPriceCents,
+  orderTotalCents,
+  orderReference,
+) {
+  const firstItem = items[0] ?? {};
+  const cartSummary = items
+    .map((item) => `${item.quantity}x ${item.seed} ${item.colorLabel}`)
+    .join(" | ");
+  const cartItemsJson = JSON.stringify(items);
+
   return {
     order_ref: orderReference,
-    seed: normalizeMetadataValue(payload.seed, 50),
-    version: normalizeMetadataValue(payload.version, 32),
-    height_mm: normalizeMetadataValue(payload.heightMm, 32),
-    min_diameter_mm: normalizeMetadataValue(payload.minDiameterMm, 32),
-    max_diameter_mm: normalizeMetadataValue(payload.maxDiameterMm, 32),
-    waterproof_insert_label: normalizeMetadataValue(payload.waterproofInsertLabel, 120),
-    soliflore_choice: normalizeMetadataValue(payload.solifloreChoice, 8),
-    soliflore_choice_label: normalizeMetadataValue(payload.solifloreChoiceLabel, 120),
-    wants_soliflore: normalizeMetadataValue(payload.solifloreChoice === "yes" ? "yes" : "no", 8),
+    item_count: normalizeMetadataValue(items.reduce((total, item) => total + item.quantity, 0), 40),
+    cart_summary: normalizeMetadataValue(cartSummary, 500),
+    cart_items_json: cartItemsJson.length <= 500 ? cartItemsJson : "",
+    seed: normalizeMetadataValue(firstItem.seed, 50),
+    version: normalizeMetadataValue(firstItem.version, 32),
+    height_mm: normalizeMetadataValue(firstItem.heightMm, 32),
+    min_diameter_mm: normalizeMetadataValue(firstItem.minDiameterMm, 32),
+    max_diameter_mm: normalizeMetadataValue(firstItem.maxDiameterMm, 32),
+    waterproof_insert_label: normalizeMetadataValue(firstItem.waterproofInsertLabel, 120),
+    soliflore_choice: normalizeMetadataValue(firstItem.solifloreChoice, 8),
+    soliflore_choice_label: normalizeMetadataValue(firstItem.solifloreChoiceLabel, 120),
+    wants_soliflore: normalizeMetadataValue(firstItem.solifloreChoice === "yes" ? "yes" : "no", 8),
     force_test_tube_support: normalizeMetadataValue(
-      payload.solifloreChoice === "yes" ? "yes" : "no",
+      firstItem.forceTestTubeSupport ? "yes" : "no",
       8,
     ),
     suppress_test_tube_support: normalizeMetadataValue(
-      payload.suppressTestTubeSupport ? "yes" : "no",
+      firstItem.suppressTestTubeSupport ? "yes" : "no",
       8,
     ),
-    material: normalizeMetadataValue(payload.material, 32),
+    material: normalizeMetadataValue(firstItem.material, 32),
     product_price_cents: normalizeMetadataValue(productPriceCents, 40),
-    color_id: normalizeMetadataValue(payload.colorId, 64),
-    color_label: normalizeMetadataValue(payload.colorLabel, 128),
+    color_id: normalizeMetadataValue(firstItem.colorId, 64),
+    color_label: normalizeMetadataValue(firstItem.colorLabel, 128),
     customer_first_name: normalizeMetadataValue(payload.customerFirstName, 120),
     customer_last_name: normalizeMetadataValue(payload.customerLastName, 120),
     customer_email: normalizeMetadataValue(payload.customerEmail, 160),
@@ -176,31 +243,35 @@ function buildOrderMetadata(payload, shippingOption, productPriceCents, shipping
   };
 }
 
-function buildLineItems(params, payload, shippingOption, productPriceCents, shippingPriceCents) {
+function buildLineItems(params, items, payload, shippingOption, productPriceCents, shippingPriceCents) {
   const currency = (readEnv("STRIPE_CURRENCY") ?? "eur").trim().toLowerCase();
   const productName = (readEnv("STRIPE_PRODUCT_NAME") ?? "Vase Vaso").trim();
-  const productDescription = [
-    `Vase N° ${payload.seed}`,
-    payload.colorLabel,
-    `${payload.heightMm} mm`,
-    payload.solifloreChoice === "yes" ? "Soliflore avec tube à essai" : payload.waterproofInsertLabel,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
-  params.set("line_items[0][quantity]", "1");
-  params.set("line_items[0][price_data][currency]", currency);
-  params.set("line_items[0][price_data][unit_amount]", `${productPriceCents}`);
-  params.set("line_items[0][price_data][product_data][name]", productName);
-  params.set("line_items[0][price_data][product_data][description]", productDescription);
+  items.forEach((item, index) => {
+    const productDescription = [
+      `Vase N° ${item.seed}`,
+      item.colorLabel,
+      `${item.heightMm} mm`,
+      item.solifloreChoice === "yes" ? "Soliflore avec tube à essai" : item.waterproofInsertLabel,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    params.set(`line_items[${index}][quantity]`, `${item.quantity}`);
+    params.set(`line_items[${index}][price_data][currency]`, currency);
+    params.set(`line_items[${index}][price_data][unit_amount]`, `${productPriceCents}`);
+    params.set(`line_items[${index}][price_data][product_data][name]`, productName);
+    params.set(`line_items[${index}][price_data][product_data][description]`, productDescription);
+  });
 
   if (shippingPriceCents > 0) {
-    params.set("line_items[1][quantity]", "1");
-    params.set("line_items[1][price_data][currency]", currency);
-    params.set("line_items[1][price_data][unit_amount]", `${shippingPriceCents}`);
-    params.set("line_items[1][price_data][product_data][name]", shippingOption.label);
+    const shippingIndex = items.length;
+    params.set(`line_items[${shippingIndex}][quantity]`, "1");
+    params.set(`line_items[${shippingIndex}][price_data][currency]`, currency);
+    params.set(`line_items[${shippingIndex}][price_data][unit_amount]`, `${shippingPriceCents}`);
+    params.set(`line_items[${shippingIndex}][price_data][product_data][name]`, shippingOption.label);
     params.set(
-      "line_items[1][price_data][product_data][description]",
+      `line_items[${shippingIndex}][price_data][product_data][description]`,
       `${shippingOption.provider} · ${payload.customerCountry}`,
     );
   }
@@ -211,16 +282,12 @@ function validatePayload(payload) {
     return "La commande n'a pas pu être lue.";
   }
 
+  const items = getCheckoutItems(payload);
+  if (items.length === 0) {
+    return "Le panier est vide.";
+  }
+
   const requiredFields = [
-    "seed",
-    "version",
-    "heightMm",
-    "minDiameterMm",
-    "maxDiameterMm",
-    "waterproofInsertLabel",
-    "material",
-    "colorLabel",
-    "solifloreChoice",
     "customerFirstName",
     "customerLastName",
     "customerEmail",
@@ -238,8 +305,29 @@ function validatePayload(payload) {
     }
   }
 
-  if (!["yes", "no"].includes(`${payload.solifloreChoice}`)) {
-    return "Le choix soliflore Oui/Non est requis pour lancer le paiement.";
+  for (const item of items) {
+    const requiredItemFields = [
+      "seed",
+      "version",
+      "heightMm",
+      "minDiameterMm",
+      "maxDiameterMm",
+      "waterproofInsertLabel",
+      "material",
+      "colorLabel",
+      "solifloreChoice",
+    ];
+
+    for (const field of requiredItemFields) {
+      const value = item[field];
+      if (value === null || value === undefined || `${value}`.trim().length === 0) {
+        return `Le champ ${field} est requis pour chaque vase du panier.`;
+      }
+    }
+
+    if (!["yes", "no"].includes(`${item.solifloreChoice}`)) {
+      return "Le choix soliflore Oui/Non est requis pour chaque vase du panier.";
+    }
   }
 
   return null;
@@ -284,10 +372,13 @@ export default async (request) => {
   if (validationError) {
     return jsonResponse({ error: validationError }, 400, corsHeaders);
   }
+  const checkoutItems = getCheckoutItems(payload);
+  const itemCount = checkoutItems.reduce((total, item) => total + item.quantity, 0);
 
   let shopConfig;
   let shippingOption;
   let productPriceCents;
+  let productSubtotalCents;
   let shippingPriceCents;
   let orderTotalCents;
   try {
@@ -305,12 +396,13 @@ export default async (request) => {
       payload.shippingModeId,
     );
     productPriceCents = getConfiguredProductPriceCents(shopConfig);
+    productSubtotalCents = productPriceCents * itemCount;
     shippingPriceCents = getEffectiveShippingPriceCents(
       shopConfig,
-      productPriceCents,
+      productSubtotalCents,
       shippingOption.priceCents,
     );
-    orderTotalCents = productPriceCents + shippingPriceCents;
+    orderTotalCents = productSubtotalCents + shippingPriceCents;
   } catch (error) {
     const message =
       error instanceof Error
@@ -319,19 +411,21 @@ export default async (request) => {
     return jsonResponse({ error: message }, 400, corsHeaders);
   }
 
-  const orderReference = buildOrderReference(payload.seed);
+  const firstCheckoutItem = checkoutItems[0];
+  const orderReference = buildOrderReference(firstCheckoutItem.seed);
   const publicSiteUrl = getPublicSiteUrl(origin);
   const successUrl = new URL("checkout-success.html", publicSiteUrl);
   successUrl.searchParams.set("order_ref", orderReference);
-  successUrl.searchParams.set("seed", `${payload.seed}`);
+  successUrl.searchParams.set("seed", `${firstCheckoutItem.seed}`);
   successUrl.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
 
   const cancelUrl = new URL("checkout-cancelled.html", publicSiteUrl);
   cancelUrl.searchParams.set("order_ref", orderReference);
-  cancelUrl.searchParams.set("seed", `${payload.seed}`);
+  cancelUrl.searchParams.set("seed", `${firstCheckoutItem.seed}`);
 
   const metadata = buildOrderMetadata(
     payload,
+    checkoutItems,
     shippingOption,
     productPriceCents,
     shippingPriceCents,
@@ -351,7 +445,7 @@ export default async (request) => {
     params.set("payment_intent_data[description]", `Commande Vaso ${orderReference}`);
     appendMetadata(params, "metadata", metadata);
     appendMetadata(params, "payment_intent_data[metadata]", metadata);
-    buildLineItems(params, payload, shippingOption, productPriceCents, shippingPriceCents);
+    buildLineItems(params, checkoutItems, payload, shippingOption, productPriceCents, shippingPriceCents);
 
     const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",

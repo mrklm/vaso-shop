@@ -54,6 +54,7 @@ interface ShopState {
   goPrevious: () => void;
   goNext: () => void;
   openOrderForCurrent: () => void;
+  openOrderForEntry: (entry: ShopVaseEntry, colorId?: string) => void;
   closeOrder: () => void;
   setSelectedColorId: (colorId: string) => void;
 }
@@ -102,6 +103,24 @@ export const useShopStore = create<ShopState>((set, get) => ({
     set({
       selectedEntryId: entries[currentIndex]?.id ?? null,
       selectedColorId: "",
+    });
+  },
+
+  openOrderForEntry: (entry, colorId = "") => {
+    const { entries } = get();
+    const existingEntryIndex = entries.findIndex((currentEntry) => currentEntry.id === entry.id);
+    const nextEntries =
+      existingEntryIndex === -1
+        ? [...entries, { ...entry, params: cloneParams(entry.params) }]
+        : entries;
+    const nextIndex = existingEntryIndex === -1 ? nextEntries.length - 1 : existingEntryIndex;
+
+    applyEntryToVaseStore(nextEntries[nextIndex]);
+    set({
+      entries: nextEntries,
+      currentIndex: nextIndex,
+      selectedEntryId: nextEntries[nextIndex]?.id ?? null,
+      selectedColorId: colorId,
     });
   },
 

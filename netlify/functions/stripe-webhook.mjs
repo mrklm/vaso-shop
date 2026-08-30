@@ -99,13 +99,30 @@ function parseStripeEvent(rawBody) {
   }
 }
 
+function parseCartItemsMetadata(value) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsedValue = JSON.parse(value);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+}
+
 function normalizeCheckoutSession(session) {
   const metadata = session.metadata ?? {};
   const customerDetails = session.customer_details ?? {};
   const customerAddress = customerDetails.address ?? {};
+  const cartItems = parseCartItemsMetadata(metadata.cart_items_json);
 
   return {
     orderRef: metadata.order_ref ?? session.client_reference_id ?? null,
+    itemCount: metadata.item_count ?? null,
+    cartSummary: metadata.cart_summary ?? null,
+    cartItems,
     seed: metadata.seed ?? null,
     version: metadata.version ?? null,
     colorId: metadata.color_id ?? null,
@@ -230,7 +247,8 @@ function buildDiscordMessage(order) {
     "**Nouvelle commande Vaso**",
     `Date : ${formatOrderDateTime(order.createdAt) ?? "n/a"}`,
     `Reference : ${order.orderRef ?? "n/a"}`,
-    `Vase : n° ${order.seed ?? "n/a"}${order.heightMm ? ` · ${order.heightMm} mm` : ""}`,
+    `Panier : ${order.cartSummary ?? `Vase n° ${order.seed ?? "n/a"}`}`,
+    `Articles : ${order.itemCount ?? "1"}`,
     `Couleur : ${order.colorLabel ?? "n/a"}`,
     `Contenant compatible : ${order.waterproofInsertLabel ?? "n/a"}`,
     `Usage soliflore : ${order.solifloreChoiceLabel ?? "n/a"}`,

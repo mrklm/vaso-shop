@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { InsertView2D } from "./components/viewer/InsertView2D";
 import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
 import { useUIStore } from "./store/ui-store";
+import type { VaseParameters } from "./engine/types";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
 import {
   DEFAULT_HERO_GALLERY_FADE_IN_MS,
@@ -24,10 +25,13 @@ import {
 } from "./shop/shop-shipping";
 import { useShopStore } from "./shop/shop-store";
 import {
+  getInsertPresetById,
   getPreferredTestTubePreset,
   type WaterproofInsertCompatibility,
 } from "./engine/insert-compatibility";
-import vasoMark from "./assets/shop/vaso-mark.png";
+import cartIcon from "./assets/shop/panier.png";
+import workshopVasoIcon from "./assets/shop/workshop-vaso.png";
+import workshopBretonFlag from "./assets/shop/workshop-bretagne.png";
 import "./App.css";
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev";
@@ -73,6 +77,29 @@ interface ShopRelaySelection {
 
 type SolifloreChoice = "" | "yes" | "no";
 
+interface ShopCartItem {
+  id: string;
+  seed: number;
+  version: string;
+  heightMm: number;
+  minDiameterMm: number;
+  maxDiameterMm: number;
+  waterproofInsertCompatibility: WaterproofInsertCompatibility;
+  waterproofInsertLabel: string;
+  solifloreChoice: Exclude<SolifloreChoice, "">;
+  solifloreChoiceLabel: string;
+  forceTestTubeSupport: boolean;
+  suppressTestTubeSupport: boolean;
+  material: "PLA";
+  params: VaseParameters;
+  colorId: string;
+  colorLabel: string;
+  colorHex: string;
+  quantity: number;
+}
+
+type CartEditTarget = "insert" | "color";
+
 interface MondialRelayParcelShopData {
   Adresse1?: string;
   Adresse2?: string;
@@ -115,12 +142,154 @@ declare global {
   }
 }
 
+const SHOP_CART_STORAGE_KEY = "vaso-shop-cart-v1";
+
+function cloneVaseParams(params: VaseParameters): VaseParameters {
+  return JSON.parse(JSON.stringify(params)) as VaseParameters;
+}
+
+function buildCartItemKey(
+  item: Pick<
+    ShopCartItem,
+    "seed" | "version" | "colorId" | "solifloreChoice" | "suppressTestTubeSupport"
+  >,
+): string {
+  return [
+    item.version,
+    item.seed,
+    item.colorId,
+    item.solifloreChoice,
+    item.suppressTestTubeSupport ? "suppress-tube" : "tube-default",
+  ].join("|");
+}
+
+function normalizeCartQuantity(quantity: unknown): number {
+  const normalizedQuantity = Math.trunc(Number(quantity));
+  if (!Number.isFinite(normalizedQuantity)) {
+    return 1;
+  }
+
+  return Math.min(99, Math.max(1, normalizedQuantity));
+}
+
+function readStoredCartItems(): ShopCartItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(SHOP_CART_STORAGE_KEY);
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsedValue = JSON.parse(rawValue);
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    return parsedValue
+      .filter((item): item is ShopCartItem => {
+        if (!item || typeof item !== "object") {
+          return false;
+        }
+
+        return (
+          Number.isFinite(Number(item.seed)) &&
+          typeof item.id === "string" &&
+          typeof item.version === "string" &&
+          typeof item.colorId === "string" &&
+          typeof item.colorLabel === "string" &&
+          typeof item.colorHex === "string" &&
+          typeof item.waterproofInsertLabel === "string" &&
+          (item.solifloreChoice === "yes" || item.solifloreChoice === "no") &&
+          item.waterproofInsertCompatibility &&
+          typeof item.waterproofInsertCompatibility === "object" &&
+          item.params &&
+          typeof item.params === "object"
+        );
+      })
+      .map((item) => ({
+        ...item,
+        seed: Number(item.seed),
+        heightMm: Number(item.heightMm) || 0,
+        minDiameterMm: Number(item.minDiameterMm) || 0,
+        maxDiameterMm: Number(item.maxDiameterMm) || 0,
+        quantity: normalizeCartQuantity(item.quantity),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredCartItems(items: ShopCartItem[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(SHOP_CART_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Le panier reste utilisable en session si le navigateur refuse le stockage.
+  }
+}
+
+function getCartInsertDetails(
+  compatibility: WaterproofInsertCompatibility,
+  solifloreChoice: Exclude<SolifloreChoice, "">,
+) {
+  const wantsSoliflore = solifloreChoice === "yes";
+  const suppressTestTubeSupport = solifloreChoice === "no" && compatibility.type === "test_tube";
+
+  if (wantsSoliflore) {
+    return {
+      waterproofInsertLabel: `${SHOP_SOLIFLORE_TEST_TUBE_LABEL} (soliflore)`,
+      solifloreChoiceLabel: "Oui, mode soliflore avec support tube dans le STL",
+      forceTestTubeSupport: true,
+      suppressTestTubeSupport: false,
+    };
+  }
+
+  return {
+    waterproofInsertLabel: suppressTestTubeSupport
+      ? SHOP_TEST_TUBE_WITHOUT_SUPPORT_LABEL
+      : compatibility.label,
+    solifloreChoiceLabel: suppressTestTubeSupport
+      ? "Non, tube compatible sans support STL généré"
+      : "Non, contenant étanche compatible",
+    forceTestTubeSupport: false,
+    suppressTestTubeSupport,
+  };
+}
+
+function createEntryFromCartItem(item: ShopCartItem) {
+  return {
+    id: item.id,
+    seed: item.seed,
+    isSeedModified: false,
+    version: item.version,
+    heightMm: item.heightMm,
+    minDiameterMm: item.minDiameterMm,
+    maxDiameterMm: item.maxDiameterMm,
+    waterproofInsertCompatibility: item.waterproofInsertCompatibility,
+    material: item.material,
+    params: cloneVaseParams(item.params),
+  };
+}
+
 function formatShippingOptionDisplay(optionLabel: string, optionProvider: string): string {
   if (!optionProvider || optionProvider === "Mondial Relay Domicile") {
     return optionLabel;
   }
 
   return `${optionLabel} · ${optionProvider}`;
+}
+
+function formatInsertHeightCm(heightMm: number): string {
+  const heightCm = heightMm / 10;
+  return Number.isInteger(heightCm)
+    ? `${heightCm} cm`
+    : `${heightCm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} cm`;
 }
 
 function loadShopScript(id: string, src: string): Promise<void> {
@@ -230,6 +399,7 @@ function App() {
   const goPrevious = useShopStore((s) => s.goPrevious);
   const goNext = useShopStore((s) => s.goNext);
   const openOrderForCurrent = useShopStore((s) => s.openOrderForCurrent);
+  const openOrderForEntry = useShopStore((s) => s.openOrderForEntry);
   const closeOrder = useShopStore((s) => s.closeOrder);
   const setSelectedColorId = useShopStore((s) => s.setSelectedColorId);
   const entries = useShopStore((s) => s.entries);
@@ -263,7 +433,13 @@ function App() {
   const [checkoutError, setCheckoutError] = useState("");
   const [shopConfig, setShopConfig] = useState<ShopPublicConfig | null>(null);
   const [shopConfigError, setShopConfigError] = useState("");
+  const [cartItems, setCartItems] = useState<ShopCartItem[]>(() => readStoredCartItems());
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+  const [cartItemBeingEditedId, setCartItemBeingEditedId] = useState<string | null>(null);
+  const [isCheckoutSectionVisible, setIsCheckoutSectionVisible] = useState(false);
+  const stageSectionRef = useRef<HTMLElement | null>(null);
   const orderSectionRef = useRef<HTMLElement | null>(null);
+  const colorStepRef = useRef<HTMLElement | null>(null);
   const clientStepRef = useRef<HTMLElement | null>(null);
 
   const currentEntry = entries[currentIndex] ?? null;
@@ -319,6 +495,9 @@ function App() {
   const heroGalleryPreviewClearMs = Math.max(heroGalleryFadeInMs, heroGalleryFadeOutMs, 1);
   const selectedColorLabel = selectedColor?.label ?? "A choisir";
   const productPriceCents = shopConfig ? getShopBasePriceCents(shopConfig) : 0;
+  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const cartSubtotalCents = productPriceCents * cartItemCount;
+  const cartSubtotalLabel = formatShopPriceFromCents(cartSubtotalCents);
   const customerFullName = [customerFirstName.trim(), customerLastName.trim()]
     .filter(Boolean)
     .join(" ");
@@ -351,7 +530,7 @@ function App() {
     shopConfig && selectedShippingOption
       ? getShopEffectiveShippingPriceCents(
           shopConfig,
-          productPriceCents,
+          cartSubtotalCents,
           selectedShippingOption.priceCents,
         )
       : 0;
@@ -360,13 +539,33 @@ function App() {
       ? "Offerte"
       : formatShopPriceFromCents(shippingPriceCents)
     : null;
-  const orderTotalCents = productPriceCents + shippingPriceCents;
+  const orderTotalCents = cartSubtotalCents + shippingPriceCents;
   const orderTotalLabel = formatShopPriceFromCents(orderTotalCents);
   const isEcoCupCompatible = selectedEntry?.waterproofInsertCompatibility.type === "eco_cup";
   const isTestTubeCompatible = selectedEntry?.waterproofInsertCompatibility.type === "test_tube";
-  const wantsSoliflore = solifloreChoice === "yes";
-  const hasAnsweredSolifloreQuestion = solifloreChoice !== "";
-  const suppressTestTubeSupport = solifloreChoice === "no" && isTestTubeCompatible;
+  const ecoCupInsertPreset = selectedEntry
+    ? getInsertPresetById(selectedEntry.waterproofInsertCompatibility.presetId)
+    : null;
+  const testTubeInsertPreset = selectedEntry
+    ? getPreferredTestTubePreset(selectedEntry.params.heightMm)
+    : null;
+  const ecoCupInsertLabel = isEcoCupCompatible
+    ? (selectedEntry?.waterproofInsertCompatibility.label ?? "Eco-Cup")
+    : "";
+  const ecoCupInsertSpecLabel =
+    isEcoCupCompatible && ecoCupInsertPreset
+      ? `${ecoCupInsertPreset.label} : diamètre haut ${Math.round(
+          ecoCupInsertPreset.topDiameterMm,
+        )} mm / hauteur ${formatInsertHeightCm(ecoCupInsertPreset.heightMm)}`
+      : "";
+  const testTubeInsertSpecLabel = testTubeInsertPreset
+    ? `Tube à essai : diamètre ${Math.round(testTubeInsertPreset.topDiameterMm)} mm / hauteur ${formatInsertHeightCm(testTubeInsertPreset.heightMm)}`
+    : "";
+  const effectiveSolifloreChoice: SolifloreChoice =
+    isTestTubeCompatible && solifloreChoice === "" ? "yes" : solifloreChoice;
+  const wantsSoliflore = effectiveSolifloreChoice === "yes";
+  const hasAnsweredSolifloreQuestion = isTestTubeCompatible || effectiveSolifloreChoice !== "";
+  const suppressTestTubeSupport = effectiveSolifloreChoice === "no" && isTestTubeCompatible;
   const selectedWaterproofInsertLabel = wantsSoliflore
     ? `${SHOP_SOLIFLORE_TEST_TUBE_LABEL} (soliflore)`
     : suppressTestTubeSupport
@@ -388,20 +587,12 @@ function App() {
     : null;
   const displayedWaterproofInsertCompatibility =
     selectedWaterproofInsertCompatibility ?? selectedEntry?.waterproofInsertCompatibility ?? null;
-  const solifloreChoiceLabel =
-    solifloreChoice === "yes"
-      ? "Oui, mode soliflore avec support tube dans le STL"
-      : solifloreChoice === "no"
-        ? isTestTubeCompatible
-          ? "Non, tube compatible sans support STL généré"
-          : "Non, contenant étanche compatible"
-        : "";
   const selectedShippingOptionLabel =
     shopConfig && selectedShippingOption
       ? `${formatShippingOptionDisplay(selectedShippingOption.label, selectedShippingOption.provider)} · ${formatShopPriceFromCents(
           getShopEffectiveShippingPriceCents(
             shopConfig,
-            productPriceCents,
+            cartSubtotalCents,
             selectedShippingOption.priceCents,
           ),
         )}`
@@ -442,11 +633,9 @@ function App() {
     isRelaySelectionComplete &&
     !isUnsupportedShippingCountry;
   const canAccessColorStep = isModelStepConfirmed && availableColors.length > 0;
-  const canAccessClientStep = isColorStepConfirmed;
+  const canAccessClientStep = isCheckoutSectionVisible && cartItems.length > 0;
   const canAccessGlobalStep = isClientStepConfirmed && canValidateClientStep;
   const canAccessStripeStep = isGlobalStepConfirmed && canOrder;
-  const orderBasePriceLabel = formatShopPriceFromCents(productPriceCents);
-
   useEffect(() => {
     setShowGrid(false);
     setWireframe(false);
@@ -494,6 +683,23 @@ function App() {
       isCancelled = true;
     };
   }, [applyPrinterVolumeConfig]);
+
+  useEffect(() => {
+    writeStoredCartItems(cartItems);
+  }, [cartItems]);
+
+  useEffect(() => {
+    if (cartItems.length > 0) {
+      return;
+    }
+
+    setIsCartModalOpen(false);
+    setCartItemBeingEditedId(null);
+    setIsCheckoutSectionVisible(false);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+    setCheckoutError("");
+  }, [cartItems.length]);
 
   useEffect(() => {
     if (availableColors.length === 0) {
@@ -555,9 +761,9 @@ function App() {
     }
 
     const intervalId = window.setInterval(() => {
-      setContainerIllustrationIndex((currentIndex) => (
-        currentIndex + 1
-      ) % containerIllustrations.length);
+      setContainerIllustrationIndex(
+        (currentIndex) => (currentIndex + 1) % containerIllustrations.length,
+      );
     }, 6000);
 
     return () => {
@@ -574,7 +780,9 @@ function App() {
     setIsColorStepConfirmed(false);
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
-    setSolifloreChoice("");
+    setSolifloreChoice(
+      selectedEntry.waterproofInsertCompatibility.type === "test_tube" ? "yes" : "",
+    );
     setCheckoutError("");
     setIsStartingCheckout(false);
     setRelaySelection(null);
@@ -615,10 +823,6 @@ function App() {
   }, [selectedColorId, selectedEntry]);
 
   useEffect(() => {
-    if (!selectedEntry) {
-      return;
-    }
-
     setIsClientStepConfirmed(false);
     setIsGlobalStepConfirmed(false);
     setCheckoutError("");
@@ -634,7 +838,6 @@ function App() {
     customerPhone,
     customerCountry,
     shippingModeId,
-    selectedEntry,
   ]);
 
   useEffect(() => {
@@ -774,6 +977,152 @@ function App() {
   const getOrderStepClassName = (isComplete: boolean, isUnlocked: boolean) =>
     `shop-order-step-card${isComplete ? " is-complete" : ""}${!isUnlocked ? " is-locked" : ""}`;
 
+  const scrollToStage = () => {
+    stageSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleReturnToGeneration = () => {
+    closeOrder();
+    setCartItemBeingEditedId(null);
+    setIsModelStepConfirmed(false);
+    setIsColorStepConfirmed(false);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+    setIsCheckoutSectionVisible(false);
+    setSolifloreChoice("");
+    setCheckoutError("");
+    window.setTimeout(() => {
+      stageSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  };
+
+  const handleConfirmModelStep = () => {
+    setIsModelStepConfirmed(true);
+    window.setTimeout(() => {
+      colorStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
+  const handleAddSelectedVaseToCart = () => {
+    if (!selectedEntry || !selectedColor || !hasAnsweredSolifloreQuestion) {
+      return;
+    }
+
+    const selectedSolifloreChoice = effectiveSolifloreChoice === "yes" ? "yes" : "no";
+    const insertDetails = getCartInsertDetails(
+      selectedEntry.waterproofInsertCompatibility,
+      selectedSolifloreChoice,
+    );
+    const nextItem: ShopCartItem = {
+      id:
+        cartItemBeingEditedId ??
+        `${selectedEntry.id}-${selectedColor.id}-${selectedSolifloreChoice}-${insertDetails.suppressTestTubeSupport ? "without-support" : "default"}`,
+      seed: selectedEntry.seed,
+      version: selectedEntry.version,
+      heightMm: selectedEntry.heightMm,
+      minDiameterMm: selectedEntry.minDiameterMm,
+      maxDiameterMm: selectedEntry.maxDiameterMm,
+      waterproofInsertCompatibility: selectedEntry.waterproofInsertCompatibility,
+      waterproofInsertLabel: insertDetails.waterproofInsertLabel,
+      solifloreChoice: selectedSolifloreChoice,
+      solifloreChoiceLabel: insertDetails.solifloreChoiceLabel,
+      forceTestTubeSupport: insertDetails.forceTestTubeSupport,
+      suppressTestTubeSupport: insertDetails.suppressTestTubeSupport,
+      material: selectedEntry.material,
+      params: cloneVaseParams(selectedEntry.params),
+      colorId: selectedColor.id,
+      colorLabel: selectedColor.label,
+      colorHex: selectedColor.hex,
+      quantity: 1,
+    };
+    const nextItemKey = buildCartItemKey(nextItem);
+
+    setCartItems((currentItems) => {
+      if (cartItemBeingEditedId) {
+        return currentItems.map((item) =>
+          item.id === cartItemBeingEditedId ? { ...nextItem, quantity: item.quantity } : item,
+        );
+      }
+
+      const existingItemIndex = currentItems.findIndex(
+        (item) => buildCartItemKey(item) === nextItemKey,
+      );
+      if (existingItemIndex === -1) {
+        return [...currentItems, nextItem];
+      }
+
+      return currentItems.map((item, index) =>
+        index === existingItemIndex
+          ? { ...item, quantity: normalizeCartQuantity(item.quantity + 1) }
+          : item,
+      );
+    });
+    setIsModelStepConfirmed(false);
+    setIsColorStepConfirmed(false);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+    setIsCheckoutSectionVisible(false);
+    setCartItemBeingEditedId(null);
+    setCheckoutError("");
+    closeOrder();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const updateCartItemQuantity = (itemId: string, nextQuantity: number) => {
+    setCartItems((currentItems) =>
+      currentItems
+        .map((item) =>
+          item.id === itemId ? { ...item, quantity: normalizeCartQuantity(nextQuantity) } : item,
+        )
+        .filter((item) => item.quantity > 0),
+    );
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+  };
+
+  const removeCartItem = (itemId: string) => {
+    setCartItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
+    setCartItemBeingEditedId((currentItemId) => (currentItemId === itemId ? null : currentItemId));
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+  };
+
+  const handleEditCartItem = (item: ShopCartItem, target: CartEditTarget) => {
+    openOrderForEntry(createEntryFromCartItem(item), item.colorId);
+    setCartItemBeingEditedId(item.id);
+    setIsClientStepConfirmed(false);
+    setIsGlobalStepConfirmed(false);
+    setIsCheckoutSectionVisible(false);
+    setCheckoutError("");
+    setIsCartModalOpen(false);
+
+    window.setTimeout(() => {
+      setSolifloreChoice(item.solifloreChoice);
+      setIsModelStepConfirmed(target === "color");
+      setIsColorStepConfirmed(false);
+
+      if (target === "color") {
+        colorStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+
+      orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 140);
+  };
+
+  const handleProceedToCheckout = () => {
+    if (cartItems.length === 0) {
+      return;
+    }
+
+    setIsCartModalOpen(false);
+    setIsCheckoutSectionVisible(true);
+    setCheckoutError("");
+    window.setTimeout(() => {
+      orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
+
   const handleSolifloreChoiceChange = (nextChoice: SolifloreChoice) => {
     setSolifloreChoice(nextChoice);
     setIsModelStepConfirmed(false);
@@ -786,13 +1135,7 @@ function App() {
   const handleCheckoutSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (
-      !selectedEntry ||
-      !shopConfig ||
-      !canAccessStripeStep ||
-      !hasAnsweredSolifloreQuestion ||
-      isStartingCheckout
-    ) {
+    if (!shopConfig || cartItems.length === 0 || !canAccessStripeStep || isStartingCheckout) {
       return;
     }
 
@@ -806,21 +1149,24 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          seed: selectedEntry.seed,
-          version: selectedEntry.version,
-          heightMm: selectedEntry.heightMm,
-          minDiameterMm: selectedEntry.minDiameterMm,
-          maxDiameterMm: selectedEntry.maxDiameterMm,
-          waterproofInsertLabel: selectedWaterproofInsertLabel,
-          solifloreChoice,
-          solifloreChoiceLabel,
-          wantsSoliflore,
-          forceTestTubeSupport: wantsSoliflore,
-          suppressTestTubeSupport,
-          material: selectedEntry.material,
+          items: cartItems.map((item) => ({
+            seed: item.seed,
+            version: item.version,
+            heightMm: item.heightMm,
+            minDiameterMm: item.minDiameterMm,
+            maxDiameterMm: item.maxDiameterMm,
+            waterproofInsertLabel: item.waterproofInsertLabel,
+            solifloreChoice: item.solifloreChoice,
+            solifloreChoiceLabel: item.solifloreChoiceLabel,
+            wantsSoliflore: item.forceTestTubeSupport,
+            forceTestTubeSupport: item.forceTestTubeSupport,
+            suppressTestTubeSupport: item.suppressTestTubeSupport,
+            material: item.material,
+            colorId: item.colorId,
+            colorLabel: item.colorLabel,
+            quantity: item.quantity,
+          })),
           productPriceCents,
-          colorId: selectedColorId,
-          colorLabel: selectedColorLabel,
           customerFirstName,
           customerLastName,
           customerEmail,
@@ -875,6 +1221,8 @@ function App() {
     if (!canOrder) {
       return;
     }
+
+    setCartItemBeingEditedId(null);
 
     if (selectedEntry?.id === currentEntry?.id) {
       orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -939,20 +1287,6 @@ function App() {
                   Explorez des formes uniques, choisissez votre coloris PLA et passez commande à
                   partir du modèle affiché.
                 </p>
-                <div className="shop-status-banner">
-                  <span className={`shop-status-badge shop-status-${shopConfig.shopStatus.state}`}>
-                    {shopConfig.shopStatus.label}
-                  </span>
-                  {shopConfig.messages.shippingLeadTime ? (
-                    <p className="shop-status-note">{shopConfig.messages.shippingLeadTime}</p>
-                  ) : null}
-                  {shopConfig.shopStatus.message ? (
-                    <p className="shop-status-note">{shopConfig.shopStatus.message}</p>
-                  ) : null}
-                  {shopConfig.messages.temporaryNotice ? (
-                    <p className="shop-status-note">{shopConfig.messages.temporaryNotice}</p>
-                  ) : null}
-                </div>
               </div>
 
               <div className="shop-hero-media">
@@ -992,15 +1326,80 @@ function App() {
                   </div>
                 </div>
               </div>
+              <div className="shop-start-panel">
+                <p className="shop-start-copy">
+                  Un parcours clair et simple avant le panier : validez le modèle, choisissez un
+                  contenant, sélectionnez une couleur puis ajoutez ce vase à votre panier.
+                </p>
+                <button
+                  className="shop-button shop-button-accent shop-start-button"
+                  type="button"
+                  onClick={scrollToStage}
+                >
+                  Commencer
+                </button>
+              </div>
             </div>
           </div>
 
           <aside className="shop-hero-note shop-current-card">
-            <div className="shop-info-head">
-              <p className="shop-panel-title">Des modèles générés en direct</p>
+            <div className="shop-info-head shop-info-head-cart">
+              <div className="shop-status-banner shop-status-banner-cart">
+                <span className={`shop-status-badge shop-status-${shopConfig.shopStatus.state}`}>
+                  {shopConfig.shopStatus.label}
+                </span>
+                {shopConfig.messages.shippingLeadTime ? (
+                  <p className="shop-status-note">{shopConfig.messages.shippingLeadTime}</p>
+                ) : null}
+                {shopConfig.shopStatus.message ? (
+                  <p className="shop-status-note">{shopConfig.shopStatus.message}</p>
+                ) : null}
+                {shopConfig.messages.temporaryNotice ? (
+                  <p className="shop-status-note">{shopConfig.messages.temporaryNotice}</p>
+                ) : null}
+              </div>
+              <div className="shop-cart-anchor">
+                <button
+                  className="shop-cart-button"
+                  type="button"
+                  onClick={() => setIsCartModalOpen(true)}
+                  aria-label={`Panier, ${cartItemCount} article${cartItemCount > 1 ? "s" : ""}`}
+                >
+                  <img src={cartIcon} alt="" aria-hidden="true" />
+                  {cartItemCount > 0 ? (
+                    <span className="shop-cart-badge">{cartItemCount}</span>
+                  ) : null}
+                </button>
+                <div className="shop-cart-popover" role="status">
+                  <strong>Panier</strong>
+                  {cartItems.length > 0 ? (
+                    <>
+                      <div className="shop-cart-popover-list">
+                        {cartItems.slice(0, 3).map((item) => (
+                          <div key={item.id} className="shop-cart-popover-row">
+                            <span
+                              className="shop-cart-color-dot"
+                              style={{ backgroundColor: item.colorHex }}
+                              aria-hidden="true"
+                            />
+                            <span>
+                              Vase N° {item.seed} · Qté {item.quantity}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {cartItems.length > 3 ? <p>{cartItems.length - 3} autre(s) vase(s)</p> : null}
+                      <p>Total articles : {cartSubtotalLabel}</p>
+                    </>
+                  ) : (
+                    <p>Votre panier est vide.</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="shop-story">
+              <p className="shop-panel-title shop-story-title">Des modèles générés en direct</p>
               <p>
                 La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
                 affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
@@ -1016,30 +1415,25 @@ function App() {
             </div>
             <div className="shop-story shop-story-workshop">
               <div className="shop-story-head">
-                <p className="shop-panel-title shop-title-with-mark shop-workshop-title">
+                <div className="shop-workshop-title-row">
                   <img
-                    className="shop-title-mark shop-title-mark-story"
-                    src={vasoMark}
+                    className="shop-workshop-title-icon"
+                    src={workshopVasoIcon}
                     alt=""
                     aria-hidden="true"
                   />
-                  <span>L'Atelier Vaso</span>
-                </p>
+                  <p className="shop-panel-title shop-workshop-title">L'Atelier Vaso</p>
+                  <img
+                    className="shop-workshop-title-flag"
+                    src={workshopBretonFlag}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                </div>
               </div>
-              <p className="shop-sublead shop-workshop-note">
-                <span className="shop-breton-flag" aria-hidden="true">
-                  <span className="shop-breton-flag-stripes" />
-                  <span className="shop-breton-flag-canton">
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                </span>
-                {shopConfig.messages.atelierNote}
-              </p>
+              <div className="shop-workshop-body">
+                <p className="shop-sublead shop-workshop-note">{shopConfig.messages.atelierNote}</p>
+              </div>
               <div className="shop-story-contact">
                 <span>{shopConfig.messages.contactPrompt}</span>
                 <button
@@ -1066,38 +1460,143 @@ function App() {
           </aside>
         </section>
 
-        <section className="shop-stage">
+        {isCartModalOpen ? (
+          <div className="shop-cart-modal-layer" role="presentation">
+            <section
+              className="shop-cart-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="shop-cart-modal-title"
+            >
+              <div className="shop-cart-modal-head">
+                <div>
+                  <p className="shop-panel-title">Panier</p>
+                  <h2 id="shop-cart-modal-title">Vos vases sélectionnés</h2>
+                </div>
+                <button
+                  className="shop-cart-close"
+                  type="button"
+                  onClick={() => setIsCartModalOpen(false)}
+                  aria-label="Fermer le panier"
+                >
+                  ×
+                </button>
+              </div>
+
+              {cartItems.length > 0 ? (
+                <div className="shop-cart-list">
+                  {cartItems.map((item) => (
+                    <article key={item.id} className="shop-cart-item">
+                      <div className="shop-cart-item-thumb">
+                        <img src={cartIcon} alt="" aria-hidden="true" />
+                        <span
+                          className="shop-cart-item-color"
+                          style={{ backgroundColor: item.colorHex }}
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <div className="shop-cart-item-main">
+                        <div className="shop-cart-item-title">
+                          <strong>Vase N° {item.seed}</strong>
+                          <span>Hauteur {item.heightMm} mm</span>
+                        </div>
+                        <p>
+                          Ø {item.minDiameterMm} à {item.maxDiameterMm} mm · {item.colorLabel}
+                        </p>
+                        <p>{item.waterproofInsertLabel}</p>
+                      </div>
+                      <div className="shop-cart-item-actions">
+                        <div className="shop-cart-quantity" aria-label="Quantité">
+                          <button
+                            type="button"
+                            onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                            aria-label="Réduire la quantité"
+                          >
+                            -
+                          </button>
+                          <span>{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                            aria-label="Augmenter la quantité"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          className="shop-cart-link-button"
+                          type="button"
+                          onClick={() => handleEditCartItem(item, "insert")}
+                        >
+                          Modifier le contenant
+                        </button>
+                        <button
+                          className="shop-cart-link-button"
+                          type="button"
+                          onClick={() => handleEditCartItem(item, "color")}
+                        >
+                          Modifier la couleur
+                        </button>
+                        <button
+                          className="shop-cart-link-button shop-cart-delete"
+                          type="button"
+                          onClick={() => removeCartItem(item.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="shop-cart-empty">
+                  <img src={cartIcon} alt="" aria-hidden="true" />
+                  <p>Votre panier est vide.</p>
+                </div>
+              )}
+
+              <div className="shop-cart-modal-foot">
+                <div>
+                  <span>Total articles</span>
+                  <strong>{cartSubtotalLabel}</strong>
+                </div>
+                <button
+                  className="shop-button shop-button-accent"
+                  type="button"
+                  onClick={handleProceedToCheckout}
+                  disabled={cartItems.length === 0}
+                >
+                  Procéder au paiement
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        <section ref={stageSectionRef} className="shop-stage">
           <div className="shop-viewer-card">
             <div className="shop-viewer-header">
               <span>Visualisation 3D</span>
               <span>Mode galerie</span>
             </div>
             <div className="shop-inline-actions">
+              <button
+                className="shop-button shop-button-secondary"
+                onClick={goPrevious}
+                disabled={currentIndex === 0}
+              >
+                Précédent
+              </button>
               <button className="shop-button shop-button-primary" onClick={generateNext}>
                 Generer un vase
               </button>
-              <div className="shop-nav">
-                <button
-                  className="shop-button shop-button-secondary"
-                  onClick={goPrevious}
-                  disabled={currentIndex === 0}
-                >
-                  Précédent
-                </button>
-                <button
-                  className="shop-button shop-button-secondary"
-                  onClick={goNext}
-                  disabled={currentIndex >= entries.length - 1}
-                >
-                  Suivant
-                </button>
-              </div>
               <button
-                className="shop-button shop-button-accent"
-                onClick={handleOpenOrder}
-                disabled={!canOrder}
+                className="shop-button shop-button-secondary"
+                onClick={goNext}
+                disabled={currentIndex >= entries.length - 1}
               >
-                {canOrder ? "Commander ce modèle" : "Commande indisponible"}
+                Suivant
               </button>
             </div>
             <div className="shop-viewer-frame">
@@ -1147,299 +1646,292 @@ function App() {
                 Vase {currentIndex + 1} sur {entries.length}
               </p>
             </aside>
+            <button
+              className="shop-button shop-button-accent shop-model-order-button"
+              onClick={handleOpenOrder}
+              disabled={!canOrder}
+            >
+              {canOrder ? "Commander ce modèle" : "Commande indisponible"}
+            </button>
           </div>
         </section>
 
-        {selectedEntry && (
+        {(selectedEntry || isCheckoutSectionVisible) && (
           <section ref={orderSectionRef} className="shop-order-card">
             <form className="shop-order-journey" onSubmit={handleCheckoutSubmit}>
-              <input type="hidden" name="seed" value={selectedEntry.seed} />
-              <input type="hidden" name="version" value={selectedEntry.version} />
-              <input type="hidden" name="heightMm" value={selectedEntry.heightMm} />
-              <input type="hidden" name="minDiameterMm" value={selectedEntry.minDiameterMm} />
-              <input type="hidden" name="maxDiameterMm" value={selectedEntry.maxDiameterMm} />
-              <input
-                type="hidden"
-                name="waterproofInsertLabel"
-                value={selectedWaterproofInsertLabel}
-              />
-              <input type="hidden" name="solifloreChoice" value={solifloreChoice} />
-              <input type="hidden" name="solifloreChoiceLabel" value={solifloreChoiceLabel} />
-              <input type="hidden" name="wantsSoliflore" value={String(wantsSoliflore)} />
-              <input type="hidden" name="forceTestTubeSupport" value={String(wantsSoliflore)} />
-              <input
-                type="hidden"
-                name="suppressTestTubeSupport"
-                value={String(suppressTestTubeSupport)}
-              />
-              <input type="hidden" name="color" value={selectedColor?.label ?? ""} />
-              <input type="hidden" name="material" value={selectedEntry.material} />
-              <input
-                type="hidden"
-                name="shippingMode"
-                value={selectedShippingOption?.label ?? ""}
-              />
-              <input
-                type="hidden"
-                name="shippingProvider"
-                value={selectedShippingOption?.provider ?? ""}
-              />
-              <input type="hidden" name="shippingPriceCents" value={shippingPriceCents} />
-              <input type="hidden" name="orderTotalCents" value={orderTotalCents} />
-              <input type="hidden" name="relayId" value={relaySelection?.id ?? ""} />
-              <input type="hidden" name="relayName" value={relaySelection?.name ?? ""} />
-              <input type="hidden" name="relayAddress" value={relaySelection?.address ?? ""} />
-              <input
-                type="hidden"
-                name="relayPostalCode"
-                value={relaySelection?.postalCode ?? ""}
-              />
-              <input type="hidden" name="relayCity" value={relaySelection?.city ?? ""} />
-              <input type="hidden" name="relayCountry" value={relaySelection?.country ?? ""} />
-
-              <div className="shop-order-copy shop-order-journey-head">
-                <div>
-                  <p className="shop-panel-title">Page de commande</p>
-                  <h2>Un parcours clair avant le paiement.</h2>
-                  <p>
-                    La page descend automatiquement pour valider le modèle, choisir la couleur,
-                    renseigner vos informations puis ouvrir le paiement sécurisé Stripe.
-                  </p>
-                </div>
-                <button
-                  className="shop-button shop-button-secondary"
-                  type="button"
-                  onClick={closeOrder}
-                >
-                  Retour au modele
-                </button>
-              </div>
-
-              <article className={getOrderStepClassName(isModelStepConfirmed, true)}>
-                <div className="shop-order-step-head">
-                  <span className="shop-order-step-index">01</span>
+              {isCheckoutSectionVisible ? (
+                <div className="shop-order-copy shop-order-journey-head">
                   <div>
-                    <p className="shop-panel-title">Validation du modele</p>
-                    <h3>Confirmez le vase selectionne</h3>
-                    <div className="shop-container-illustrations" aria-label="Contenants compatibles">
-                      {containerIllustrations.map((illustration, index) => (
-                        <figure
-                          key={illustration.src}
-                          className={index === containerIllustrationIndex ? "active" : undefined}
-                        >
-                          <img src={illustration.src} alt={illustration.alt} loading="lazy" />
-                          <figcaption>{illustration.label}</figcaption>
-                        </figure>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="shop-order-step-content">
-                  <p>
-                    Vous validez ici le vase exact qui sera repris dans la commande. Son numéro et
-                    ses dimensions restent fixes pour la suite du parcours.
-                  </p>
-                  <div className="shop-order-summary shop-order-summary-wide">
-                    <div className="shop-stat">
-                      <span className="shop-stat-label">N° de vase</span>
-                      <strong>{selectedEntry.seed}</strong>
-                    </div>
-                    <div className="shop-stat">
-                      <span className="shop-stat-label">Hauteur</span>
-                      <strong>{selectedEntry.heightMm} mm</strong>
-                    </div>
-                    <div className="shop-stat">
-                      <span className="shop-stat-label">Diamètre minimum</span>
-                      <strong>{selectedEntry.minDiameterMm} mm</strong>
-                    </div>
-                    <div className="shop-stat">
-                      <span className="shop-stat-label">Diamètre maximum</span>
-                      <strong>{selectedEntry.maxDiameterMm} mm</strong>
-                    </div>
-                  </div>
-                  <div className="shop-order-note shop-order-note-highlight shop-order-warning">
-                    <span className="shop-order-warning-icon" aria-hidden="true">
-                      <span>!</span>
-                    </span>
-                    <div className="shop-order-warning-copy">
-                      <strong>Attention</strong>
-                      <p>{shopConfig.messages.warningPla}</p>
-                    </div>
-                  </div>
-                  <div className="shop-order-note shop-order-note-highlight shop-soliflore-panel">
-                    <div className="shop-soliflore-question">
-                      <p id="shop-soliflore-question">
-                        Chaque vase VASO est prévu pour un contenant étanche compatible. Selon ses
-                        dimensions, il utilise un Eco-Cup 50 cl, 25 cl, 12,5 cl, ou un tube à essai
-                        25 mm en mode soliflore avec une ouverture haute utile minimale de 29 mm.
-                      </p>
-                      <p className="shop-soliflore-question-title">
-                        Voulez-vous générer ce vase en mode soliflore avec support tube à essai ?
-                      </p>
-                      <div
-                        className="shop-soliflore-options"
-                        role="radiogroup"
-                        aria-labelledby="shop-soliflore-question"
-                      >
-                        <label className="shop-soliflore-option">
-                          <input
-                            type="radio"
-                            name="solifloreChoice"
-                            value="yes"
-                            checked={solifloreChoice === "yes"}
-                            onChange={() => handleSolifloreChoiceChange("yes")}
-                          />
-                          <span>
-                            <strong>Oui</strong>
-                            <small>
-                              VASO ajoute le support physique pour tube à essai dans le STL, même si
-                              le vase est compatible Eco-Cup.
-                            </small>
-                          </span>
-                        </label>
-                        <label className="shop-soliflore-option">
-                          <input
-                            type="radio"
-                            name="solifloreChoice"
-                            value="no"
-                            checked={solifloreChoice === "no"}
-                            onChange={() => handleSolifloreChoiceChange("no")}
-                          />
-                          <span>
-                            <strong>Non</strong>
-                            <small>
-                              {isTestTubeCompatible
-                                ? "Le vase reste compatible avec un tube à essai, sans support physique ajouté au STL."
-                                : `VASO utilisera le contenant étanche compatible indiqué${
-                                    isEcoCupCompatible
-                                      ? ", par exemple un Eco-Cup lorsque les dimensions le permettent."
-                                      : "."
-                                  }`}
-                            </small>
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="shop-order-step-actions shop-order-step-actions-model">
-                  <div className="shop-stat shop-insert-compatible-stat">
-                    <span className="shop-stat-label">Contenant compatible</span>
-                    <strong>{selectedWaterproofInsertLabel}</strong>
-                  </div>
-                  <div className="shop-insert-view-slot">
-                    {displayedWaterproofInsertCompatibility ? (
-                      <InsertView2D
-                        params={selectedEntry.params}
-                        compatibility={displayedWaterproofInsertCompatibility}
-                      />
-                    ) : null}
-                  </div>
-                  {isModelStepConfirmed ? (
-                    <span className="shop-step-status">Modèle validé</span>
-                  ) : (
-                    <button
-                      className="shop-button shop-button-accent"
-                      type="button"
-                      onClick={() => setIsModelStepConfirmed(true)}
-                      disabled={!hasAnsweredSolifloreQuestion}
-                    >
-                      Je valide ce modèle
-                    </button>
-                  )}
-                </div>
-              </article>
-
-              <article className={getOrderStepClassName(isColorStepConfirmed, canAccessColorStep)}>
-                <div className="shop-order-step-head">
-                  <span className="shop-order-step-index">02</span>
-                  <div>
-                    <p className="shop-panel-title">Selection de la couleur</p>
-                    <h3>Choisissez la couleur de votre vase</h3>
-                  </div>
-                </div>
-                <div className="shop-order-step-content">
-                  <div className="shop-color-block shop-color-block-journey">
-                    <label htmlFor="shop-color">Couleur PLA</label>
-                    <select
-                      id="shop-color"
-                      value={selectedColorId}
-                      onChange={(event) => setSelectedColorId(event.target.value)}
-                      disabled={!canAccessColorStep}
-                    >
-                      {availableColors.map((color) => (
-                        <option key={color.id} value={color.id}>
-                          {color.label}
-                        </option>
-                      ))}
-                    </select>
-
-                    <div className="shop-color-swatches" aria-label="Pastilles de couleur PLA">
-                      {availableColors.map((color) => (
-                        <button
-                          key={color.id}
-                          className={`shop-swatch-button ${selectedColorId === color.id ? "active" : ""}`}
-                          type="button"
-                          onClick={() => setSelectedColorId(color.id)}
-                          disabled={!canAccessColorStep}
-                          aria-pressed={selectedColorId === color.id}
-                          title={color.label}
-                        >
-                          <span
-                            className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
-                            style={{ backgroundColor: color.hex }}
-                            aria-hidden="true"
-                          />
-                          <span className="shop-swatch-label">{color.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    <p className="shop-color-helper">
-                      Cliquez sur une pastille pour mettre à jour la couleur sélectionnée dans la
-                      liste.
+                    <p className="shop-panel-title">Page de commande</p>
+                    <h2>Finalisez votre panier.</h2>
+                    <p>
+                      Renseignez vos informations, vérifiez le récapitulatif puis ouvrez le paiement
+                      sécurisé Stripe.
                     </p>
                   </div>
                 </div>
-                <div className="shop-order-step-actions">
-                  {canAccessColorStep && (
-                    <div className="shop-color-preview-card">
-                      <span className="shop-panel-title">Aperçu 3D couleur</span>
-                      <strong>{selectedColorLabel}</strong>
-                      <div className="shop-color-preview-viewer">
-                        <VaseViewer3D
-                          mode="preview"
-                          colorOverride={
-                            selectedColor?.previewHex ??
-                            selectedColor?.hex ??
-                            SHOP_NEUTRAL_VASE_COLOR
-                          }
-                          colorOpacity={selectedColor?.opacity ?? 1}
-                          colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
-                          shadingOverride={selectedColor?.previewShading}
-                          forceTestTubeSupport={wantsSoliflore}
-                          suppressTestTubeSupport={suppressTestTubeSupport}
-                        />
-                      </div>
-                      <div className="shop-color-preview-note">
-                        {shopConfig.messages.colorPreviewNote}
+              ) : null}
+
+              {selectedEntry ? (
+                <>
+                  <article className={getOrderStepClassName(isModelStepConfirmed, true)}>
+                    <div className="shop-order-step-head">
+                      <span className="shop-order-step-index">01</span>
+                      <div>
+                        <p className="shop-panel-title">Selection du contenant</p>
+                        <h3>Selection du contenant</h3>
+                        <div
+                          className="shop-container-illustrations"
+                          aria-label="Contenants compatibles"
+                        >
+                          {containerIllustrations.map((illustration, index) => (
+                            <figure
+                              key={illustration.src}
+                              className={
+                                index === containerIllustrationIndex ? "active" : undefined
+                              }
+                            >
+                              <img src={illustration.src} alt={illustration.alt} loading="lazy" />
+                              <figcaption>{illustration.label}</figcaption>
+                            </figure>
+                          ))}
+                        </div>
+                        <button
+                          className="shop-button shop-button-secondary shop-return-generation-button"
+                          type="button"
+                          onClick={handleReturnToGeneration}
+                        >
+                          Retour à la génération
+                        </button>
                       </div>
                     </div>
-                  )}
-                  {isColorStepConfirmed ? (
-                    <span className="shop-step-status">Couleur validee</span>
-                  ) : canAccessColorStep ? (
-                    <button
-                      className="shop-button shop-button-accent"
-                      type="button"
-                      onClick={() => setIsColorStepConfirmed(true)}
-                    >
-                      Je valide cette couleur
-                    </button>
-                  ) : (
-                    <span className="shop-step-hint">Validez d'abord le modele</span>
-                  )}
-                </div>
-              </article>
+                    <div className="shop-order-step-content">
+                      <p>
+                        Vous validez ici le vase exact qui sera repris dans la commande. Son numéro
+                        et ses dimensions restent fixes pour la suite du parcours.
+                      </p>
+                      <div className="shop-order-summary shop-order-summary-wide">
+                        <div className="shop-stat">
+                          <span className="shop-stat-label">N° de vase</span>
+                          <strong>{selectedEntry.seed}</strong>
+                        </div>
+                        <div className="shop-stat">
+                          <span className="shop-stat-label">Hauteur</span>
+                          <strong>{selectedEntry.heightMm} mm</strong>
+                        </div>
+                        <div className="shop-stat">
+                          <span className="shop-stat-label">Diamètre minimum</span>
+                          <strong>{selectedEntry.minDiameterMm} mm</strong>
+                        </div>
+                        <div className="shop-stat">
+                          <span className="shop-stat-label">Diamètre maximum</span>
+                          <strong>{selectedEntry.maxDiameterMm} mm</strong>
+                        </div>
+                      </div>
+                      <div className="shop-order-note shop-order-note-highlight shop-order-warning">
+                        <span className="shop-order-warning-icon" aria-hidden="true">
+                          <span>!</span>
+                        </span>
+                        <div className="shop-order-warning-copy">
+                          <strong>Attention</strong>
+                          <p>{shopConfig.messages.warningPla}</p>
+                        </div>
+                      </div>
+                      <div className="shop-order-note shop-order-note-highlight shop-soliflore-panel">
+                        <div className="shop-soliflore-question">
+                          <p id="shop-soliflore-question">
+                            Chaque vase VASO est prévu pour un contenant étanche compatible. Selon
+                            ses dimensions, il sera possible d'y insérer un Eco-Cup 50 cl, 25 cl,
+                            12,5 cl, ou un tube à essai, ce qui fera du vase un soliflore.
+                          </p>
+                          {isTestTubeCompatible ? (
+                            <div className="shop-soliflore-only">
+                              <p className="shop-soliflore-question-title">
+                                Les dimensions du vase actuel permettent uniquement un soliflore. Un
+                                support sera généré pour accueillir un tube à essai.
+                              </p>
+                              {testTubeInsertSpecLabel ? (
+                                <p className="shop-soliflore-spec">{testTubeInsertSpecLabel}</p>
+                              ) : null}
+                            </div>
+                          ) : isEcoCupCompatible ? (
+                            <>
+                              <p className="shop-soliflore-question-title">
+                                Votre modèle est compatible avec un {ecoCupInsertLabel}. Vous pouvez
+                                choisir de générer un support pour accueillir à la place un tube à
+                                essai et utiliser votre vase en soliflore. Veuillez noter que vous
+                                ne pourrez pas l'utiliser avec un Eco-Cup.
+                              </p>
+                              <div
+                                className="shop-soliflore-options"
+                                role="radiogroup"
+                                aria-labelledby="shop-soliflore-question"
+                              >
+                                <label className="shop-soliflore-option">
+                                  <input
+                                    type="radio"
+                                    name="solifloreChoice"
+                                    value="no"
+                                    checked={solifloreChoice === "no"}
+                                    onChange={() => handleSolifloreChoiceChange("no")}
+                                  />
+                                  <span>
+                                    <strong>Garder mon vase avec contenant Eco-Cup</strong>
+                                    {ecoCupInsertSpecLabel ? (
+                                      <small>{ecoCupInsertSpecLabel}</small>
+                                    ) : null}
+                                  </span>
+                                </label>
+                                <label className="shop-soliflore-option">
+                                  <input
+                                    type="radio"
+                                    name="solifloreChoice"
+                                    value="yes"
+                                    checked={solifloreChoice === "yes"}
+                                    onChange={() => handleSolifloreChoiceChange("yes")}
+                                  />
+                                  <span>
+                                    <strong>
+                                      Générer un support de tube à essai pour utiliser le vase en
+                                      soliflore uniquement
+                                    </strong>
+                                    {testTubeInsertSpecLabel ? (
+                                      <small>{testTubeInsertSpecLabel}</small>
+                                    ) : null}
+                                  </span>
+                                </label>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="shop-soliflore-question-title">
+                              Aucun contenant compatible n'a été identifié pour ce modèle.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="shop-order-step-actions shop-order-step-actions-model">
+                      <div className="shop-stat shop-insert-compatible-stat">
+                        <span className="shop-stat-label">Contenant compatible</span>
+                        <strong>{selectedWaterproofInsertLabel}</strong>
+                      </div>
+                      <div className="shop-insert-view-slot">
+                        {displayedWaterproofInsertCompatibility ? (
+                          <InsertView2D
+                            params={selectedEntry.params}
+                            compatibility={displayedWaterproofInsertCompatibility}
+                          />
+                        ) : null}
+                      </div>
+                      {isModelStepConfirmed ? (
+                        <span className="shop-step-status">Modèle validé</span>
+                      ) : (
+                        <button
+                          className="shop-button shop-button-accent"
+                          type="button"
+                          onClick={handleConfirmModelStep}
+                          disabled={!hasAnsweredSolifloreQuestion}
+                        >
+                          Je valide ce modèle
+                        </button>
+                      )}
+                    </div>
+                  </article>
+
+                  <article
+                    ref={colorStepRef}
+                    className={`${getOrderStepClassName(isColorStepConfirmed, canAccessColorStep)} shop-order-step-color`}
+                  >
+                    <div className="shop-order-step-head">
+                      <span className="shop-order-step-index">02</span>
+                      <div>
+                        <p className="shop-panel-title">Selection de la couleur</p>
+                        <h3>Choisissez la couleur de votre vase</h3>
+                      </div>
+                    </div>
+                    <div className="shop-order-step-content">
+                      <div className="shop-color-block shop-color-block-journey">
+                        <label htmlFor="shop-color">Couleur PLA</label>
+                        <select
+                          id="shop-color"
+                          value={selectedColorId}
+                          onChange={(event) => setSelectedColorId(event.target.value)}
+                          disabled={!canAccessColorStep}
+                        >
+                          {availableColors.map((color) => (
+                            <option key={color.id} value={color.id}>
+                              {color.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        <div className="shop-color-swatches" aria-label="Pastilles de couleur PLA">
+                          {availableColors.map((color) => (
+                            <button
+                              key={color.id}
+                              className={`shop-swatch-button ${selectedColorId === color.id ? "active" : ""}`}
+                              type="button"
+                              onClick={() => setSelectedColorId(color.id)}
+                              disabled={!canAccessColorStep}
+                              aria-pressed={selectedColorId === color.id}
+                              title={color.label}
+                            >
+                              <span
+                                className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                                style={{ backgroundColor: color.hex }}
+                                aria-hidden="true"
+                              />
+                              <span className="shop-swatch-label">{color.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="shop-color-helper">
+                          Cliquez sur une pastille pour mettre à jour la couleur sélectionnée dans
+                          la liste.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="shop-order-step-actions">
+                      {canAccessColorStep && (
+                        <div className="shop-color-preview-card">
+                          <span className="shop-panel-title">Aperçu 3D couleur</span>
+                          <strong>{selectedColorLabel}</strong>
+                          <div className="shop-color-preview-viewer">
+                            <VaseViewer3D
+                              mode="preview"
+                              colorOverride={
+                                selectedColor?.previewHex ??
+                                selectedColor?.hex ??
+                                SHOP_NEUTRAL_VASE_COLOR
+                              }
+                              colorOpacity={selectedColor?.opacity ?? 1}
+                              colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
+                              shadingOverride={selectedColor?.previewShading}
+                              forceTestTubeSupport={wantsSoliflore}
+                              suppressTestTubeSupport={suppressTestTubeSupport}
+                            />
+                          </div>
+                          <div className="shop-color-preview-note">
+                            {shopConfig.messages.colorPreviewNote}
+                          </div>
+                        </div>
+                      )}
+                      {canAccessColorStep ? (
+                        <button
+                          className="shop-button shop-button-accent"
+                          type="button"
+                          onClick={handleAddSelectedVaseToCart}
+                          disabled={!selectedColor}
+                        >
+                          {cartItemBeingEditedId ? "Mettre à jour le panier" : "Ajouter au panier"}
+                        </button>
+                      ) : (
+                        <span className="shop-step-hint">Validez d'abord le modele</span>
+                      )}
+                    </div>
+                  </article>
+                </>
+              ) : null}
 
               <article
                 ref={clientStepRef}
@@ -1666,8 +2158,8 @@ function App() {
                         name="message"
                         value={customerMessage}
                         onChange={(event) => setCustomerMessage(event.target.value)}
-                        placeholder="Precisions, quantite, delai souhaite..."
-                        rows={4}
+                        placeholder="Precisions, delai souhaite..."
+                        rows={1}
                         disabled={!canAccessClientStep}
                       />
                     </label>
@@ -1748,9 +2240,9 @@ function App() {
                   <div className="shop-order-note shop-legal-note">
                     <strong>Mentions et donnees personnelles</strong>
                     <p>
-                      Ces informations servent uniquement a traiter cette demande de commande et a
-                      preparer le futur paiement. Prevu au branchement final : effacement
-                      automatique des demandes inactives apres 30 jours.
+                      Ces informations servent uniquement à traiter la commande et le paiement. Vos
+                      données personnelles servirons uniquement à l'expedition et seront ensuite
+                      effacées.
                     </p>
                   </div>
                 </div>
@@ -1790,17 +2282,19 @@ function App() {
                 <div className="shop-order-step-content">
                   <div className="shop-order-confirm-grid">
                     <div className="shop-order-note">
-                      <strong>Modèle</strong>
-                      <p>
-                        Vase N° {selectedEntry.seed} · {selectedEntry.heightMm} mm ·{" "}
-                        {selectedEntry.minDiameterMm} à {selectedEntry.maxDiameterMm} mm
-                      </p>
-                      <p>{solifloreChoiceLabel || "Usage soliflore à confirmer"}</p>
-                      <p>Contenant : {selectedWaterproofInsertLabel}</p>
+                      <strong>Panier</strong>
+                      {cartItems.map((item) => (
+                        <p key={item.id}>
+                          {item.quantity} x Vase N° {item.seed} · Hauteur {item.heightMm} mm · Ø{" "}
+                          {item.minDiameterMm} à {item.maxDiameterMm} mm · {item.colorLabel}
+                        </p>
+                      ))}
                     </div>
                     <div className="shop-order-note">
-                      <strong>Couleur</strong>
-                      <p>{selectedColorLabel}</p>
+                      <strong>Contenants</strong>
+                      {cartItems.map((item) => (
+                        <p key={`${item.id}-insert`}>{item.waterproofInsertLabel}</p>
+                      ))}
                     </div>
                     <div className="shop-order-note">
                       <strong>Client</strong>
@@ -1828,7 +2322,7 @@ function App() {
                     </div>
                     <div className="shop-order-note">
                       <strong>Montant</strong>
-                      <p>Vase : {orderBasePriceLabel}</p>
+                      <p>Articles : {cartSubtotalLabel}</p>
                       <p>Livraison : {shippingPriceLabel ?? "À confirmer"}</p>
                       <p>Total TTC : {shippingPriceLabel ? orderTotalLabel : "Nous contacter"}</p>
                     </div>
