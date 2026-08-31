@@ -1078,6 +1078,11 @@
   cursor: pointer;
 }
 
+.shop-cart-link-button:disabled {
+  color: rgb(38 29 22 / 34%);
+  cursor: not-allowed;
+}
+
 .shop-cart-delete {
   color: #a14b28;
 }
@@ -1643,6 +1648,14 @@
     radial-gradient(circle at top left, rgb(198 39 39 / 7%), transparent 42%),
     linear-gradient(180deg, rgb(250 249 244 / 96%), rgb(241 237 229 / 96%));
   box-shadow: 0 12px 32px rgb(198 39 39 / 8%);
+}
+
+.shop-soliflore-panel-subtle {
+  border-color: rgb(73 124 101 / 18%);
+  background:
+    radial-gradient(circle at top left, rgb(73 124 101 / 6%), transparent 42%),
+    linear-gradient(180deg, rgb(250 249 244 / 94%), rgb(241 237 229 / 94%));
+  box-shadow: 0 10px 24px rgb(73 124 101 / 5%);
 }
 
 .shop-soliflore-question {

@@ -1569,8 +1569,8 @@ function App() {
                       <div className="shop-cart-item-main">
                         <div className="shop-cart-item-title">
                           <strong>Vase N° {item.seed}</strong>
-                          <span>Hauteur {item.heightMm} mm</span>
                         </div>
+                        <p>Hauteur {item.heightMm} mm</p>
                         <p>
                           Ø {item.minDiameterMm} à {item.maxDiameterMm} mm · {item.colorLabel}
                         </p>
@@ -1599,6 +1599,7 @@ function App() {
                           className="shop-cart-link-button"
                           type="button"
                           onClick={() => handleEditCartItem(item, "insert")}
+                          disabled={item.forceTestTubeSupport}
                         >
                           Modifier le contenant
                         </button>
@@ -1818,7 +1819,11 @@ function App() {
                           <p>{shopConfig.messages.warningPla}</p>
                         </div>
                       </div>
-                      <div className="shop-order-note shop-order-note-highlight shop-soliflore-panel">
+                      <div
+                        className={`shop-order-note shop-order-note-highlight shop-soliflore-panel ${
+                          isTestTubeCompatible ? "shop-soliflore-panel-subtle" : ""
+                        }`}
+                      >
                         <div className="shop-soliflore-question">
                           <p id="shop-soliflore-question">
                             Chaque vase VASO est prévu pour un contenant étanche compatible. Selon

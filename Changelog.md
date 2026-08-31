@@ -7,6 +7,13 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.119] - 2026-08-31
+
+### Modifié
+- Place la hauteur sur une ligne dédiée dans le panier, entre le numéro du vase et les diamètres.
+- Adoucit l'affichage de la sélection du contenant lorsque le vase impose uniquement le mode soliflore.
+- Désactive la modification du contenant dans le panier pour les vases déjà ajoutés en soliflore.
+
 ## [1.1.118] - 2026-08-31
 
 ### Ajouté
