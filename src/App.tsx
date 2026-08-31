@@ -240,6 +240,24 @@ function writeStoredCartItems(items: ShopCartItem[]) {
   }
 }
 
+function renderWorkshopNote(note: string) {
+  return note
+    .split(/\n{2,}/)
+    .map((section) => section.trim())
+    .filter(Boolean)
+    .map((section, index) =>
+      section.endsWith(":") ? (
+        <strong key={`${section}-${index}`} className="shop-workshop-note-heading">
+          {section}
+        </strong>
+      ) : (
+        <p key={`${section}-${index}`} className="shop-workshop-note-paragraph">
+          {section}
+        </p>
+      ),
+    );
+}
+
 async function createCartThumbnail(
   captureViewerImage: (() => Promise<string | null>) | null,
 ): Promise<string | null> {
@@ -1392,10 +1410,6 @@ function App() {
                 </div>
               </div>
               <div className="shop-start-panel">
-                <p className="shop-start-copy">
-                  Un parcours clair et simple avant le panier : validez le modèle, choisissez un
-                  contenant, sélectionnez une couleur puis ajoutez ce vase à votre panier.
-                </p>
                 <button
                   className="shop-button shop-button-accent shop-start-button"
                   type="button"
@@ -1463,21 +1477,6 @@ function App() {
               </div>
             </div>
 
-            <div className="shop-story">
-              <p className="shop-panel-title shop-story-title">Des modèles générés en direct</p>
-              <p>
-                La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
-                affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
-                la commande.
-              </p>
-            </div>
-
-            <div className="shop-story">
-              <p>
-                Chaque génération produit une silhouette différente. Vous pouvez parcourir
-                l'historique, retenir un vase puis commander exactement ce modèle.
-              </p>
-            </div>
             <div className="shop-story shop-story-workshop">
               <div className="shop-story-head">
                 <div className="shop-workshop-title-row">
@@ -1497,7 +1496,9 @@ function App() {
                 </div>
               </div>
               <div className="shop-workshop-body">
-                <p className="shop-sublead shop-workshop-note">{shopConfig.messages.atelierNote}</p>
+                <div className="shop-sublead shop-workshop-note">
+                  {renderWorkshopNote(shopConfig.messages.atelierNote)}
+                </div>
               </div>
               <div className="shop-story-contact">
                 <span>{shopConfig.messages.contactPrompt}</span>
@@ -1680,6 +1681,15 @@ function App() {
           </div>
 
           <div className="shop-side-column">
+            <div className="shop-stage-intro">
+              <p className="shop-panel-title shop-story-title">Des modèles générés en direct</p>
+              <p>
+                La visualisation, les dimensions et le N° de vase correspondent toujours au modèle
+                affiché pour vous permettre de valider un vase précis, sans ambiguïté au moment de
+                la commande.
+              </p>
+            </div>
+
             <aside className="shop-info-card">
               <div className="shop-info-head">
                 <p className="shop-panel-title">Modèle actuel</p>

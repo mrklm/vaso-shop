@@ -7,6 +7,13 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.117] - 2026-08-31
+
+### Modifié
+- Aère la carte Atelier Vaso avec des sections dédiées à la situation géographique et au matériau.
+- Déplace le texte de présentation des modèles générés dans la colonne de droite de l'écran de génération.
+- Ajuste la colonne Modèle actuel pour conserver une présentation lisible sur un écran complet.
+
 ## [1.1.116] - 2026-08-30
 
 ### Ajouté

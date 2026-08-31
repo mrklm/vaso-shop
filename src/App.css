@@ -249,19 +249,18 @@
   overflow: hidden;
   border-radius: 4px;
   border: 1px solid rgb(38 29 22 / 16%);
-  background:
-    linear-gradient(
-      180deg,
-      #ffffff 0 11%,
-      #111111 11% 22%,
-      #ffffff 22% 33%,
-      #111111 33% 44%,
-      #ffffff 44% 55%,
-      #111111 55% 66%,
-      #ffffff 66% 77%,
-      #111111 77% 88%,
-      #ffffff 88% 100%
-    );
+  background: linear-gradient(
+    180deg,
+    #ffffff 0 11%,
+    #111111 11% 22%,
+    #ffffff 22% 33%,
+    #111111 33% 44%,
+    #ffffff 44% 55%,
+    #111111 55% 66%,
+    #ffffff 66% 77%,
+    #111111 77% 88%,
+    #ffffff 88% 100%
+  );
   box-shadow: 0 2px 8px rgb(38 29 22 / 8%);
 }
 
@@ -356,7 +355,12 @@
   border-radius: 999px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 30% 28%, rgb(255 255 255 / 90%), rgb(255 255 255 / 12%) 24%, transparent 25%),
+    radial-gradient(
+      circle at 30% 28%,
+      rgb(255 255 255 / 90%),
+      rgb(255 255 255 / 12%) 24%,
+      transparent 25%
+    ),
     linear-gradient(180deg, rgb(255 250 244 / 96%), rgb(238 228 213 / 92%));
   box-shadow:
     inset 0 4px 10px rgb(255 255 255 / 16%),
@@ -377,17 +381,15 @@
 .shop-hero-gallery-image-current {
   opacity: 0;
   transform: scale(1.018);
-  animation:
-    shop-gallery-fade-in var(--shop-hero-fade-in-ms, 3.2s)
-    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: shop-gallery-fade-in var(--shop-hero-fade-in-ms, 3.2s) cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
 }
 
 .shop-hero-gallery-image-previous {
   opacity: 1;
   transform: scale(1);
-  animation:
-    shop-gallery-fade-out var(--shop-hero-fade-out-ms, 3.2s)
-    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: shop-gallery-fade-out var(--shop-hero-fade-out-ms, 3.2s) cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
 }
 
 .shop-hero-gallery-placeholder {
@@ -466,12 +468,38 @@
   scroll-margin-top: 16px;
 }
 
+.shop-stage-intro {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgb(255 252 247 / 78%), rgb(246 236 220 / 84%)),
+    radial-gradient(circle at top right, rgb(73 124 101 / 9%), transparent 42%);
+}
+
+.shop-stage-intro p {
+  max-width: none;
+  margin: 0;
+  color: rgb(38 29 22 / 72%);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.shop-stage-intro .shop-panel-title {
+  color: #8f5331;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
 .shop-side-column {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   align-content: stretch;
   gap: 12px;
-  min-height: calc(100vh - 32px);
+  min-height: 0;
 }
 
 .shop-side-column .shop-info-card {
@@ -482,7 +510,7 @@
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   padding: 12px 12px 12px;
-  min-height: calc(100vh - 32px);
+  min-height: 0;
 }
 
 .shop-viewer-header {
@@ -775,6 +803,14 @@
   min-height: clamp(300px, 38vh, 460px);
 }
 
+.shop-story-workshop .shop-story-head {
+  margin-bottom: clamp(110px, 14vh, 160px);
+}
+
+.shop-story-workshop .shop-story-contact {
+  margin-top: clamp(110px, 14vh, 160px);
+}
+
 .shop-history {
   color: rgb(38 29 22 / 60%);
   font-size: 0.8rem;
@@ -782,12 +818,23 @@
 }
 
 .shop-workshop-note {
+  display: grid;
   max-width: none;
   margin-top: 0;
   margin-bottom: 0;
-  gap: 12px;
+  gap: 9px;
   font-size: 0.83rem;
   line-height: 1.46;
+}
+
+.shop-workshop-note-heading {
+  color: #8f5331;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.shop-workshop-note-paragraph {
+  margin: 0;
 }
 
 .shop-workshop-body {
@@ -1955,6 +2002,7 @@
   .shop-hero,
   .shop-stage,
   .shop-inline-actions,
+  .shop-stage-intro,
   .shop-order-card {
     grid-template-columns: 1fr;
   }
@@ -2009,7 +2057,6 @@
     width: min(100%, 420px);
     justify-content: flex-start;
   }
-
 }
 
 @media (width <= 720px) {
