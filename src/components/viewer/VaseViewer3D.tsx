@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer, SSAO, ToneMapping } from "@react-three/postprocessing";
@@ -14,6 +14,8 @@ import { formatEngravingLines } from "../../engine/engraving-text";
 import { analyzeWaterproofInsertCompatibility } from "../../engine/insert-compatibility";
 import { usesLowPolyTexture } from "../../engine/textures";
 import type { VaseParameters } from "../../engine/types";
+import viewer3dOffIcon from "../../assets/shop/viewer-3d-off.png";
+import viewer3dOnIcon from "../../assets/shop/viewer-3d-on.png";
 
 const ROTATE_SPEED = 0.05;
 const PREVIEW_TEXT_FIT_MARGIN_MM = 4;
@@ -342,13 +344,17 @@ function PreviewEngravingOverlay({
 
 function KeyboardControls({
   controlsRef,
+  enabled,
 }: {
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  enabled: boolean;
 }) {
   const { camera } = useThree();
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (!enabled) return;
+
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
 
@@ -381,7 +387,7 @@ function KeyboardControls({
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [camera, controlsRef]);
+  }, [camera, controlsRef, enabled]);
 
   return null;
 }
@@ -520,6 +526,7 @@ export function VaseViewer3D({
   const showSeedModified = false;
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const lastTapRef = useRef(0);
+  const [interactionEnabled, setInteractionEnabled] = useState(false);
   const paramsKey = JSON.stringify(params);
   const isPreview = mode === "preview";
   const shouldCaptureToStore = captureToStore ?? !isPreview;
@@ -552,9 +559,34 @@ export function VaseViewer3D({
 
   return (
     <div
-      className={`viewer-3d${isPreview ? " viewer-3d-preview" : ""}`}
-      onTouchEnd={isPreview ? undefined : handleDoubleTap}
+      className={`viewer-3d${isPreview ? " viewer-3d-preview" : ""}${
+        !isPreview && interactionEnabled ? " viewer-3d-unlocked" : " viewer-3d-locked"
+      }`}
+      onTouchEnd={isPreview || !interactionEnabled ? undefined : handleDoubleTap}
     >
+      {!isPreview && (
+        <button
+          className={`viewer-3d-interaction-toggle${
+            interactionEnabled ? " viewer-3d-interaction-toggle-active" : ""
+          }`}
+          type="button"
+          onClick={() => setInteractionEnabled((currentValue) => !currentValue)}
+          aria-pressed={interactionEnabled}
+          aria-label={
+            interactionEnabled ? "Verrouiller la manipulation 3D" : "Activer la manipulation 3D"
+          }
+          title={
+            interactionEnabled ? "Manipulation 3D active" : "Activer la rotation et le zoom 3D"
+          }
+        >
+          <img
+            className="viewer-3d-toggle-icon"
+            src={interactionEnabled ? viewer3dOnIcon : viewer3dOffIcon}
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
+      )}
       <Canvas
         camera={{
           position: isPreview ? [175, 130, 175] : [220, 160, 220],
@@ -625,12 +657,13 @@ export function VaseViewer3D({
           <>
             <OrbitControls
               ref={controlsRef}
+              enabled={interactionEnabled}
               enableDamping
               dampingFactor={0.1}
               minDistance={50}
               maxDistance={500}
             />
-            <KeyboardControls controlsRef={controlsRef} />
+            <KeyboardControls controlsRef={controlsRef} enabled={interactionEnabled} />
             <Autoplay controlsRef={controlsRef} paramsKey={paramsKey} rotationMode={rotationMode} />
           </>
         )}

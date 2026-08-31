@@ -7,6 +7,16 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.118] - 2026-08-31
+
+### Ajouté
+- Ajoute un bouton d'activation de la manipulation 3D dans l'aperçu du vase.
+- Ajoute des icônes ON/OFF dédiées pour signaler l'état de la vue 3D.
+
+### Modifié
+- Verrouille l'interaction 3D par défaut afin de laisser le scroll de page naturel.
+- Aligne les icônes 3D pour éviter tout déplacement visuel au changement d'état.
+
 ## [1.1.117] - 2026-08-31
 
 ### Modifié
