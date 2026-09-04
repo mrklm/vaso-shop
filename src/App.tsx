@@ -1756,7 +1756,7 @@ function App() {
 
               {selectedEntry ? (
                 <>
-                  <article className={getOrderStepClassName(isModelStepConfirmed, true)}>
+                  <article className={`${getOrderStepClassName(isModelStepConfirmed, true)} shop-order-step-model`}>
                     <div className="shop-order-step-head">
                       <span className="shop-order-step-index">01</span>
                       <div>

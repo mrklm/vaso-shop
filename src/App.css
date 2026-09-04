@@ -1166,6 +1166,41 @@
   min-height: calc(100vh - 40px);
 }
 
+.shop-order-step-model {
+  align-items: start;
+  min-height: 0;
+}
+
+.shop-order-step-model .shop-order-step-head,
+.shop-order-step-model .shop-order-step-actions {
+  min-height: 0;
+}
+
+.shop-order-step-model .shop-order-step-head > div {
+  grid-template-rows: auto auto auto auto;
+  height: auto;
+  min-height: 0;
+}
+
+.shop-order-step-model .shop-container-illustrations {
+  align-self: start;
+  margin-top: clamp(118px, 14vh, 150px);
+}
+
+.shop-order-step-model .shop-order-step-actions-model {
+  align-content: start;
+  grid-template-rows: auto auto auto;
+}
+
+.shop-order-step-model .shop-insert-view-slot {
+  min-height: 0;
+  padding-top: clamp(112px, 13vh, 144px);
+}
+
+.shop-order-step-model .shop-return-generation-button {
+  margin-top: 18px;
+}
+
 .shop-order-step-color .shop-order-step-content {
   align-content: center;
 }
@@ -1221,7 +1256,8 @@
 .shop-order-step-head {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  align-content: start;
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
   align-items: start;
   gap: 10px;
   min-height: 100%;
@@ -1229,8 +1265,9 @@
 
 .shop-order-step-head > div {
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   justify-items: start;
+  height: 100%;
   min-height: 100%;
 }
 
@@ -1259,6 +1296,7 @@
 .shop-container-illustrations {
   grid-column: 1 / -1;
   position: relative;
+  align-self: center;
   justify-self: center;
   width: min(92%, 300px);
   height: clamp(220px, 25vw, 350px);
@@ -1321,6 +1359,7 @@
 .shop-order-step-content {
   display: grid;
   gap: 12px;
+  align-content: start;
 }
 
 .shop-order-step-content > p {
@@ -1344,9 +1383,10 @@
 }
 
 .shop-return-generation-button {
+  align-self: end;
   justify-self: center;
   width: fit-content;
-  margin-top: clamp(250px, 31vh, 430px);
+  margin-top: 0;
   background: linear-gradient(135deg, #e88900, #f0a21d);
   color: #fff9f1;
   box-shadow: 0 16px 36px rgb(232 137 0 / 24%);
@@ -1359,9 +1399,11 @@
 
 .shop-insert-view-slot {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   min-height: 100%;
+  padding-top: clamp(96px, 14vh, 170px);
+  box-sizing: border-box;
 }
 
 .shop-insert-view-card {
@@ -2072,6 +2114,14 @@
 
   .shop-return-generation-button {
     margin-top: 18px;
+  }
+
+  .shop-container-illustrations {
+    margin-top: 18px;
+  }
+
+  .shop-insert-view-slot {
+    padding-top: 0;
   }
 
   .shop-cart-modal-layer {

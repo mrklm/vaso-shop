@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.120] - 2026-09-04
+
+### Modifié
+- Réduit la hauteur de l'étape de sélection du contenant en supprimant les étirements verticaux inutiles.
+- Réaligne le carrousel des contenants avec le schéma de compatibilité.
+
 ## [1.1.119] - 2026-08-31
 
 ### Modifié
