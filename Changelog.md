@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.129] - 2026-09-05
+
+### Modifié
+- Complète la fiche de production TXT avec les informations logistiques de commande : email, téléphone, adresse, livraison, transporteur, point relais, montant et statut paiement.
+
 ## [1.1.128] - 2026-09-05
 
 ### Ajouté

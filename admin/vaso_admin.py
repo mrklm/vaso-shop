@@ -3044,6 +3044,25 @@ class VasoAdminApp(tk.Tk):
             for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
             if isinstance(part, str) and part.strip()
         ).strip()
+        address_lines = [
+            order.get("customerAddress", ""),
+            " ".join(
+                part.strip()
+                for part in [order.get("customerPostalCode", ""), order.get("customerCity", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip(),
+            order.get("customerCountry", ""),
+        ]
+        relay_lines = [
+            order.get("relayName", ""),
+            order.get("relayAddress", ""),
+            " ".join(
+                part.strip()
+                for part in [order.get("relayPostalCode", ""), order.get("relayCity", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip(),
+            order.get("relayCountry", ""),
+        ]
         order_items = self.get_order_cart_items(order)
         lines = [
             "FICHE DE PRODUCTION VASO",
@@ -3051,6 +3070,14 @@ class VasoAdminApp(tk.Tk):
             f"Commande : {order.get('orderRef', 'n/a')}",
             f"Date : {order.get('createdAt', 'n/a')}",
             f"Client : {customer_full_name or 'n/a'}",
+            f"Email : {order.get('customerEmail', 'n/a')}",
+            f"Telephone : {order.get('customerPhone', 'non renseigne')}",
+            f"Adresse : {', '.join(line for line in address_lines if isinstance(line, str) and line.strip()) or 'n/a'}",
+            f"Livraison : {order.get('shippingMode', 'n/a')}",
+            f"Transporteur : {order.get('shippingProvider', 'n/a')}",
+            f"Point relais : {', '.join(line for line in relay_lines if isinstance(line, str) and line.strip()) or 'non'}",
+            f"Montant : {self.format_order_amount(order.get('amountTotal'), order.get('currency'))}",
+            f"Statut paiement : {order.get('paymentStatus', 'n/a')}",
             f"Quantité totale : {self.get_order_item_count(order_items)}",
             "",
         ]
