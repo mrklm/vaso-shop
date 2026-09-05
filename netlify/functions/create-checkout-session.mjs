@@ -493,9 +493,13 @@ export default async (request) => {
   const firstCheckoutItem = checkoutItems[0];
   const orderReference = buildOrderReference(firstCheckoutItem.seed);
   const publicSiteUrl = getPublicSiteUrl(origin);
+  const checkoutSeeds = checkoutItems.flatMap((item) =>
+    Array.from({ length: item.quantity }, () => `${item.seed}`),
+  );
   const successUrl = new URL("checkout-success.html", publicSiteUrl);
   successUrl.searchParams.set("order_ref", orderReference);
   successUrl.searchParams.set("seed", `${firstCheckoutItem.seed}`);
+  successUrl.searchParams.set("seeds", checkoutSeeds.join(","));
   successUrl.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
 
   const cancelUrl = new URL("checkout-cancelled.html", publicSiteUrl);

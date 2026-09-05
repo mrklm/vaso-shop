@@ -121,7 +121,9 @@
 
       <section class="panel">
         <strong id="order-ref-label">Référence de commande en cours de préparation</strong>
-        <p id="order-seed-copy">Le numéro du vase validé sera repris pour la fabrication.</p>
+        <div id="order-seeds-copy">
+          <p>Le numéro du vase validé sera repris pour la fabrication.</p>
+        </div>
       </section>
 
       <div class="actions">
@@ -130,17 +132,33 @@
     </main>
 
     <script>
+      const SHOP_CART_STORAGE_KEY = "vaso-shop-cart-v1";
       const params = new URLSearchParams(window.location.search);
       const orderRef = params.get("order_ref");
       const seed = params.get("seed");
+      const seeds = (params.get("seeds") || seed || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      try {
+        window.localStorage.removeItem(SHOP_CART_STORAGE_KEY);
+      } catch {
+      }
 
       if (orderRef) {
         document.getElementById("order-ref-label").textContent = `Référence : ${orderRef}`;
       }
 
-      if (seed) {
-        document.getElementById("order-seed-copy").textContent =
-          `Le vase n° ${seed} a bien été associé à ce paiement.`;
+      if (seeds.length > 0) {
+        const seedsContainer = document.getElementById("order-seeds-copy");
+        seedsContainer.replaceChildren(
+          ...seeds.map((vaseSeed) => {
+            const line = document.createElement("p");
+            line.textContent = `Le vase n° ${vaseSeed} a bien été associé à ce paiement.`;
+            return line;
+          }),
+        );
       }
     </script>
   </body>

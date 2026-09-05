@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import hashlib
 from datetime import datetime
 from pathlib import Path
 import tkinter as tk
@@ -176,6 +177,42 @@ SHIPPING_MODE_PROVIDERS = {
     "home": "Mondial Relay Domicile",
     "pickup": "À 45 minutes au nord de Rennes / Ille-et-Vilaine",
 }
+TOKEN_HELP_TEXT = "Collez ici la valeur de: Environment variables/ADMIN_ORDERS_TOKEN"
+
+
+class Tooltip:
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self.widget = widget
+        self.text = text
+        self.window: tk.Toplevel | None = None
+        widget.bind("<Enter>", self.show)
+        widget.bind("<Leave>", self.hide)
+
+    def show(self, _event: tk.Event | None = None) -> None:
+        if self.window is not None:
+            return
+
+        x = self.widget.winfo_rootx() + 16
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 8
+        self.window = tk.Toplevel(self.widget)
+        self.window.wm_overrideredirect(True)
+        self.window.wm_geometry(f"+{x}+{y}")
+        label = ttk.Label(
+            self.window,
+            text=self.text,
+            padding=(10, 6),
+            relief="solid",
+            borderwidth=1,
+            background="#fff8ec",
+        )
+        label.pack()
+
+    def hide(self, _event: tk.Event | None = None) -> None:
+        if self.window is None:
+            return
+
+        self.window.destroy()
+        self.window = None
 
 
 class VasoAdminApp(tk.Tk):
@@ -244,14 +281,24 @@ class VasoAdminApp(tk.Tk):
         self.skip_netlify_deploy_var = tk.BooleanVar(
             value=bool(self.settings_data.get("skip_netlify_deploy", True)),
         )
+        self.remember_admin_token_var = tk.BooleanVar(
+            value=bool(self.settings_data.get("remember_admin_token", False)),
+        )
         self.orders_api_url_var = tk.StringVar(
-            value=self.settings_data.get("orders_api_url", DEFAULT_ORDERS_API_URL),
+            value=self.settings_data.get("orders_api_url") or DEFAULT_ORDERS_API_URL,
         )
         self.theme_name_var = tk.StringVar(
             value=self.settings_data.get("theme", next(iter(THEMES))),
         )
-        self.session_auth_status_var = tk.StringVar(value="Session admin verrouillée")
-        self.session_admin_token = ""
+        self.session_auth_status_var = tk.StringVar(value="Token Netlify non renseigné")
+        self.session_admin_token = (
+            self.settings_data.get("admin_orders_token", "").strip()
+            if self.remember_admin_token_var.get()
+            else ""
+        )
+        if self.session_admin_token:
+            self.session_auth_status_var.set("Token Netlify mémorisé")
+        self.admin_access_password_hash = self.settings_data.get("admin_access_password_hash", "")
         self.orders_data: list[dict] = []
 
         self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
@@ -272,11 +319,76 @@ class VasoAdminApp(tk.Tk):
         self.build_ui()
         self.populate_form()
         self.apply_theme(self.theme_name_var.get())
-        self.after(120, self.prompt_session_admin_token)
+        self.withdraw()
+        self.after(120, self.prompt_admin_access_password)
 
     def load_config(self) -> dict:
         with CONFIG_PATH.open("r", encoding="utf-8") as handle:
             return json.load(handle)
+
+    def hash_admin_access_password(self, password: str) -> str:
+        return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+    def prompt_new_admin_access_password(self) -> bool:
+        password = simpledialog.askstring(
+            "VASO-Admin",
+            "Crée le mot de passe local Vaso-admin :",
+            parent=self,
+            show="*",
+        )
+        if password is None:
+            return False
+
+        cleaned_password = password.strip()
+        if not cleaned_password:
+            messagebox.showerror("VASO-Admin", "Le mot de passe Vaso-admin ne peut pas être vide.")
+            return False
+
+        confirmation = simpledialog.askstring(
+            "VASO-Admin",
+            "Confirme le mot de passe local Vaso-admin :",
+            parent=self,
+            show="*",
+        )
+        if confirmation is None or confirmation.strip() != cleaned_password:
+            messagebox.showerror("VASO-Admin", "Les deux mots de passe ne correspondent pas.")
+            return False
+
+        self.admin_access_password_hash = self.hash_admin_access_password(cleaned_password)
+        self.save_settings()
+        return True
+
+    def prompt_admin_access_password(self) -> None:
+        if not self.admin_access_password_hash:
+            if not self.prompt_new_admin_access_password():
+                self.destroy()
+                return
+
+        for attempt_index in range(3):
+            password = simpledialog.askstring(
+                "VASO-Admin",
+                "Renseigne le mot de passe Vaso-admin :",
+                parent=self,
+                show="*",
+            )
+            if password is None:
+                self.destroy()
+                return
+
+            if self.hash_admin_access_password(password.strip()) == self.admin_access_password_hash:
+                self.deiconify()
+                self.lift()
+                return
+
+            remaining_attempts = 2 - attempt_index
+            if remaining_attempts > 0:
+                messagebox.showerror(
+                    "VASO-Admin",
+                    f"Mot de passe Vaso-admin incorrect. {remaining_attempts} tentative(s) restante(s).",
+                )
+
+        messagebox.showerror("VASO-Admin", "Mot de passe Vaso-admin incorrect.")
+        self.destroy()
 
     def load_settings(self) -> dict:
         if not ADMIN_SETTINGS_PATH.exists():
@@ -296,6 +408,11 @@ class VasoAdminApp(tk.Tk):
                     "theme": self.theme_name_var.get(),
                     "orders_api_url": self.orders_api_url_var.get().strip(),
                     "skip_netlify_deploy": bool(self.skip_netlify_deploy_var.get()),
+                    "remember_admin_token": bool(self.remember_admin_token_var.get()),
+                    "admin_orders_token": (
+                        self.session_admin_token if self.remember_admin_token_var.get() else ""
+                    ),
+                    "admin_access_password_hash": self.admin_access_password_hash,
                 },
                 handle,
                 indent=2,
@@ -328,9 +445,6 @@ class VasoAdminApp(tk.Tk):
         self.theme_selector.pack(side="right", padx=(8, 0))
         ttk.Label(toolbar, text="Thème").pack(side="right")
         self.theme_selector.bind("<<ComboboxSelected>>", lambda _event: self.on_theme_change())
-        ttk.Button(toolbar, text="Mot de passe session", command=self.prompt_session_admin_token).pack(side="left")
-        ttk.Label(toolbar, textvariable=self.session_auth_status_var).pack(side="left", padx=(0, 12))
-
         self.notebook = ttk.Notebook(self)
         notebook = self.notebook
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
@@ -983,7 +1097,7 @@ class VasoAdminApp(tk.Tk):
         )
         ttk.Label(
             settings,
-            text="Le mot de passe de session est demande a l'ouverture et vaut pour tous les onglets.",
+            text="Le token Netlify donne acces aux commandes et vaut pour tous les onglets.",
             justify="left",
             wraplength=520,
         ).grid(
@@ -1000,11 +1114,35 @@ class VasoAdminApp(tk.Tk):
             rowspan=2,
             sticky="ns",
         )
-        ttk.Button(settings, text="Changer le mot de passe session", command=self.prompt_session_admin_token).grid(
+        token_button = ttk.Button(
+            settings,
+            text="Renseigner le token Netlify",
+            command=self.prompt_session_admin_token,
+        )
+        token_button.grid(
             row=2,
             column=2,
             sticky="e",
             pady=(4, 0),
+        )
+        Tooltip(token_button, TOKEN_HELP_TEXT)
+        ttk.Checkbutton(
+            settings,
+            text="Mémoriser sur cet ordinateur",
+            variable=self.remember_admin_token_var,
+            command=self.save_settings,
+        ).grid(
+            row=2,
+            column=0,
+            sticky="w",
+            pady=(4, 0),
+        )
+        ttk.Label(settings, textvariable=self.session_auth_status_var).grid(
+            row=2,
+            column=1,
+            sticky="w",
+            pady=(4, 0),
+            padx=(8, 10),
         )
 
         left = ttk.Frame(frame)
@@ -2449,12 +2587,11 @@ class VasoAdminApp(tk.Tk):
         return process
 
     def refresh_orders(self) -> None:
-        api_url = self.orders_api_url_var.get().strip()
+        api_url = self.orders_api_url_var.get().strip() or DEFAULT_ORDERS_API_URL
+        if self.orders_api_url_var.get().strip() != api_url:
+            self.orders_api_url_var.set(api_url)
+            self.save_settings()
         api_token = self.get_session_admin_token()
-
-        if not api_url:
-            messagebox.showerror("VASO-Admin", "Renseigne l'URL de l'API commandes.")
-            return
 
         if not api_token:
             return
@@ -2490,6 +2627,19 @@ class VasoAdminApp(tk.Tk):
             body = error.read().decode("utf-8", errors="replace").strip()
             message = body or f"HTTP {error.code}"
             self.log(f"Erreur API commandes : {message}")
+            if error.code == 401:
+                self.session_admin_token = ""
+                self.session_auth_status_var.set("Token Netlify refusé")
+                messagebox.showerror(
+                    "VASO-Admin",
+                    (
+                        "Impossible de charger les commandes.\n"
+                        "Le token admin a ete refuse par Netlify.\n"
+                        "Renseigne la valeur exacte de ADMIN_ORDERS_TOKEN."
+                    ),
+                )
+                self.prompt_session_admin_token()
+                return
             messagebox.showerror("VASO-Admin", f"Impossible de charger les commandes.\n{message}")
             return
         except (urllib_error.URLError, TimeoutError, json.JSONDecodeError) as error:
@@ -2612,27 +2762,31 @@ class VasoAdminApp(tk.Tk):
     def prompt_session_admin_token(self) -> None:
         token = simpledialog.askstring(
             "VASO-Admin",
-            "Renseigne le mot de passe admin pour cette session :",
+            "Collez la valeur de ADMIN_ORDERS_TOKEN :",
             parent=self,
             show="*",
         )
 
         if token is None:
             if not self.session_admin_token:
-                self.session_auth_status_var.set("Session admin verrouillée")
-                self.log("Mot de passe session non renseigne.")
+                self.session_auth_status_var.set("Token Netlify non renseigné")
+                self.log("Token Netlify non renseigne.")
             return
 
         cleaned_token = token.strip()
         if not cleaned_token:
             self.session_admin_token = ""
-            self.session_auth_status_var.set("Session admin verrouillée")
-            self.log("Mot de passe session vide.")
+            self.session_auth_status_var.set("Token Netlify non renseigné")
+            self.save_settings()
+            self.log("Token Netlify vide.")
             return
 
         self.session_admin_token = cleaned_token
-        self.session_auth_status_var.set("Session admin déverrouillée")
-        self.log("Mot de passe session enregistre pour cette ouverture.")
+        self.session_auth_status_var.set(
+            "Token Netlify mémorisé" if self.remember_admin_token_var.get() else "Token Netlify renseigné"
+        )
+        self.save_settings()
+        self.log("Token Netlify admin renseigne.")
 
     def get_session_admin_token(self) -> str:
         if self.session_admin_token:
@@ -2642,7 +2796,7 @@ class VasoAdminApp(tk.Tk):
         if not self.session_admin_token:
             messagebox.showerror(
                 "VASO-Admin",
-                "Le mot de passe de session est requis pour acceder aux commandes et aux tests Discord.",
+                "Le token Netlify est requis pour acceder aux commandes et aux tests Discord.",
             )
         return self.session_admin_token
 

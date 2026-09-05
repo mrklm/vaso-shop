@@ -7,6 +7,23 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.127] - 2026-09-05
+
+### Ajouté
+- Ajoute l'affichage de tous les numéros de vases sur la page de confirmation Stripe.
+- Ajoute la possibilité de mémoriser localement le token Netlify des commandes dans VASO-Admin.
+- Ajoute une aide au survol pour identifier la variable Netlify `ADMIN_ORDERS_TOKEN`.
+
+### Modifié
+- Sépare le mot de passe local d'ouverture de VASO-Admin du token Netlify utilisé par l'onglet Commandes.
+- Rétablit le verrou d'ouverture de VASO-Admin avec un mot de passe local hashé.
+- Utilise automatiquement l'URL commandes par défaut lorsque le réglage local est vide.
+- Clarifie les libellés et messages liés au token Netlify dans VASO-Admin.
+
+### Corrigé
+- Vide silencieusement le panier après retour Stripe réussi.
+- Conserve le panier lorsque le paiement Stripe est interrompu.
+
 ## [1.1.126] - 2026-09-05
 
 ### Ajouté
