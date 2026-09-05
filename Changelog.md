@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.124] - 2026-09-05
+
+### Corrigé
+- Supprime la fausse gravure de prévisualisation visible à l'intérieur des vases tube à essai dans l'aperçu couleur translucide.
+
 ## [1.1.123] - 2026-09-05
 
 ### Corrigé
