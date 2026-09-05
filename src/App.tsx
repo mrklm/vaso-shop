@@ -2438,6 +2438,15 @@ function App() {
                               selectedShippingOption.provider,
                             )}
                           </p>
+                          {selectedShippingOption.id === "relay" && relaySelection ? (
+                            <div className="shop-relay-summary-compact">
+                              <p>{relaySelection.name}</p>
+                              <p>
+                                {relaySelection.address} · {relaySelection.postalCode} {relaySelection.city}
+                              </p>
+                              <p>{relaySelection.country}</p>
+                            </div>
+                          ) : null}
                           <p>{shippingPriceLabel}</p>
                         </>
                       ) : (

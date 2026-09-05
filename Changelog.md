@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.130] - 2026-09-05
+
+### Modifié
+- Affiche le détail du point relais Mondial Relay sélectionné dans le récapitulatif de livraison avant paiement.
+
 ## [1.1.129] - 2026-09-05
 
 ### Modifié

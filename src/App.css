@@ -1913,6 +1913,18 @@
     linear-gradient(180deg, rgb(248 245 239 / 96%), rgb(240 236 228 / 96%));
 }
 
+.shop-relay-summary-compact {
+  display: grid;
+  gap: 2px;
+  padding-left: 10px;
+  border-left: 2px solid rgb(73 124 101 / 32%);
+}
+
+.shop-relay-summary-compact p:first-child {
+  color: rgb(38 29 22 / 82%);
+  font-weight: 700;
+}
+
 .shop-relay-hint,
 .shop-relay-error {
   margin: 0;
