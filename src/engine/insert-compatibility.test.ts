@@ -86,6 +86,27 @@ describe("analyzeWaterproofInsertCompatibility", () => {
     );
   });
 
+  it("does not announce a test tube when the centered support would not fit", () => {
+    const params = defaultVaseParameters();
+    params.heightMm = 247;
+    params.wallThicknessMm = 2.4;
+    params.bottomThicknessMm = 3;
+    params.radialSamples = 96;
+    params.textureMode = "Texture aléatoire";
+    params.textureType = "Spirale";
+    params.textureZoom = "Énorme";
+    params.profiles = [
+      createProfile({ zRatio: 0, diameter: 104.7, sides: 6, rotationDeg: 10.6 }),
+      createProfile({ zRatio: 0.163, diameter: 91.4, sides: 9, rotationDeg: 10.2 }),
+      createProfile({ zRatio: 0.397, diameter: 74.5, sides: 10, rotationDeg: 6.9 }),
+      createProfile({ zRatio: 0.591, diameter: 68.6, sides: 7, rotationDeg: 9.6 }),
+      createProfile({ zRatio: 0.806, diameter: 107.9, sides: 9, rotationDeg: 8 }),
+      createProfile({ zRatio: 1, diameter: 89.4, sides: 7, rotationDeg: 12.8 }),
+    ];
+
+    expect(analyzeWaterproofInsertCompatibility(params).label).toBe("Aucun contenant compatible");
+  });
+
   it("accepts a profile above the 12,5 cl dimensions with safety clearance", () => {
     expect(
       analyzeWaterproofInsertCompatibility(createTwoProfileVase(103, 60, 74)).label,

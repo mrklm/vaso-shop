@@ -18,6 +18,8 @@ const INSERT_SECTION_SAMPLES = 96;
 const INSERT_FIT_SAMPLES = 72;
 const INSERT_DIAMETER_TOLERANCE_MM = 0.35;
 const ECO_CUP_RIGID_MIN_CLEARANCE_MM = 0.5;
+const TEST_TUBE_SUPPORT_THICKNESS_MM = 2;
+const TEST_TUBE_SUPPORT_WALL_MARGIN_MM = 0.8;
 export const MIN_TEST_TUBE_VASE_HEIGHT_MM = 115;
 export const TEST_TUBE_LONG_VASE_HEIGHT_MM = 140;
 export const TEST_TUBE_TOP_CLEARANCE_MM = 20;
@@ -111,8 +113,19 @@ export function getMinimumTestTubeProfileDiameterMm(
   const sides = Math.max(3, Math.round(profile.sides));
   const minScale = Math.max(0.1, Math.min(Math.abs(profile.scaleX), Math.abs(profile.scaleY)));
   const apothemRatio = Math.cos(Math.PI / sides);
+  const minimumSupportInnerDiameterMm =
+    (25.4 / 2 +
+      1.5 +
+      TEST_TUBE_SUPPORT_THICKNESS_MM +
+      TEST_TUBE_SUPPORT_WALL_MARGIN_MM +
+      INSERT_DIAMETER_TOLERANCE_MM) *
+    2;
+  const minimumInnerDiameterMm = Math.max(
+    MIN_TEST_TUBE_TOP_OPENING_INNER_DIAMETER_MM,
+    minimumSupportInnerDiameterMm,
+  );
   const requiredOuterApothemMm =
-    MIN_TEST_TUBE_TOP_OPENING_INNER_DIAMETER_MM / 2 +
+    minimumInnerDiameterMm / 2 +
     Math.max(0, textureInsetMm) +
     Math.max(0, wallThicknessMm);
 
@@ -634,6 +647,45 @@ function computeRigidEcoCupFitClearance(
   return bestCenter.clearance;
 }
 
+function canFitCenteredTestTubeSupport(
+  preset: InsertPreset,
+  availabilityProfile: ReturnType<typeof buildInnerAvailabilityProfile>,
+  params: VaseParameters,
+): boolean {
+  const supportInnerRadius = Math.max(5, preset.topDiameterMm / 2 + preset.clearanceMm);
+  const supportOuterRadius = supportInnerRadius + TEST_TUBE_SUPPORT_THICKNESS_MM;
+  const placement = getTestTubePlacement(params, preset);
+  const supportBottomZ = placement.supportBottomZ;
+  const supportTopZ = placement.supportTopZ;
+
+  if (supportTopZ <= supportBottomZ) {
+    return false;
+  }
+
+  const fitSamples = [
+    supportBottomZ + 0.5,
+    supportBottomZ + (supportTopZ - supportBottomZ) * 0.33,
+    supportBottomZ + (supportTopZ - supportBottomZ) * 0.66,
+    supportTopZ,
+  ];
+
+  for (const zMm of fitSamples) {
+    const innerContour = getInterpolatedInnerContour(zMm, availabilityProfile);
+    if (!pointInPolygon(innerContour, 0, 0)) {
+      return false;
+    }
+
+    if (
+      distanceToPolygonEdges(innerContour, 0, 0) <
+      supportOuterRadius + TEST_TUBE_SUPPORT_WALL_MARGIN_MM
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function isPresetCompatible(
   preset: InsertPreset,
   availabilityProfile: ReturnType<typeof buildInnerAvailabilityProfile>,
@@ -671,7 +723,7 @@ function isPresetCompatible(
       }
     }
 
-    return true;
+    return canFitCenteredTestTubeSupport(preset, availabilityProfile, params);
   }
 
   for (let sampleIndex = 0; sampleIndex <= INSERT_FIT_SAMPLES; sampleIndex++) {

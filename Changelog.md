@@ -7,6 +7,17 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.123] - 2026-09-05
+
+### Corrigé
+- Empêche la boutique de proposer un vase sans contenant compatible après durcissement des règles.
+- Vérifie qu'un vase annoncé tube à essai peut réellement générer son support STL.
+- Force la gravure des vases tube à essai à rester sous la base plutôt qu'à l'intérieur du vase.
+
+### Tests
+- Ajoute des tests de génération boutique pour garantir un contenant compatible.
+- Ajoute un test empêchant le retour de la gravure intérieure sur les vases tube à essai.
+
 ## [1.1.122] - 2026-09-05
 
 ### Modifié

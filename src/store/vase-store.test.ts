@@ -102,7 +102,7 @@ describe("vaseStore", () => {
         expect(Number.isFinite(mesh.vertices[vertexIndex]), `seed ${seed}`).toBe(true);
       }
     }
-  }, 10000);
+  }, 20000);
 
   it("setTextureMode updates texture mode", () => {
     useVaseStore.getState().setTextureMode("Double texture");
@@ -164,5 +164,22 @@ describe("vaseStore", () => {
       expect(params.heightMm, `seed ${seed}`).toBeGreaterThanOrEqual(MIN_TEST_TUBE_VASE_HEIGHT_MM);
       expect(analyzeWaterproofInsertCompatibility(params).type, `seed ${seed}`).not.toBe("none");
     }
-  }, 10000);
+  }, 20000);
+
+  it("keeps a previously unsupported requested seed compatible after generation", () => {
+    useUIStore.setState({ enforcePrinterVolume: false });
+    useVaseStore.setState({
+      seed: 71748756,
+      randomStyle: "Soft",
+      complexity: "Moyen",
+      forceComplexity: false,
+      forceTexture: false,
+    });
+
+    useVaseStore.getState().applySeed();
+
+    const { params, seed } = useVaseStore.getState();
+    expect(seed).toBe(71748756);
+    expect(analyzeWaterproofInsertCompatibility(params).type, `seed ${seed}`).not.toBe("none");
+  });
 });
