@@ -166,6 +166,16 @@ SHOP_STATUS_LABELS = {
 }
 
 SHOP_STATUS_CODES_BY_LABEL = {label: code for code, label in SHOP_STATUS_LABELS.items()}
+SHIPPING_MODE_LABELS = {
+    "relay": "Point relais",
+    "home": "Livraison à domicile",
+    "pickup": "Retrait à l'Atelier Vaso",
+}
+SHIPPING_MODE_PROVIDERS = {
+    "relay": "Mondial Relay",
+    "home": "Mondial Relay Domicile",
+    "pickup": "À 45 minutes au nord de Rennes / Ille-et-Vilaine",
+}
 
 
 class VasoAdminApp(tk.Tk):
@@ -610,7 +620,7 @@ class VasoAdminApp(tk.Tk):
         ttk.Combobox(
             editor,
             textvariable=self.shipping_option_id_var,
-            values=["relay", "home"],
+            values=list(SHIPPING_MODE_LABELS.keys()),
             state="readonly",
         ).grid(row=1, column=1, sticky="ew", pady=4)
 
@@ -1394,8 +1404,8 @@ class VasoAdminApp(tk.Tk):
             return
 
         option_id = self.shipping_option_id_var.get().strip()
-        if option_id not in {"relay", "home"}:
-            messagebox.showerror("VASO-Admin", "Le type livraison doit etre relay ou home.")
+        if option_id not in SHIPPING_MODE_LABELS:
+            messagebox.showerror("VASO-Admin", "Le type livraison doit etre relay, home ou pickup.")
             return
 
         if any(
@@ -1414,9 +1424,7 @@ class VasoAdminApp(tk.Tk):
 
         options[option_index] = {
             "id": option_id,
-            "label": self.shipping_option_label_var.get().strip() or (
-                "Point relais" if option_id == "relay" else "Livraison à domicile"
-            ),
+            "label": self.shipping_option_label_var.get().strip() or SHIPPING_MODE_LABELS[option_id],
             "provider": self.shipping_option_provider_var.get().strip(),
             "priceCents": price_cents,
         }
@@ -1434,16 +1442,16 @@ class VasoAdminApp(tk.Tk):
 
         options = countries[country_index].setdefault("options", [])
         existing_ids = {option.get("id") for option in options if isinstance(option, dict)}
-        option_id = "relay" if "relay" not in existing_ids else "home"
-        if option_id in existing_ids:
-            messagebox.showinfo("VASO-Admin", "Ce pays possede deja les modes relay et home.")
+        option_id = next((mode_id for mode_id in SHIPPING_MODE_LABELS if mode_id not in existing_ids), None)
+        if option_id is None:
+            messagebox.showinfo("VASO-Admin", "Ce pays possede deja tous les modes livraison.")
             return
 
         options.append(
             {
                 "id": option_id,
-                "label": "Point relais" if option_id == "relay" else "Livraison à domicile",
-                "provider": "Mondial Relay" if option_id == "relay" else "Mondial Relay Domicile",
+                "label": SHIPPING_MODE_LABELS[option_id],
+                "provider": SHIPPING_MODE_PROVIDERS[option_id],
                 "priceCents": 0,
             }
         )
@@ -2494,13 +2502,30 @@ class VasoAdminApp(tk.Tk):
 
         for order in self.orders_data:
             created_at = f"{order.get('createdAt', '')}".replace("T", " ").replace("Z", "")
+            order_items = self.get_order_cart_items(order)
+            item_count = self.get_order_item_count(order_items)
+            seeds = ", ".join(
+                f"{item.get('seed', '')}".strip()
+                for item in order_items[:3]
+                if f"{item.get('seed', '')}".strip()
+            )
+            if len(order_items) > 3:
+                seeds = f"{seeds}, ..." if seeds else "..."
             customer_name = " ".join(
                 part.strip()
                 for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
                 if isinstance(part, str) and part.strip()
             ).strip()
             summary = " | ".join(
-                part for part in [created_at[:16], order.get("orderRef", ""), customer_name, f"vase {order.get('seed', '')}"] if part
+                part
+                for part in [
+                    created_at[:16],
+                    order.get("orderRef", ""),
+                    customer_name,
+                    f"{item_count} article(s)",
+                    f"vase(s) {seeds}" if seeds else "",
+                ]
+                if part
             )
             self.orders_listbox.insert("end", summary or "Commande")
 
@@ -2621,6 +2646,62 @@ class VasoAdminApp(tk.Tk):
             )
         return self.session_admin_token
 
+    def get_order_cart_items(self, order: dict) -> list[dict]:
+        cart_items = order.get("cartItems")
+        if isinstance(cart_items, list):
+            normalized_items = [item for item in cart_items if isinstance(item, dict)]
+            if normalized_items:
+                return normalized_items
+
+        return [
+            {
+                "seed": order.get("seed"),
+                "version": order.get("version"),
+                "heightMm": order.get("heightMm"),
+                "minDiameterMm": order.get("minDiameterMm"),
+                "maxDiameterMm": order.get("maxDiameterMm"),
+                "waterproofInsertLabel": order.get("waterproofInsertLabel"),
+                "solifloreChoiceLabel": order.get("solifloreChoiceLabel"),
+                "forceTestTubeSupport": order.get("forceTestTubeSupport") in [True, "yes"],
+                "suppressTestTubeSupport": order.get("suppressTestTubeSupport") in [True, "yes"],
+                "material": order.get("material"),
+                "colorLabel": order.get("colorLabel"),
+                "quantity": order.get("itemCount", 1),
+            }
+        ]
+
+    def get_order_item_count(self, order_items: list[dict]) -> int:
+        total = 0
+        for item in order_items:
+            try:
+                total += max(1, int(item.get("quantity", 1)))
+            except (TypeError, ValueError):
+                total += 1
+        return total
+
+    def format_bool_fr(self, value: object) -> str:
+        return "oui" if value in [True, "yes"] else "non"
+
+    def format_order_item_detail(self, item: dict, index: int) -> str:
+        dimensions = []
+        if item.get("heightMm"):
+            dimensions.append(f"H {item.get('heightMm')} mm")
+        if item.get("minDiameterMm") and item.get("maxDiameterMm"):
+            dimensions.append(f"Ø {item.get('minDiameterMm')} à {item.get('maxDiameterMm')} mm")
+
+        details = [
+            f"{item.get('quantity', 1)} x Vase n° {item.get('seed', 'n/a')}",
+            f"Version {item.get('version')}" if item.get("version") else "",
+            " · ".join(dimensions),
+            f"Couleur : {item.get('colorLabel')}" if item.get("colorLabel") else "",
+            f"Contenant : {item.get('waterproofInsertLabel')}" if item.get("waterproofInsertLabel") else "",
+            f"Usage : {item.get('solifloreChoiceLabel')}" if item.get("solifloreChoiceLabel") else "",
+            f"Support tube : {self.format_bool_fr(item.get('forceTestTubeSupport'))}",
+            "Support supprime" if item.get("suppressTestTubeSupport") in [True, "yes"] else "",
+            f"Materiau : {item.get('material')}" if item.get("material") else "",
+        ]
+        return f"{index + 1}. " + " | ".join(part for part in details if part)
+
     def load_selected_order(self) -> None:
         selection = self.orders_listbox.curselection()
         if not selection:
@@ -2628,6 +2709,7 @@ class VasoAdminApp(tk.Tk):
 
         order = self.orders_data[selection[0]]
         production_files = self.get_order_production_files(order)
+        order_items = self.get_order_cart_items(order)
         customer_full_name = " ".join(
             part.strip()
             for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
@@ -2655,12 +2737,11 @@ class VasoAdminApp(tk.Tk):
         detail_lines = [
             f"Reference : {order.get('orderRef', 'n/a')}",
             f"Date : {order.get('createdAt', 'n/a')}",
-            f"Vase : n° {order.get('seed', 'n/a')}",
-            f"Couleur : {order.get('colorLabel', 'n/a')}",
-            f"Contenant compatible : {order.get('waterproofInsertLabel', 'n/a')}",
-            f"Materiau : {order.get('material', 'n/a')}",
-            f"Hauteur : {order.get('heightMm', 'n/a')} mm",
+            f"Articles : {self.get_order_item_count(order_items)}",
             f"JSON production : {'disponible' if production_files else 'absent'}",
+            "",
+            "Vases :",
+            *[self.format_order_item_detail(item, index) for index, item in enumerate(order_items)],
             "",
             f"Client : {customer_full_name or 'n/a'}",
             f"Email : {order.get('customerEmail', 'n/a')}",
@@ -2741,6 +2822,7 @@ class VasoAdminApp(tk.Tk):
                             "suppressTestTubeSupport",
                             order.get("suppressTestTubeSupport"),
                         ),
+                        "quantity": item.get("quantity", 1),
                         "params": item["params"],
                     },
                 }

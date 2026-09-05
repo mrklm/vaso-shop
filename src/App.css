@@ -1166,6 +1166,32 @@
   min-height: calc(100vh - 40px);
 }
 
+.shop-order-step-stripe {
+  grid-template-rows: minmax(120px, 1fr) auto 28px auto minmax(80px, 0.55fr);
+}
+
+.shop-order-step-stripe .shop-order-step-head {
+  grid-column: 1;
+  grid-row: 1 / -1;
+}
+
+.shop-order-step-stripe .shop-order-step-content {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: end;
+  justify-self: center;
+  width: min(100%, 640px);
+}
+
+.shop-order-step-stripe .shop-order-step-actions-final {
+  grid-column: 2;
+  grid-row: 4;
+  align-content: start;
+  align-self: start;
+  justify-self: center;
+  width: min(100%, 640px);
+}
+
 .shop-order-step-model {
   align-items: start;
   min-height: 0;
@@ -1645,11 +1671,66 @@
     linear-gradient(180deg, rgb(252 246 238 / 96%), rgb(244 234 220 / 96%));
 }
 
+.shop-order-note-emphasis {
+  border: 2px solid #e11919;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 38%),
+    0 14px 30px rgb(225 25 25 / 10%);
+}
+
 .shop-order-note-error {
   border: 1px solid rgb(183 47 47 / 14%);
   background:
     radial-gradient(circle at top right, rgb(183 47 47 / 8%), transparent 40%),
     linear-gradient(180deg, rgb(255 247 245 / 96%), rgb(247 233 229 / 96%));
+}
+
+.shop-order-amount-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.shop-order-thumbnails {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.shop-order-thumbnail {
+  position: relative;
+  width: 68px;
+  height: 88px;
+  overflow: hidden;
+  border: 1px solid rgb(93 58 37 / 14%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 58%);
+  box-shadow: 0 10px 20px rgb(83 54 28 / 8%);
+}
+
+.shop-order-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shop-order-thumbnail-quantity {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgb(165 79 43 / 92%);
+  color: #fffaf2;
+  font-size: 0.7rem;
+  font-weight: 800;
 }
 
 .shop-order-warning {
@@ -1904,6 +1985,14 @@
   border-color: rgb(47 36 29 / 24%);
 }
 
+.shop-shipping-combobox-trigger.needs-selection {
+  border: 2px solid #e11919;
+  background: rgb(255 249 242 / 96%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 36%),
+    0 12px 26px rgb(225 25 25 / 10%);
+}
+
 .shop-shipping-combobox-trigger:disabled {
   cursor: not-allowed;
   opacity: 0.7;
@@ -2105,6 +2194,25 @@
   .shop-soliflore-options,
   .shop-color-swatches {
     grid-template-columns: 1fr;
+  }
+
+  .shop-order-step-stripe {
+    grid-template-rows: auto;
+  }
+
+  .shop-order-step-stripe .shop-order-step-head,
+  .shop-order-step-stripe .shop-order-step-content,
+  .shop-order-step-stripe .shop-order-step-actions-final {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .shop-order-amount-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-order-thumbnails {
+    justify-content: flex-start;
   }
 
   .shop-order-journey-head {

@@ -516,6 +516,8 @@ function App() {
   const orderSectionRef = useRef<HTMLElement | null>(null);
   const colorStepRef = useRef<HTMLElement | null>(null);
   const clientStepRef = useRef<HTMLElement | null>(null);
+  const globalStepRef = useRef<HTMLElement | null>(null);
+  const stripeStepRef = useRef<HTMLElement | null>(null);
 
   const currentEntry = entries[currentIndex] ?? null;
   const selectedEntry = useMemo(
@@ -611,7 +613,7 @@ function App() {
       : 0;
   const shippingPriceLabel = selectedShippingOption
     ? shippingPriceCents === 0
-      ? "Offerte"
+      ? "Gratuite"
       : formatShopPriceFromCents(shippingPriceCents)
     : null;
   const orderTotalCents = cartSubtotalCents + shippingPriceCents;
@@ -882,6 +884,18 @@ function App() {
 
     return () => window.clearTimeout(scrollTimeoutId);
   }, [isColorStepConfirmed, selectedEntry]);
+
+  useEffect(() => {
+    if (!isClientStepConfirmed) {
+      return;
+    }
+
+    const scrollTimeoutId = window.setTimeout(() => {
+      globalStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+
+    return () => window.clearTimeout(scrollTimeoutId);
+  }, [isClientStepConfirmed]);
 
   useEffect(() => {
     if (!selectedEntry) {
@@ -1204,6 +1218,20 @@ function App() {
     window.setTimeout(() => {
       orderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 80);
+  };
+
+  const handleConfirmClientStep = () => {
+    setIsClientStepConfirmed(true);
+    window.setTimeout(() => {
+      globalStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  };
+
+  const handleConfirmGlobalStep = () => {
+    setIsGlobalStepConfirmed(true);
+    window.setTimeout(() => {
+      stripeStepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
   };
 
   const handleSolifloreChoiceChange = (nextChoice: SolifloreChoice) => {
@@ -2119,7 +2147,9 @@ function App() {
                         ) : (
                           <>
                             <button
-                              className={`shop-shipping-combobox-trigger${isShippingModeMenuOpen ? " open" : ""}`}
+                              className={`shop-shipping-combobox-trigger${isShippingModeMenuOpen ? " open" : ""}${
+                                selectedShippingOption ? "" : " needs-selection"
+                              }`}
                               type="button"
                               onClick={() =>
                                 setIsShippingModeMenuOpen((currentValue) => !currentValue)
@@ -2259,8 +2289,8 @@ function App() {
                         {formatShippingOptionDisplay(
                           selectedShippingOption.label,
                           selectedShippingOption.provider,
-                        )}{" "}
-                        · {shippingPriceLabel}
+                        )}
+                        {selectedShippingOption.id === "pickup" ? "" : ` · ${shippingPriceLabel}`}
                       </p>
                       {selectedShippingOption.id === "relay" ? (
                         <div className="shop-relay-selector">
@@ -2316,6 +2346,11 @@ function App() {
                             <p className="shop-relay-error">{relaySelectionError}</p>
                           ) : null}
                         </div>
+                      ) : selectedShippingOption.id === "pickup" ? (
+                        <p className="shop-relay-hint">
+                          L'adresse exacte et le créneau de retrait seront transmis après
+                          validation de la commande.
+                        </p>
                       ) : null}
                     </div>
                   ) : null}
@@ -2341,7 +2376,7 @@ function App() {
                     <button
                       className="shop-button shop-button-accent"
                       type="button"
-                      onClick={() => setIsClientStepConfirmed(true)}
+                      onClick={handleConfirmClientStep}
                       disabled={!canValidateClientStep}
                     >
                       Je valide mes informations
@@ -2358,6 +2393,7 @@ function App() {
               </article>
 
               <article
+                ref={globalStepRef}
                 className={getOrderStepClassName(isGlobalStepConfirmed, canAccessGlobalStep)}
               >
                 <div className="shop-order-step-head">
@@ -2408,11 +2444,32 @@ function App() {
                         <p>{shopConfig.shipping.unsupportedMessage}</p>
                       )}
                     </div>
-                    <div className="shop-order-note">
-                      <strong>Montant</strong>
-                      <p>Articles : {cartSubtotalLabel}</p>
-                      <p>Livraison : {shippingPriceLabel ?? "À confirmer"}</p>
-                      <p>Total TTC : {shippingPriceLabel ? orderTotalLabel : "Nous contacter"}</p>
+                    <div className="shop-order-amount-summary">
+                      <div className="shop-order-note shop-order-note-emphasis">
+                        <strong>Montant</strong>
+                        <p>Articles : {cartSubtotalLabel}</p>
+                        <p>Livraison : {shippingPriceLabel ?? "À confirmer"}</p>
+                        <p>Total TTC : {shippingPriceLabel ? orderTotalLabel : "Nous contacter"}</p>
+                      </div>
+                      <div className="shop-order-thumbnails" aria-label="Miniatures des vases de la commande">
+                        {cartItems.map((item) => (
+                          <div key={`${item.id}-thumb`} className="shop-order-thumbnail">
+                            <img
+                              src={item.thumbnailDataUrl ?? cartIcon}
+                              alt={
+                                item.thumbnailDataUrl
+                                  ? `Miniature du vase N° ${item.seed}`
+                                  : `Vase N° ${item.seed}`
+                              }
+                            />
+                            {item.quantity > 1 ? (
+                              <span className="shop-order-thumbnail-quantity">
+                                x{item.quantity}
+                              </span>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <p>
@@ -2428,7 +2485,7 @@ function App() {
                     <button
                       className="shop-button shop-button-accent"
                       type="button"
-                      onClick={() => setIsGlobalStepConfirmed(true)}
+                      onClick={handleConfirmGlobalStep}
                     >
                       Je valide le récapitulatif
                     </button>
@@ -2438,7 +2495,10 @@ function App() {
                 </div>
               </article>
 
-              <article className={getOrderStepClassName(false, canAccessStripeStep)}>
+              <article
+                ref={stripeStepRef}
+                className={`${getOrderStepClassName(false, canAccessStripeStep)} shop-order-step-stripe`}
+              >
                 <div className="shop-order-step-head">
                   <span className="shop-order-step-index">05</span>
                   <div>
@@ -2447,7 +2507,7 @@ function App() {
                   </div>
                 </div>
                 <div className="shop-order-step-content">
-                  <div className="shop-order-note shop-order-note-highlight">
+                  <div className="shop-order-note shop-order-note-highlight shop-order-note-emphasis">
                     <strong>Paiement sécurisé Stripe</strong>
                     <p>
                       Une page de paiement Stripe sécurisée s'ouvrira avec le modèle, la couleur,
@@ -2465,11 +2525,6 @@ function App() {
                 <div className="shop-order-step-actions shop-order-step-actions-final">
                   {canAccessStripeStep ? (
                     <>
-                      <span className="shop-step-hint">
-                        {isStartingCheckout
-                          ? "Redirection vers Stripe..."
-                          : `Vous allez être redirigé vers Stripe pour régler ${orderTotalLabel}.`}
-                      </span>
                       <button
                         className="shop-button shop-button-primary"
                         type="submit"

@@ -315,6 +315,12 @@
             "label": "Livraison à domicile",
             "provider": "Mondial Relay Domicile",
             "priceCents": 749
+          },
+          {
+            "id": "pickup",
+            "label": "Retrait à l'Atelier Vaso",
+            "provider": "À 45 minutes au nord de Rennes / Ille-et-Vilaine",
+            "priceCents": 0
           }
         ]
       },

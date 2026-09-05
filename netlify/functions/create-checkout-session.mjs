@@ -287,6 +287,7 @@ function buildProductionVaseFiles(orderReference, items) {
         solifloreChoiceLabel: item.solifloreChoiceLabel,
         forceTestTubeSupport: item.forceTestTubeSupport,
         suppressTestTubeSupport: item.suppressTestTubeSupport,
+        quantity: item.quantity,
         params: item.params,
       },
     };

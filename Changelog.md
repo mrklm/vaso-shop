@@ -7,6 +7,17 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.126] - 2026-09-05
+
+### Ajouté
+- Ajoute le retrait à l'Atelier Vaso comme mode de livraison gratuit pour la France.
+- Affiche les miniatures des vases dans le récapitulatif de commande.
+
+### Modifié
+- Améliore le parcours checkout avec un scroll automatique vers le récapitulatif puis le paiement.
+- Met en valeur les zones clés de livraison, montant et paiement dans le tunnel de commande.
+- Adapte VASO-Admin et les fonctions Netlify aux commandes multi-vases et au mode retrait atelier.
+
 ## [1.1.125] - 2026-09-05
 
 ### Ajouté

@@ -273,6 +273,58 @@ function formatOrderDateTime(createdAt) {
   }).format(parsedDate);
 }
 
+function getOrderCartItems(order) {
+  if (Array.isArray(order.cartItems) && order.cartItems.length > 0) {
+    return order.cartItems.filter((item) => item && typeof item === "object");
+  }
+
+  return [
+    {
+      seed: order.seed,
+      version: order.version,
+      heightMm: order.heightMm,
+      minDiameterMm: order.minDiameterMm,
+      maxDiameterMm: order.maxDiameterMm,
+      waterproofInsertLabel: order.waterproofInsertLabel,
+      solifloreChoiceLabel: order.solifloreChoiceLabel,
+      forceTestTubeSupport: order.forceTestTubeSupport === "yes",
+      suppressTestTubeSupport: order.suppressTestTubeSupport === "yes",
+      material: order.material,
+      colorLabel: order.colorLabel,
+      quantity: order.itemCount ?? 1,
+    },
+  ];
+}
+
+function formatBooleanLabel(value) {
+  return value === true || value === "yes" ? "oui" : "non";
+}
+
+function formatOrderItemLine(item, index) {
+  const dimensions = [
+    item.heightMm ? `H ${item.heightMm} mm` : "",
+    item.minDiameterMm && item.maxDiameterMm
+      ? `Ø ${item.minDiameterMm}-${item.maxDiameterMm} mm`
+      : "",
+  ].filter(Boolean);
+  const details = [
+    item.colorLabel,
+    item.waterproofInsertLabel,
+    item.solifloreChoiceLabel,
+    `support tube ${formatBooleanLabel(item.forceTestTubeSupport)}`,
+    item.suppressTestTubeSupport ? "support supprime" : "",
+    item.material,
+  ].filter(Boolean);
+
+  return [
+    `${index + 1}. ${item.quantity ?? 1}x vase n° ${item.seed ?? "n/a"}`,
+    dimensions.join(", "),
+    details.join(", "),
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
 function buildDiscordMessage(order) {
   const customerFullName = [order.customerFirstName, order.customerLastName]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
@@ -291,6 +343,10 @@ function buildDiscordMessage(order) {
     [order.relayPostalCode, order.relayCity].filter(Boolean).join(" ").trim(),
     order.relayCountry,
   ].filter((value) => typeof value === "string" && value.trim().length > 0);
+  const orderItems = getOrderCartItems(order);
+  const productionFileCount = Array.isArray(order.productionVaseFiles)
+    ? order.productionVaseFiles.length
+    : 0;
 
   const lines = [
     "**Nouvelle commande Vaso**",
@@ -298,12 +354,9 @@ function buildDiscordMessage(order) {
     `Reference : ${order.orderRef ?? "n/a"}`,
     `Panier : ${order.cartSummary ?? `Vase n° ${order.seed ?? "n/a"}`}`,
     `Articles : ${order.itemCount ?? "1"}`,
-    `Couleur : ${order.colorLabel ?? "n/a"}`,
-    `Contenant compatible : ${order.waterproofInsertLabel ?? "n/a"}`,
-    `Usage soliflore : ${order.solifloreChoiceLabel ?? "n/a"}`,
-    `Support tube a essai : ${order.forceTestTubeSupport === "yes" ? "oui" : "non"}`,
-    `Suppression support tube : ${order.suppressTestTubeSupport === "yes" ? "oui" : "non"}`,
-    `Materiau : ${order.material ?? "n/a"}`,
+    "Vases :",
+    ...orderItems.map(formatOrderItemLine),
+    `JSON production : ${productionFileCount > 0 ? `${productionFileCount} fichier(s)` : "absent"}`,
     `Montant : ${formatAmountFromMinorUnits(order.amountTotal, order.currency) ?? "n/a"}`,
     `Client : ${customerFullName || "n/a"}`,
     `Email : ${order.customerEmail ?? "n/a"}`,

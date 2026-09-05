@@ -8,7 +8,7 @@ export const DEFAULT_HERO_GALLERY_FADE_OUT_MS = 3200;
 const SHOP_PUBLIC_CONFIG_URL = `${import.meta.env.BASE_URL}config/shop-config.json`;
 
 export type ShopStatusState = "open" | "slowed" | "holiday" | "closed";
-export type ShopShippingModeId = "relay" | "home";
+export type ShopShippingModeId = "relay" | "home" | "pickup";
 
 export interface ShopColor {
   id: string;
@@ -117,6 +117,11 @@ const DEFAULT_STATUS_LABELS: Record<ShopStatusState, string> = {
 
 const DEFAULT_SHIPPING_UNSUPPORTED_MESSAGE =
   "Nous contacter avant commande pour organiser la livraison vers ce pays.";
+const DEFAULT_SHIPPING_LABELS: Record<ShopShippingModeId, string> = {
+  relay: "Point relais",
+  home: "Livraison à domicile",
+  pickup: "Retrait à l'Atelier Vaso",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -251,7 +256,7 @@ function normalizeShippingOption(value: unknown): ShopShippingOption | null {
   }
 
   const id = normalizeString(value.id).trim();
-  if (id !== "relay" && id !== "home") {
+  if (id !== "relay" && id !== "home" && id !== "pickup") {
     return null;
   }
 
@@ -261,7 +266,7 @@ function normalizeShippingOption(value: unknown): ShopShippingOption | null {
 
   return {
     id,
-    label: label || (id === "relay" ? "Point relais" : "Livraison à domicile"),
+    label: label || DEFAULT_SHIPPING_LABELS[id],
     provider,
     priceCents,
   };
