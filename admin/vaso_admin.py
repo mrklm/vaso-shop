@@ -1013,6 +1013,13 @@ class VasoAdminApp(tk.Tk):
         ttk.Label(right, text="Detail commande").grid(row=0, column=0, sticky="w", pady=(0, 4))
         self.orders_detail_text = tk.Text(right, height=18, wrap="word")
         self.orders_detail_text.grid(row=1, column=0, sticky="nsew")
+        order_actions = ttk.Frame(right)
+        order_actions.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(
+            order_actions,
+            text="Exporter JSON production",
+            command=self.export_selected_order_production_json,
+        ).pack(side="left")
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
@@ -2620,6 +2627,7 @@ class VasoAdminApp(tk.Tk):
             return
 
         order = self.orders_data[selection[0]]
+        production_files = self.get_order_production_files(order)
         customer_full_name = " ".join(
             part.strip()
             for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
@@ -2652,6 +2660,7 @@ class VasoAdminApp(tk.Tk):
             f"Contenant compatible : {order.get('waterproofInsertLabel', 'n/a')}",
             f"Materiau : {order.get('material', 'n/a')}",
             f"Hauteur : {order.get('heightMm', 'n/a')} mm",
+            f"JSON production : {'disponible' if production_files else 'absent'}",
             "",
             f"Client : {customer_full_name or 'n/a'}",
             f"Email : {order.get('customerEmail', 'n/a')}",
@@ -2669,7 +2678,130 @@ class VasoAdminApp(tk.Tk):
         if order.get("customerMessage"):
             detail_lines.extend(["", f"Message client : {order.get('customerMessage')}"])
 
+        if production_files:
+            detail_lines.extend(
+                [
+                    "",
+                    "Fichiers production :",
+                    *[f"- {production_file.get('filename', 'vase-production.json')}" for production_file in production_files],
+                ]
+            )
+
         self.write_text(self.orders_detail_text, "\n".join(detail_lines))
+
+    def get_selected_order(self) -> dict | None:
+        selection = self.orders_listbox.curselection()
+        if not selection:
+            messagebox.showinfo("VASO-Admin", "Selectionnez d'abord une commande.")
+            return None
+
+        return self.orders_data[selection[0]]
+
+    def get_order_production_files(self, order: dict) -> list[dict]:
+        production_files = order.get("productionVaseFiles")
+        if isinstance(production_files, list):
+            return [production_file for production_file in production_files if isinstance(production_file, dict)]
+
+        cart_items = order.get("cartItems")
+        if not isinstance(cart_items, list):
+            return []
+
+        fallback_files: list[dict] = []
+        for index, item in enumerate(cart_items):
+            if not isinstance(item, dict) or not isinstance(item.get("params"), dict):
+                continue
+            seed = item.get("seed", order.get("seed", ""))
+            seed_label = str(seed).zfill(8) if str(seed).isdigit() else str(seed or "vase")
+            fallback_files.append(
+                {
+                    "filename": f"{order.get('orderRef', 'commande')}-vase-{index + 1}-{seed_label}.json",
+                    "content": {
+                        "schema": "vaso-production-vase-v1",
+                        "orderRef": order.get("orderRef"),
+                        "itemIndex": index,
+                        "seed": seed,
+                        "version": item.get("version", order.get("version")),
+                        "colorId": item.get("colorId", order.get("colorId")),
+                        "colorLabel": item.get("colorLabel", order.get("colorLabel")),
+                        "material": item.get("material", order.get("material")),
+                        "waterproofInsertLabel": item.get(
+                            "waterproofInsertLabel",
+                            order.get("waterproofInsertLabel"),
+                        ),
+                        "solifloreChoice": item.get("solifloreChoice", order.get("solifloreChoice")),
+                        "solifloreChoiceLabel": item.get(
+                            "solifloreChoiceLabel",
+                            order.get("solifloreChoiceLabel"),
+                        ),
+                        "forceTestTubeSupport": item.get(
+                            "forceTestTubeSupport",
+                            order.get("forceTestTubeSupport"),
+                        ),
+                        "suppressTestTubeSupport": item.get(
+                            "suppressTestTubeSupport",
+                            order.get("suppressTestTubeSupport"),
+                        ),
+                        "params": item["params"],
+                    },
+                }
+            )
+        return fallback_files
+
+    def sanitize_filename(self, filename: str) -> str:
+        safe = "".join(char if char.isalnum() or char in "._-" else "-" for char in filename)
+        safe = "-".join(part for part in safe.split("-") if part)
+        return safe or "vaso-production.json"
+
+    def write_production_file(self, path: Path, production_file: dict) -> None:
+        content = production_file.get("content")
+        if not isinstance(content, dict):
+            content = production_file
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(content, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+
+    def export_selected_order_production_json(self) -> None:
+        order = self.get_selected_order()
+        if not order:
+            return
+
+        production_files = self.get_order_production_files(order)
+        if not production_files:
+            messagebox.showwarning(
+                "VASO-Admin",
+                "Cette commande ne contient pas encore de JSON production.",
+            )
+            return
+
+        if len(production_files) == 1:
+            filename = self.sanitize_filename(
+                str(production_files[0].get("filename", "vaso-production.json"))
+            )
+            target = filedialog.asksaveasfilename(
+                title="Exporter le JSON production",
+                initialfile=filename,
+                defaultextension=".json",
+                filetypes=[("JSON", "*.json"), ("Tous les fichiers", "*.*")],
+            )
+            if not target:
+                return
+            self.write_production_file(Path(target), production_files[0])
+            self.log(f"JSON production exporte : {target}")
+            messagebox.showinfo("VASO-Admin", "JSON production exporte.")
+            return
+
+        target_dir = filedialog.askdirectory(title="Choisir le dossier d'export production")
+        if not target_dir:
+            return
+
+        for production_file in production_files:
+            filename = self.sanitize_filename(
+                str(production_file.get("filename", "vaso-production.json"))
+            )
+            self.write_production_file(Path(target_dir) / filename, production_file)
+
+        self.log(f"JSON production exportes : {len(production_files)} fichier(s) dans {target_dir}")
+        messagebox.showinfo("VASO-Admin", f"{len(production_files)} JSON production exporte(s).")
 
     def write_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", "end")

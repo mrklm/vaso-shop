@@ -4,6 +4,7 @@ import {
   getEffectiveShippingPriceCents,
   readShopConfig,
 } from "./_shop-config.mjs";
+import { getStore } from "@netlify/blobs";
 
 const DEFAULT_NETLIFY_ORIGIN = "https://vaso-shop.netlify.app";
 const DEFAULT_GITHUB_PAGES_ORIGIN = "https://mrklm.github.io";
@@ -119,6 +120,27 @@ function buildOrderReference(seed) {
   return `VSO-${seedLabel}-${timeLabel}`;
 }
 
+function buildSafeOrderRef(orderReference) {
+  return (
+    `${orderReference ?? "unknown"}`
+      .replace(/[^A-Za-z0-9_-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "unknown"
+  );
+}
+
+function cloneJsonObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
 function normalizeCheckoutItem(rawItem) {
   if (!rawItem || typeof rawItem !== "object") {
     return null;
@@ -137,6 +159,7 @@ function normalizeCheckoutItem(rawItem) {
     forceTestTubeSupport: rawItem.forceTestTubeSupport === true,
     suppressTestTubeSupport: rawItem.suppressTestTubeSupport === true,
     material: rawItem.material,
+    params: cloneJsonObject(rawItem.params),
     colorId: rawItem.colorId,
     colorLabel: rawItem.colorLabel,
     quantity: Math.min(99, Math.max(1, Math.trunc(Number(rawItem.quantity) || 1))),
@@ -163,6 +186,7 @@ function getCheckoutItems(payload) {
     material: payload?.material,
     colorId: payload?.colorId,
     colorLabel: payload?.colorLabel,
+    params: payload?.params,
     quantity: 1,
   });
 
@@ -241,6 +265,56 @@ function buildOrderMetadata(
     relay_country: normalizeMetadataValue(payload.relayCountry, 120),
     order_total_cents: normalizeMetadataValue(orderTotalCents, 40),
   };
+}
+
+function buildProductionVaseFiles(orderReference, items) {
+  return items.map((item, index) => {
+    const seedLabel = `${Math.abs(Math.trunc(Number(item.seed) || 0))}`.padStart(8, "0");
+    return {
+      filename: `${orderReference}-vase-${index + 1}-${seedLabel}.json`,
+      mimeType: "application/json",
+      content: {
+        schema: "vaso-production-vase-v1",
+        orderRef: orderReference,
+        itemIndex: index,
+        seed: item.seed,
+        version: item.version,
+        colorId: item.colorId,
+        colorLabel: item.colorLabel,
+        material: item.material,
+        waterproofInsertLabel: item.waterproofInsertLabel,
+        solifloreChoice: item.solifloreChoice,
+        solifloreChoiceLabel: item.solifloreChoiceLabel,
+        forceTestTubeSupport: item.forceTestTubeSupport,
+        suppressTestTubeSupport: item.suppressTestTubeSupport,
+        params: item.params,
+      },
+    };
+  });
+}
+
+async function persistPendingProductionOrder(orderReference, items) {
+  const ordersStore = getStore("vaso-orders");
+  const safeOrderRef = buildSafeOrderRef(orderReference);
+  const createdAt = new Date().toISOString();
+
+  await ordersStore.setJSON(
+    `pending-production/${safeOrderRef}.json`,
+    {
+      schema: "vaso-pending-production-order-v1",
+      orderRef: orderReference,
+      createdAt,
+      cartItems: items,
+      productionVaseFiles: buildProductionVaseFiles(orderReference, items),
+    },
+    {
+      metadata: {
+        orderRef: orderReference,
+        seed: items[0]?.seed ?? "",
+        createdAt,
+      },
+    },
+  );
 }
 
 function buildLineItems(params, items, payload, shippingOption, productPriceCents, shippingPriceCents) {
@@ -327,6 +401,10 @@ function validatePayload(payload) {
 
     if (!["yes", "no"].includes(`${item.solifloreChoice}`)) {
       return "Le choix soliflore Oui/Non est requis pour chaque vase du panier.";
+    }
+
+    if (!item.params || typeof item.params !== "object") {
+      return "Les paramètres de production du vase sont requis pour chaque vase du panier.";
     }
   }
 
@@ -434,6 +512,8 @@ export default async (request) => {
   );
 
   try {
+    await persistPendingProductionOrder(orderReference, checkoutItems);
+
     const params = new URLSearchParams();
     params.set("mode", "payment");
     params.set("locale", "fr");

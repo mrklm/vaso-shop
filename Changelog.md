@@ -7,6 +7,16 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.125] - 2026-09-05
+
+### Ajouté
+- Transmet les paramètres complets des vases au checkout pour figer la recette de production.
+- Stocke les fichiers JSON production côté Netlify et les rattache aux commandes validées.
+- Ajoute un export JSON production dans l'onglet Commandes de VASO-Admin.
+
+### Technique
+- Utilise Netlify Blobs pour conserver les données de production hors métadonnées Stripe.
+
 ## [1.1.124] - 2026-09-05
 
 ### Corrigé

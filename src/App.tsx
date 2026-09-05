@@ -1245,6 +1245,7 @@ function App() {
             forceTestTubeSupport: item.forceTestTubeSupport,
             suppressTestTubeSupport: item.suppressTestTubeSupport,
             material: item.material,
+            params: cloneVaseParams(item.params),
             colorId: item.colorId,
             colorLabel: item.colorLabel,
             quantity: item.quantity,

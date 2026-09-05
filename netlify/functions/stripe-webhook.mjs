@@ -112,6 +112,55 @@ function parseCartItemsMetadata(value) {
   }
 }
 
+function buildSafeOrderRef(orderReference) {
+  return (
+    `${orderReference ?? "unknown"}`
+      .replace(/[^A-Za-z0-9_-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "unknown"
+  );
+}
+
+async function readPendingProductionOrder(orderReference) {
+  if (!orderReference) {
+    return null;
+  }
+
+  try {
+    const ordersStore = getStore("vaso-orders");
+    return await ordersStore.get(`pending-production/${buildSafeOrderRef(orderReference)}.json`, {
+      type: "json",
+    });
+  } catch (error) {
+    console.error(
+      `[stripe-webhook] pending production read failed ${
+        error instanceof Error ? error.message : "unexpected error"
+      }`,
+    );
+    return null;
+  }
+}
+
+function mergeProductionData(order, pendingProductionOrder) {
+  if (!pendingProductionOrder || typeof pendingProductionOrder !== "object") {
+    return order;
+  }
+
+  const productionVaseFiles = Array.isArray(pendingProductionOrder.productionVaseFiles)
+    ? pendingProductionOrder.productionVaseFiles
+    : [];
+  const cartItems = Array.isArray(pendingProductionOrder.cartItems)
+    ? pendingProductionOrder.cartItems
+    : order.cartItems;
+
+  return {
+    ...order,
+    cartItems,
+    productionVaseFiles,
+    productionDataAvailable: productionVaseFiles.length > 0,
+  };
+}
+
 function normalizeCheckoutSession(session) {
   const metadata = session.metadata ?? {};
   const customerDetails = session.customer_details ?? {};
@@ -303,10 +352,7 @@ async function sendDiscordNotification(order) {
 
 async function persistOrder(order) {
   const ordersStore = getStore("vaso-orders");
-  const safeOrderRef = `${order.orderRef ?? "unknown"}`
-    .replace(/[^A-Za-z0-9_-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "") || "unknown";
+  const safeOrderRef = buildSafeOrderRef(order.orderRef);
   const key = `orders/${order.createdAt ?? new Date().toISOString()}-${safeOrderRef}.json`;
   const customerFullName = [order.customerFirstName, order.customerLastName]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
@@ -329,7 +375,12 @@ async function handleStripeEvent(event) {
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const order = normalizeOrderRecord(normalizeCheckoutSession(session), event);
+      const baseOrder = normalizeCheckoutSession(session);
+      const pendingProductionOrder = await readPendingProductionOrder(baseOrder.orderRef);
+      const order = normalizeOrderRecord(
+        mergeProductionData(baseOrder, pendingProductionOrder),
+        event,
+      );
       logWebhookEvent(event.type, {
         ...buildGenericEventSummary(event),
         order,
