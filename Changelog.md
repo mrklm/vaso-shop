@@ -7,6 +7,15 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.121] - 2026-09-05
+
+### Modifié
+- Aligne la gravure standard sur Vaso Web pour supprimer le second N° de vase sur les modèles sans tube.
+- Conserve la gravure extérieure sous la base pour les modèles soliflore avec tube à essai.
+
+### Tests
+- Met à jour les tests de gravure et d'export moteur autour des modèles sans tube et tube à essai.
+
 ## [1.1.120] - 2026-09-04
 
 ### Modifié

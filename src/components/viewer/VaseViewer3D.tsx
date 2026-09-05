@@ -114,7 +114,11 @@ function PreviewEngravingOverlay({
   isSeedModified: boolean;
   placement?: "bottom" | "support";
 }) {
-  const lines = useMemo(() => formatEngravingLines(seed, isSeedModified), [isSeedModified, seed]);
+  const lines = useMemo(() => {
+    const engravingLines = formatEngravingLines(seed, isSeedModified);
+    const vaseNumber = engravingLines[1];
+    return engravingLines.filter((line) => line !== `N° ${vaseNumber}`);
+  }, [isSeedModified, seed]);
   const fitRadius = useMemo(() => computePreviewBottomFitRadius(params), [params]);
 
   const texture = useMemo(() => {
@@ -162,9 +166,11 @@ function PreviewEngravingOverlay({
         const targetWidth =
           canvas.width *
           PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
+        const line = lines[index];
+        if (!line) continue;
         lineFontSizes[index] = Math.min(
           referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR,
-          fitPreviewText(context, lines[index], referenceFontSize, targetWidth),
+          fitPreviewText(context, line, referenceFontSize, targetWidth),
         );
       }
 
@@ -244,9 +250,11 @@ function PreviewEngravingOverlay({
     ) {
       const targetWidth =
         canvas.width * PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1];
+      const line = lines[index];
+      if (!line) continue;
       lineFontSizes[index] = Math.min(
         referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR,
-        fitPreviewText(context, lines[index], referenceFontSize, targetWidth),
+        fitPreviewText(context, line, referenceFontSize, targetWidth),
       );
     }
     const maxHeight = canvas.height * 0.82;
@@ -631,12 +639,14 @@ export function VaseViewer3D({
           />
         )}
 
-        <PreviewEngravingOverlay
-          params={params}
-          seed={seed}
-          isSeedModified={showSeedModified}
-          placement={hasTestTubeSupport ? "support" : "bottom"}
-        />
+        {hasTestTubeSupport && (
+          <PreviewEngravingOverlay
+            params={params}
+            seed={seed}
+            isSeedModified={showSeedModified}
+            placement="support"
+          />
+        )}
 
         {!isPreview && (
           <mesh
