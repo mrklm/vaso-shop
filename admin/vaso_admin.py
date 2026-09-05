@@ -1168,6 +1168,11 @@ class VasoAdminApp(tk.Tk):
             text="Exporter JSON production",
             command=self.export_selected_order_production_json,
         ).pack(side="left")
+        ttk.Button(
+            order_actions,
+            text="Exporter fiche de production",
+            command=self.export_selected_order_production_sheet,
+        ).pack(side="left", padx=(8, 0))
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
@@ -1335,6 +1340,18 @@ class VasoAdminApp(tk.Tk):
     def format_price_preview(self, value_in_cents: int) -> str:
         euros = max(0, value_in_cents) / 100
         return f"{euros:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def format_order_amount(self, amount_in_cents: object, currency: object) -> str:
+        try:
+            cents = int(amount_in_cents)
+        except (TypeError, ValueError):
+            return "n/a"
+
+        currency_label = f"{currency}".upper() if currency else "EUR"
+        if currency_label == "EUR":
+            return self.format_price_preview(cents)
+
+        return f"{self.format_price_preview(cents)} {currency_label}"
 
     def update_price_preview(self) -> None:
         try:
@@ -2906,7 +2923,7 @@ class VasoAdminApp(tk.Tk):
             f"Transporteur : {order.get('shippingProvider', 'n/a')}",
             f"Point relais : {', '.join(line for line in relay_lines if isinstance(line, str) and line.strip()) or 'non'}",
             "",
-            f"Montant : {order.get('amountTotal', 'n/a')} {order.get('currency', '')}",
+            f"Montant : {self.format_order_amount(order.get('amountTotal'), order.get('currency'))}",
             f"Statut paiement : {order.get('paymentStatus', 'n/a')}",
         ]
 
@@ -2996,6 +3013,106 @@ class VasoAdminApp(tk.Tk):
             json.dump(content, handle, indent=2, ensure_ascii=False)
             handle.write("\n")
 
+    def format_production_number(self, value: object, decimals: int = 1) -> str:
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return "n/a"
+
+        if numeric_value.is_integer():
+            return str(int(numeric_value))
+
+        return f"{numeric_value:.{decimals}f}".replace(".", ",")
+
+    def format_production_bool(self, value: object) -> str:
+        return "oui" if value in [True, "yes", "true", "1"] else "non"
+
+    def format_profile_label(self, index: int, total: int) -> str:
+        if total == 1:
+            return "Profil"
+        if index == 0:
+            return "Base"
+        if index == total - 1:
+            return "Haut"
+        if total == 3 and index == 1:
+            return "Milieu"
+        return f"Intermédiaire {index}"
+
+    def build_production_sheet_text(self, order: dict, production_files: list[dict]) -> str:
+        customer_full_name = " ".join(
+            part.strip()
+            for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
+            if isinstance(part, str) and part.strip()
+        ).strip()
+        order_items = self.get_order_cart_items(order)
+        lines = [
+            "FICHE DE PRODUCTION VASO",
+            "",
+            f"Commande : {order.get('orderRef', 'n/a')}",
+            f"Date : {order.get('createdAt', 'n/a')}",
+            f"Client : {customer_full_name or 'n/a'}",
+            f"Quantité totale : {self.get_order_item_count(order_items)}",
+            "",
+        ]
+
+        for index, production_file in enumerate(production_files):
+            content = production_file.get("content")
+            if not isinstance(content, dict):
+                content = production_file
+            params = content.get("params") if isinstance(content.get("params"), dict) else {}
+            profiles = params.get("profiles") if isinstance(params.get("profiles"), list) else []
+            quantity = content.get("quantity", 1)
+
+            lines.extend(
+                [
+                    f"VASE {index + 1}",
+                    f"N° : {content.get('seed', 'n/a')}",
+                    f"Version moteur : {content.get('version', 'n/a')}",
+                    f"Quantité : {quantity}",
+                    f"Couleur : {content.get('colorLabel', 'n/a')}",
+                    f"Matière : {content.get('material', 'n/a')}",
+                    f"Contenant : {content.get('waterproofInsertLabel', 'n/a')}",
+                    f"Mode soliflore : {self.format_production_bool(content.get('solifloreChoice') == 'yes')}",
+                    f"Support tube dans le STL : {self.format_production_bool(content.get('forceTestTubeSupport'))}",
+                    f"Support tube supprimé : {self.format_production_bool(content.get('suppressTestTubeSupport'))}",
+                    "",
+                    "Dimensions",
+                    f"Hauteur : {self.format_production_number(params.get('heightMm'))} mm",
+                    f"Épaisseur paroi : {self.format_production_number(params.get('wallThicknessMm'))} mm",
+                    f"Épaisseur fond : {self.format_production_number(params.get('bottomThicknessMm'))} mm",
+                    "",
+                    "Texture",
+                    f"Mode : {params.get('textureMode', 'n/a')}",
+                    f"Type principal : {params.get('textureType', 'n/a')}",
+                    f"Zoom principal : {params.get('textureZoom', 'n/a')}",
+                    f"Type secondaire : {params.get('textureType2', 'n/a')}",
+                    f"Zoom secondaire : {params.get('textureZoom2', 'n/a')}",
+                    "",
+                    "Profils",
+                ]
+            )
+
+            if profiles:
+                for profile_index, profile in enumerate(profiles):
+                    if not isinstance(profile, dict):
+                        continue
+                    label = self.format_profile_label(profile_index, len(profiles))
+                    lines.append(
+                        (
+                            f"{label} : diamètre {self.format_production_number(profile.get('diameter'))} mm"
+                            f" · {profile.get('sides', 'n/a')} côtés"
+                            f" · rotation {self.format_production_number(profile.get('rotationDeg'))}°"
+                            f" · décalage X {self.format_production_number(profile.get('offsetX'))}"
+                            f" · décalage Y {self.format_production_number(profile.get('offsetY'))}"
+                        )
+                    )
+            else:
+                lines.append("Aucun profil détaillé disponible.")
+
+            lines.extend(["", "-" * 42, ""])
+
+        return "\n".join(lines).strip() + "\n"
+
     def export_selected_order_production_json(self) -> None:
         order = self.get_selected_order()
         if not order:
@@ -3038,6 +3155,36 @@ class VasoAdminApp(tk.Tk):
 
         self.log(f"JSON production exportes : {len(production_files)} fichier(s) dans {target_dir}")
         messagebox.showinfo("VASO-Admin", f"{len(production_files)} JSON production exporte(s).")
+
+    def export_selected_order_production_sheet(self) -> None:
+        order = self.get_selected_order()
+        if not order:
+            return
+
+        production_files = self.get_order_production_files(order)
+        if not production_files:
+            messagebox.showwarning(
+                "VASO-Admin",
+                "Cette commande ne contient pas encore de données de production.",
+            )
+            return
+
+        order_ref = self.sanitize_filename(str(order.get("orderRef", "commande")))
+        target = filedialog.asksaveasfilename(
+            title="Exporter la fiche de production",
+            initialfile=f"{order_ref}-fiche-production.txt",
+            defaultextension=".txt",
+            filetypes=[("Texte", "*.txt"), ("Tous les fichiers", "*.*")],
+        )
+        if not target:
+            return
+
+        sheet_text = self.build_production_sheet_text(order, production_files)
+        with Path(target).open("w", encoding="utf-8") as handle:
+            handle.write(sheet_text)
+
+        self.log(f"Fiche de production exportee : {target}")
+        messagebox.showinfo("VASO-Admin", "Fiche de production exportee.")
 
     def write_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", "end")

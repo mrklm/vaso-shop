@@ -7,6 +7,15 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.128] - 2026-09-05
+
+### Ajouté
+- Ajoute l'export TXT d'une fiche de production lisible depuis l'onglet Commandes de VASO-Admin.
+- Détaille dans la fiche de production les vases, couleurs, contenants, dimensions, textures et profils.
+
+### Corrigé
+- Affiche les montants Stripe en euros lisibles dans VASO-Admin au lieu des centimes bruts.
+
 ## [1.1.127] - 2026-09-05
 
 ### Ajouté
