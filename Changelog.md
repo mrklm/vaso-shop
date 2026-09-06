@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.131] - 2026-09-06
+
+### Modifié
+- Précise dans la sélection du contenant que les Eco-Cup ne sont pas fournis.
+- Indique que le tube à essai est fourni lorsque le vase est commandé en mode soliflore.
+
 ## [1.1.130] - 2026-09-05
 
 ### Modifié

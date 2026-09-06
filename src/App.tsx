@@ -1858,12 +1858,14 @@ function App() {
                             Chaque vase VASO est prévu pour un contenant étanche compatible. Selon
                             ses dimensions, il sera possible d'y insérer un Eco-Cup 50 cl, 25 cl,
                             12,5 cl, ou un tube à essai, ce qui fera du vase un soliflore.
+                            Les Eco-Cup ne sont pas fournis. Le tube à essai est fourni lorsque le
+                            mode soliflore est choisi.
                           </p>
                           {isTestTubeCompatible ? (
                             <div className="shop-soliflore-only">
                               <p className="shop-soliflore-question-title">
                                 Les dimensions du vase actuel permettent uniquement un soliflore. Un
-                                support sera généré pour accueillir un tube à essai.
+                                support sera généré pour accueillir un tube à essai fourni.
                               </p>
                               {testTubeInsertSpecLabel ? (
                                 <p className="shop-soliflore-spec">{testTubeInsertSpecLabel}</p>
@@ -1895,6 +1897,7 @@ function App() {
                                     {ecoCupInsertSpecLabel ? (
                                       <small>{ecoCupInsertSpecLabel}</small>
                                     ) : null}
+                                    <small>Eco-Cup non fourni.</small>
                                   </span>
                                 </label>
                                 <label className="shop-soliflore-option">
@@ -1913,6 +1916,7 @@ function App() {
                                     {testTubeInsertSpecLabel ? (
                                       <small>{testTubeInsertSpecLabel}</small>
                                     ) : null}
+                                    <small>Tube à essai fourni.</small>
                                   </span>
                                 </label>
                               </div>
