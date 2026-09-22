@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import shutil
 import subprocess
+import sys
 import tempfile
+import hashlib
 from datetime import datetime
 from pathlib import Path
 import tkinter as tk
@@ -28,11 +29,46 @@ except ImportError:  # pragma: no cover - fallback runtime only
     ImageTk = None
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+CONFIG_RELATIVE_PATH = Path("public") / "config" / "shop-config.json"
+
+
+def find_repo_root() -> Path:
+    candidates: list[Path] = []
+
+    env_root = os.environ.get("VASO_SHOP_ROOT", "").strip()
+    if env_root:
+        candidates.append(Path(env_root))
+
+    candidates.append(Path.cwd())
+
+    script_path = Path(__file__).resolve()
+    if getattr(sys, "frozen", False):
+        executable_path = Path(sys.executable).resolve()
+        candidates.extend(reversed(executable_path.parents))
+    else:
+        candidates.extend(script_path.parents)
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+        except OSError:
+            continue
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if (resolved / CONFIG_RELATIVE_PATH).exists():
+            return resolved
+
+    return script_path.parents[1]
+
+
+REPO_ROOT = find_repo_root()
 CONFIG_PATH = REPO_ROOT / "public" / "config" / "shop-config.json"
 HERO_DIR = REPO_ROOT / "public" / "images" / "hero"
+CONTAINERS_DIR = REPO_ROOT / "public" / "images" / "containers"
 ADMIN_SETTINGS_PATH = REPO_ROOT / "admin" / ".vaso_admin_settings.json"
-PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "admin"]
+PUBLISH_PATHS = ["public/config/shop-config.json", "public/images/hero", "public/images/containers", "admin"]
 DEFAULT_ORDERS_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/list-orders"
 DEFAULT_DISCORD_TEST_API_URL = "https://vaso-shop.netlify.app/.netlify/functions/send-discord-test"
 DEFAULT_HERO_TRANSITION_MS = 8200
@@ -131,6 +167,52 @@ SHOP_STATUS_LABELS = {
 }
 
 SHOP_STATUS_CODES_BY_LABEL = {label: code for code, label in SHOP_STATUS_LABELS.items()}
+SHIPPING_MODE_LABELS = {
+    "relay": "Point relais",
+    "home": "Livraison à domicile",
+    "pickup": "Retrait à l'Atelier Vaso",
+}
+SHIPPING_MODE_PROVIDERS = {
+    "relay": "Mondial Relay",
+    "home": "Mondial Relay Domicile",
+    "pickup": "À 45 minutes au nord de Rennes / Ille-et-Vilaine",
+}
+TOKEN_HELP_TEXT = "Collez ici la valeur de: Environment variables/ADMIN_ORDERS_TOKEN"
+
+
+class Tooltip:
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self.widget = widget
+        self.text = text
+        self.window: tk.Toplevel | None = None
+        widget.bind("<Enter>", self.show)
+        widget.bind("<Leave>", self.hide)
+
+    def show(self, _event: tk.Event | None = None) -> None:
+        if self.window is not None:
+            return
+
+        x = self.widget.winfo_rootx() + 16
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 8
+        self.window = tk.Toplevel(self.widget)
+        self.window.wm_overrideredirect(True)
+        self.window.wm_geometry(f"+{x}+{y}")
+        label = ttk.Label(
+            self.window,
+            text=self.text,
+            padding=(10, 6),
+            relief="solid",
+            borderwidth=1,
+            background="#fff8ec",
+        )
+        label.pack()
+
+    def hide(self, _event: tk.Event | None = None) -> None:
+        if self.window is None:
+            return
+
+        self.window.destroy()
+        self.window = None
 
 
 class VasoAdminApp(tk.Tk):
@@ -154,6 +236,13 @@ class VasoAdminApp(tk.Tk):
         self.shipping_suspend_relay_var = tk.BooleanVar()
         self.shipping_suspend_home_var = tk.BooleanVar()
         self.shipping_lead_time_var = tk.StringVar()
+        self.shipping_country_var = tk.StringVar()
+        self.shipping_option_id_var = tk.StringVar()
+        self.shipping_option_label_var = tk.StringVar()
+        self.shipping_option_provider_var = tk.StringVar()
+        self.shipping_option_euros_var = tk.StringVar()
+        self.shipping_option_cents_var = tk.StringVar()
+        self.shipping_option_preview_var = tk.StringVar()
         self.temporary_notice_var = tk.StringVar()
         self.contact_prompt_var = tk.StringVar()
         self.contact_button_label_var = tk.StringVar()
@@ -181,24 +270,42 @@ class VasoAdminApp(tk.Tk):
         self.hero_fade_in_ms_var = tk.StringVar()
         self.hero_fade_out_ms_var = tk.StringVar()
         self.hero_preview_status_var = tk.StringVar(value="Selectionnez une image hero")
+        self.container_enabled_var = tk.BooleanVar()
+        self.container_path_var = tk.StringVar()
+        self.container_label_var = tk.StringVar()
+        self.container_alt_var = tk.StringVar()
+        self.container_order_var = tk.StringVar()
+        self.container_preview_status_var = tk.StringVar(value="Selectionnez une photo de contenant")
 
         self.commit_message_var = tk.StringVar(value=self.build_default_commit_message())
         self.skip_netlify_deploy_var = tk.BooleanVar(
             value=bool(self.settings_data.get("skip_netlify_deploy", True)),
         )
+        self.remember_admin_token_var = tk.BooleanVar(
+            value=bool(self.settings_data.get("remember_admin_token", False)),
+        )
         self.orders_api_url_var = tk.StringVar(
-            value=self.settings_data.get("orders_api_url", DEFAULT_ORDERS_API_URL),
+            value=self.settings_data.get("orders_api_url") or DEFAULT_ORDERS_API_URL,
         )
         self.theme_name_var = tk.StringVar(
             value=self.settings_data.get("theme", next(iter(THEMES))),
         )
-        self.session_auth_status_var = tk.StringVar(value="Session admin verrouillée")
-        self.session_admin_token = ""
+        self.session_auth_status_var = tk.StringVar(value="Token Netlify non renseigné")
+        self.session_admin_token = (
+            self.settings_data.get("admin_orders_token", "").strip()
+            if self.remember_admin_token_var.get()
+            else ""
+        )
+        if self.session_admin_token:
+            self.session_auth_status_var.set("Token Netlify mémorisé")
+        self.admin_access_password_hash = self.settings_data.get("admin_access_password_hash", "")
         self.orders_data: list[dict] = []
 
         self.active_theme = THEMES[self.theme_name_var.get()] if self.theme_name_var.get() in THEMES else next(iter(THEMES.values()))
         self.hero_preview_photo = None
+        self.container_preview_photo = None
         self.hero_preview_temp_path = Path(tempfile.gettempdir()) / "vaso-admin-hero-preview.png"
+        self.container_preview_temp_path = Path(tempfile.gettempdir()) / "vaso-admin-container-preview.png"
         self.hero_preview_cycle_after_id = None
         self.hero_preview_frame_after_id = None
         self.hero_preview_is_animating = False
@@ -206,15 +313,82 @@ class VasoAdminApp(tk.Tk):
 
         self.price_euros_var.trace_add("write", lambda *_args: self.update_price_preview())
         self.price_cents_var.trace_add("write", lambda *_args: self.update_price_preview())
+        self.shipping_option_euros_var.trace_add("write", lambda *_args: self.update_shipping_price_preview())
+        self.shipping_option_cents_var.trace_add("write", lambda *_args: self.update_shipping_price_preview())
 
         self.build_ui()
         self.populate_form()
         self.apply_theme(self.theme_name_var.get())
-        self.after(120, self.prompt_session_admin_token)
+        self.withdraw()
+        self.after(120, self.prompt_admin_access_password)
 
     def load_config(self) -> dict:
         with CONFIG_PATH.open("r", encoding="utf-8") as handle:
             return json.load(handle)
+
+    def hash_admin_access_password(self, password: str) -> str:
+        return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+    def prompt_new_admin_access_password(self) -> bool:
+        password = simpledialog.askstring(
+            "VASO-Admin",
+            "Crée le mot de passe local Vaso-admin :",
+            parent=self,
+            show="*",
+        )
+        if password is None:
+            return False
+
+        cleaned_password = password.strip()
+        if not cleaned_password:
+            messagebox.showerror("VASO-Admin", "Le mot de passe Vaso-admin ne peut pas être vide.")
+            return False
+
+        confirmation = simpledialog.askstring(
+            "VASO-Admin",
+            "Confirme le mot de passe local Vaso-admin :",
+            parent=self,
+            show="*",
+        )
+        if confirmation is None or confirmation.strip() != cleaned_password:
+            messagebox.showerror("VASO-Admin", "Les deux mots de passe ne correspondent pas.")
+            return False
+
+        self.admin_access_password_hash = self.hash_admin_access_password(cleaned_password)
+        self.save_settings()
+        return True
+
+    def prompt_admin_access_password(self) -> None:
+        if not self.admin_access_password_hash:
+            if not self.prompt_new_admin_access_password():
+                self.destroy()
+                return
+
+        for attempt_index in range(3):
+            password = simpledialog.askstring(
+                "VASO-Admin",
+                "Renseigne le mot de passe Vaso-admin :",
+                parent=self,
+                show="*",
+            )
+            if password is None:
+                self.destroy()
+                return
+
+            if self.hash_admin_access_password(password.strip()) == self.admin_access_password_hash:
+                self.deiconify()
+                self.lift()
+                return
+
+            remaining_attempts = 2 - attempt_index
+            if remaining_attempts > 0:
+                messagebox.showerror(
+                    "VASO-Admin",
+                    f"Mot de passe Vaso-admin incorrect. {remaining_attempts} tentative(s) restante(s).",
+                )
+
+        messagebox.showerror("VASO-Admin", "Mot de passe Vaso-admin incorrect.")
+        self.destroy()
 
     def load_settings(self) -> dict:
         if not ADMIN_SETTINGS_PATH.exists():
@@ -234,6 +408,11 @@ class VasoAdminApp(tk.Tk):
                     "theme": self.theme_name_var.get(),
                     "orders_api_url": self.orders_api_url_var.get().strip(),
                     "skip_netlify_deploy": bool(self.skip_netlify_deploy_var.get()),
+                    "remember_admin_token": bool(self.remember_admin_token_var.get()),
+                    "admin_orders_token": (
+                        self.session_admin_token if self.remember_admin_token_var.get() else ""
+                    ),
+                    "admin_access_password_hash": self.admin_access_password_hash,
                 },
                 handle,
                 indent=2,
@@ -266,37 +445,40 @@ class VasoAdminApp(tk.Tk):
         self.theme_selector.pack(side="right", padx=(8, 0))
         ttk.Label(toolbar, text="Thème").pack(side="right")
         self.theme_selector.bind("<<ComboboxSelected>>", lambda _event: self.on_theme_change())
-        ttk.Button(toolbar, text="Mot de passe session", command=self.prompt_session_admin_token).pack(side="left")
-        ttk.Label(toolbar, textvariable=self.session_auth_status_var).pack(side="left", padx=(0, 12))
-
         self.notebook = ttk.Notebook(self)
         notebook = self.notebook
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.general_frame = ttk.Frame(notebook, padding=8)
         self.pricing_frame = ttk.Frame(notebook, padding=8)
+        self.shipping_frame = ttk.Frame(notebook, padding=8)
         self.contact_frame = ttk.Frame(notebook, padding=8)
         self.printer_frame = ttk.Frame(notebook, padding=8)
         self.colors_frame = ttk.Frame(notebook, padding=8)
         self.hero_frame = ttk.Frame(notebook, padding=8)
+        self.containers_frame = ttk.Frame(notebook, padding=8)
         self.orders_frame = ttk.Frame(notebook, padding=8)
         self.publish_frame = ttk.Frame(notebook, padding=8)
 
         notebook.add(self.general_frame, text="Boutique")
         notebook.add(self.pricing_frame, text="Tarifs")
+        notebook.add(self.shipping_frame, text="Livraison")
         notebook.add(self.contact_frame, text="Contact courriel")
         notebook.add(self.printer_frame, text="Imprimante")
         notebook.add(self.colors_frame, text="Couleurs")
         notebook.add(self.hero_frame, text="Hero")
+        notebook.add(self.containers_frame, text="Contenants")
         notebook.add(self.orders_frame, text="Commandes")
         notebook.add(self.publish_frame, text="Publication")
 
         self.build_general_tab()
         self.build_pricing_tab()
+        self.build_shipping_tab()
         self.build_contact_tab()
         self.build_printer_tab()
         self.build_colors_tab()
         self.build_hero_tab()
+        self.build_containers_tab()
         self.build_orders_tab()
         self.build_publish_tab()
 
@@ -308,11 +490,18 @@ class VasoAdminApp(tk.Tk):
             self.warning_text,
             self.color_preview_note_text,
             self.contact_email_body_text,
-            self.shipping_unsupported_text,
             self.orders_detail_text,
             self.output_text,
+            self.shipping_unsupported_text,
         ]
-        self.tk_listbox_widgets = [self.colors_listbox, self.hero_listbox, self.orders_listbox]
+        self.tk_listbox_widgets = [
+            self.colors_listbox,
+            self.hero_listbox,
+            self.orders_listbox,
+            self.shipping_countries_listbox,
+            self.shipping_options_listbox,
+            self.containers_listbox,
+        ]
 
     def build_general_tab(self) -> None:
         frame = self.general_frame
@@ -462,10 +651,6 @@ class VasoAdminApp(tk.Tk):
             state="readonly",
         ).pack(side="left")
 
-        ttk.Label(pricing_block, text="Message pays non geres").grid(row=1, column=0, sticky="nw", pady=(12, 0))
-        self.shipping_unsupported_text = tk.Text(pricing_block, height=2, wrap="word", width=56)
-        self.shipping_unsupported_text.grid(row=1, column=1, sticky="ew", pady=(12, 0))
-
         discord_test_frame = ttk.LabelFrame(frame, text="Test message alerte commande Discord", padding=14)
         discord_test_frame.grid(row=2, column=0, sticky="n", pady=(0, 8))
         discord_test_frame.columnconfigure(0, weight=1)
@@ -486,6 +671,111 @@ class VasoAdminApp(tk.Tk):
             command=self.send_discord_test_message,
         )
         self.discord_test_button.grid(row=1, column=0, sticky="w")
+
+    def build_shipping_tab(self) -> None:
+        frame = self.shipping_frame
+        frame.columnconfigure(0, weight=0)
+        frame.columnconfigure(1, weight=0)
+        frame.columnconfigure(2, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        countries_panel = ttk.Frame(frame)
+        countries_panel.grid(row=0, column=0, sticky="nsw", padx=(0, 12))
+        countries_panel.rowconfigure(1, weight=1)
+
+        ttk.Label(countries_panel, text="Pays").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.shipping_countries_listbox = tk.Listbox(countries_panel, width=28, exportselection=False)
+        self.shipping_countries_listbox.grid(row=1, column=0, sticky="nsew")
+        self.shipping_countries_listbox.bind(
+            "<<ListboxSelect>>",
+            lambda _event: self.load_selected_shipping_country(),
+        )
+
+        country_buttons = ttk.Frame(countries_panel)
+        country_buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(country_buttons, text="Ajouter", command=self.add_shipping_country).grid(row=0, column=0, sticky="ew")
+        ttk.Button(country_buttons, text="Supprimer", command=self.remove_shipping_country).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(country_buttons, text="Monter", command=lambda: self.move_shipping_country(-1)).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(country_buttons, text="Descendre", command=lambda: self.move_shipping_country(1)).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
+
+        options_panel = ttk.Frame(frame)
+        options_panel.grid(row=0, column=1, sticky="nsw", padx=(0, 12))
+        options_panel.rowconfigure(1, weight=1)
+
+        ttk.Label(options_panel, text="Modes").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.shipping_options_listbox = tk.Listbox(options_panel, width=34, exportselection=False)
+        self.shipping_options_listbox.grid(row=1, column=0, sticky="nsew")
+        self.shipping_options_listbox.bind(
+            "<<ListboxSelect>>",
+            lambda _event: self.load_selected_shipping_option(),
+        )
+
+        option_buttons = ttk.Frame(options_panel)
+        option_buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(option_buttons, text="Ajouter", command=self.add_shipping_option).grid(row=0, column=0, sticky="ew")
+        ttk.Button(option_buttons, text="Supprimer", command=self.remove_shipping_option).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(option_buttons, text="Monter", command=lambda: self.move_shipping_option(-1)).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(option_buttons, text="Descendre", command=lambda: self.move_shipping_option(1)).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
+
+        editor = ttk.Frame(frame)
+        editor.grid(row=0, column=2, sticky="nsew")
+        editor.columnconfigure(1, weight=1)
+
+        ttk.Label(editor, text="Pays").grid(row=0, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.shipping_country_var).grid(row=0, column=1, sticky="ew", pady=4)
+        ttk.Button(editor, text="Appliquer pays", command=self.apply_shipping_country_changes).grid(
+            row=0,
+            column=2,
+            sticky="e",
+            padx=(8, 0),
+        )
+
+        ttk.Label(editor, text="Type").grid(row=1, column=0, sticky="w")
+        ttk.Combobox(
+            editor,
+            textvariable=self.shipping_option_id_var,
+            values=list(SHIPPING_MODE_LABELS.keys()),
+            state="readonly",
+        ).grid(row=1, column=1, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Libelle").grid(row=2, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.shipping_option_label_var).grid(row=2, column=1, columnspan=2, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Transporteur").grid(row=3, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.shipping_option_provider_var).grid(row=3, column=1, columnspan=2, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Prix").grid(row=4, column=0, sticky="w")
+        price_row = ttk.Frame(editor)
+        price_row.grid(row=4, column=1, columnspan=2, sticky="w", pady=4)
+        ttk.Entry(price_row, textvariable=self.shipping_option_euros_var, width=8).pack(side="left")
+        ttk.Label(price_row, text="€").pack(side="left", padx=(6, 4))
+        ttk.Label(price_row, text=",").pack(side="left", padx=(0, 4))
+        ttk.Entry(price_row, textvariable=self.shipping_option_cents_var, width=4).pack(side="left")
+        ttk.Label(price_row, text="Apercu").pack(side="left", padx=(16, 6))
+        ttk.Entry(
+            price_row,
+            textvariable=self.shipping_option_preview_var,
+            width=14,
+            state="readonly",
+        ).pack(side="left")
+
+        ttk.Button(editor, text="Appliquer mode", command=self.apply_shipping_option_changes).grid(
+            row=5,
+            column=1,
+            columnspan=2,
+            sticky="e",
+            pady=(8, 16),
+        )
+
+        ttk.Label(editor, text="Message pays non geres").grid(row=6, column=0, sticky="nw")
+        self.shipping_unsupported_text = tk.Text(editor, height=3, wrap="word")
+        self.shipping_unsupported_text.grid(row=6, column=1, columnspan=2, sticky="ew", pady=4)
+
+    def get_shipping_config(self) -> dict:
+        shipping = self.config_data.setdefault("shipping", {})
+        if not isinstance(shipping.get("countries"), list):
+            shipping["countries"] = []
+        return shipping
 
     def build_colors_tab(self) -> None:
         frame = self.colors_frame
@@ -699,6 +989,95 @@ class VasoAdminApp(tk.Tk):
             wraplength=HERO_PREVIEW_SIZE[0],
         ).grid(row=2, column=0, sticky="n")
 
+    def build_containers_tab(self) -> None:
+        frame = self.containers_frame
+        frame.columnconfigure(0, weight=0)
+        frame.columnconfigure(1, weight=1)
+        frame.rowconfigure(0, weight=1)
+
+        list_panel = ttk.Frame(frame)
+        list_panel.grid(row=0, column=0, sticky="nsw", padx=(0, 18))
+        list_panel.rowconfigure(1, weight=1)
+
+        ttk.Label(list_panel, text="Photos contenants").grid(row=0, column=0, sticky="w", pady=(0, 4))
+        self.containers_listbox = tk.Listbox(list_panel, width=42, exportselection=False)
+        self.containers_listbox.grid(row=1, column=0, sticky="nsew")
+        self.containers_listbox.bind("<<ListboxSelect>>", lambda _event: self.load_selected_container_image())
+
+        container_buttons = ttk.Frame(list_panel)
+        container_buttons.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(container_buttons, text="Ajouter", command=self.add_container_images).grid(row=0, column=0, sticky="ew")
+        ttk.Button(container_buttons, text="Supprimer", command=self.remove_container_image).grid(row=0, column=1, sticky="ew", padx=4)
+        ttk.Button(container_buttons, text="Monter", command=lambda: self.move_container_image(-1)).grid(row=1, column=0, sticky="ew", pady=(4, 0))
+        ttk.Button(container_buttons, text="Descendre", command=lambda: self.move_container_image(1)).grid(row=1, column=1, sticky="ew", padx=4, pady=(4, 0))
+
+        editor = ttk.Frame(frame)
+        editor.grid(row=0, column=1, sticky="nsew")
+        editor.columnconfigure(1, weight=1)
+
+        ttk.Label(editor, text="Chemin publie").grid(row=0, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.container_path_var).grid(row=0, column=1, sticky="ew", pady=4)
+        ttk.Checkbutton(editor, text="Photo active", variable=self.container_enabled_var).grid(
+            row=1,
+            column=1,
+            sticky="w",
+            pady=4,
+        )
+        ttk.Label(editor, text="Libelle").grid(row=2, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.container_label_var).grid(row=2, column=1, sticky="ew", pady=4)
+        ttk.Label(editor, text="Texte alternatif").grid(row=3, column=0, sticky="w")
+        ttk.Entry(editor, textvariable=self.container_alt_var).grid(row=3, column=1, sticky="ew", pady=4)
+
+        ttk.Label(editor, text="Position d'affichage").grid(row=4, column=0, sticky="w")
+        container_order_controls = ttk.Frame(editor)
+        container_order_controls.grid(row=4, column=1, sticky="w", pady=4)
+        ttk.Spinbox(
+            container_order_controls,
+            from_=1,
+            to=999,
+            width=6,
+            textvariable=self.container_order_var,
+            command=self.apply_container_order,
+        ).grid(row=0, column=0, sticky="w")
+        ttk.Button(
+            container_order_controls,
+            text="Appliquer l'ordre",
+            command=self.apply_container_order,
+        ).grid(row=0, column=1, sticky="w", padx=(8, 0))
+        ttk.Button(editor, text="Appliquer les changements", command=self.apply_container_changes).grid(
+            row=5,
+            column=1,
+            sticky="e",
+            pady=(8, 14),
+        )
+
+        self.container_preview_surface = tk.Frame(
+            editor,
+            width=HERO_PREVIEW_SIZE[0],
+            height=HERO_PREVIEW_SIZE[1],
+            bd=0,
+            highlightthickness=1,
+        )
+        self.container_preview_surface.grid(row=6, column=0, columnspan=2, pady=(4, 8))
+        self.container_preview_surface.grid_propagate(False)
+
+        self.container_preview_label = tk.Label(
+            self.container_preview_surface,
+            text="Selectionnez une photo de contenant",
+            anchor="center",
+            justify="center",
+            relief="flat",
+            compound="center",
+            wraplength=HERO_PREVIEW_SIZE[0] - 24,
+        )
+        self.container_preview_label.pack(fill="both", expand=True)
+        ttk.Label(
+            editor,
+            textvariable=self.container_preview_status_var,
+            justify="left",
+            wraplength=HERO_PREVIEW_SIZE[0],
+        ).grid(row=7, column=0, columnspan=2, sticky="n")
+
     def build_orders_tab(self) -> None:
         frame = self.orders_frame
         frame.columnconfigure(1, weight=1)
@@ -718,7 +1097,7 @@ class VasoAdminApp(tk.Tk):
         )
         ttk.Label(
             settings,
-            text="Le mot de passe de session est demande a l'ouverture et vaut pour tous les onglets.",
+            text="Le token Netlify donne acces aux commandes et vaut pour tous les onglets.",
             justify="left",
             wraplength=520,
         ).grid(
@@ -735,11 +1114,35 @@ class VasoAdminApp(tk.Tk):
             rowspan=2,
             sticky="ns",
         )
-        ttk.Button(settings, text="Changer le mot de passe session", command=self.prompt_session_admin_token).grid(
+        token_button = ttk.Button(
+            settings,
+            text="Renseigner le token Netlify",
+            command=self.prompt_session_admin_token,
+        )
+        token_button.grid(
             row=2,
             column=2,
             sticky="e",
             pady=(4, 0),
+        )
+        Tooltip(token_button, TOKEN_HELP_TEXT)
+        ttk.Checkbutton(
+            settings,
+            text="Mémoriser sur cet ordinateur",
+            variable=self.remember_admin_token_var,
+            command=self.save_settings,
+        ).grid(
+            row=2,
+            column=0,
+            sticky="w",
+            pady=(4, 0),
+        )
+        ttk.Label(settings, textvariable=self.session_auth_status_var).grid(
+            row=2,
+            column=1,
+            sticky="w",
+            pady=(4, 0),
+            padx=(8, 10),
         )
 
         left = ttk.Frame(frame)
@@ -758,6 +1161,18 @@ class VasoAdminApp(tk.Tk):
         ttk.Label(right, text="Detail commande").grid(row=0, column=0, sticky="w", pady=(0, 4))
         self.orders_detail_text = tk.Text(right, height=18, wrap="word")
         self.orders_detail_text.grid(row=1, column=0, sticky="nsew")
+        order_actions = ttk.Frame(right)
+        order_actions.grid(row=2, column=0, sticky="ew", pady=(8, 0))
+        ttk.Button(
+            order_actions,
+            text="Exporter JSON production",
+            command=self.export_selected_order_production_json,
+        ).pack(side="left")
+        ttk.Button(
+            order_actions,
+            text="Exporter fiche de production",
+            command=self.export_selected_order_production_sheet,
+        ).pack(side="left", padx=(8, 0))
 
     def build_publish_tab(self) -> None:
         frame = self.publish_frame
@@ -862,11 +1277,13 @@ class VasoAdminApp(tk.Tk):
         self.hero_fade_in_ms_var.set(str(hero_gallery.get("fadeInMs", DEFAULT_HERO_FADE_IN_MS)))
         self.hero_fade_out_ms_var.set(str(hero_gallery.get("fadeOutMs", DEFAULT_HERO_FADE_OUT_MS)))
 
+        self.refresh_shipping_countries_listbox()
         self.refresh_colors_listbox()
         self.refresh_hero_listbox()
+        self.refresh_containers_listbox()
 
     def collect_form(self) -> None:
-        existing_shipping_countries = self.config_data.get("shipping", {}).get("countries", [])
+        existing_shipping_countries = self.get_shipping_config().get("countries", [])
         self.config_data["shopStatus"] = {
             "state": SHOP_STATUS_CODES_BY_LABEL.get(
                 self.status_state_display_var.get().strip(),
@@ -924,23 +1341,313 @@ class VasoAdminApp(tk.Tk):
         euros = max(0, value_in_cents) / 100
         return f"{euros:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
 
+    def format_order_amount(self, amount_in_cents: object, currency: object) -> str:
+        try:
+            cents = int(amount_in_cents)
+        except (TypeError, ValueError):
+            return "n/a"
+
+        currency_label = f"{currency}".upper() if currency else "EUR"
+        if currency_label == "EUR":
+            return self.format_price_preview(cents)
+
+        return f"{self.format_price_preview(cents)} {currency_label}"
+
     def update_price_preview(self) -> None:
         try:
             self.price_preview_var.set(self.format_price_preview(self.parse_price_cents()))
         except ValueError:
             self.price_preview_var.set("Saisie invalide")
 
-    def parse_shipping_countries(self) -> list[dict]:
-        raw_json = self.shipping_countries_text.get("1.0", "end").strip()
+    def parse_shipping_option_price_cents(self) -> int:
+        euros = self.parse_int(self.shipping_option_euros_var.get(), "prix livraison en euros")
+        cents = self.parse_int(self.shipping_option_cents_var.get(), "prix livraison en centimes")
+        if euros < 0:
+            raise ValueError("Le prix livraison en euros ne peut pas être négatif.")
+        if cents < 0 or cents > 99:
+            raise ValueError("Les centimes livraison doivent être compris entre 0 et 99.")
+        return euros * 100 + cents
+
+    def update_shipping_price_preview(self) -> None:
         try:
-            parsed = json.loads(raw_json or "[]")
-        except json.JSONDecodeError as error:
-            raise ValueError(f"JSON livraison invalide : {error}") from error
+            self.shipping_option_preview_var.set(
+                self.format_price_preview(self.parse_shipping_option_price_cents())
+            )
+        except ValueError:
+            self.shipping_option_preview_var.set("Saisie invalide")
 
-        if not isinstance(parsed, list):
-            raise ValueError("La grille livraison doit etre une liste JSON.")
+    def get_selected_shipping_country_index(self) -> int | None:
+        selection = self.shipping_countries_listbox.curselection()
+        if not selection:
+            return None
 
-        return parsed
+        return selection[0]
+
+    def get_selected_shipping_option_index(self) -> int | None:
+        selection = self.shipping_options_listbox.curselection()
+        if not selection:
+            return None
+
+        return selection[0]
+
+    def refresh_shipping_countries_listbox(self) -> None:
+        countries = self.get_shipping_config().get("countries", [])
+        current_selection = self.get_selected_shipping_country_index()
+
+        self.shipping_countries_listbox.delete(0, "end")
+        for country in countries:
+            option_count = len(country.get("options", [])) if isinstance(country, dict) else 0
+            country_name = country.get("country", "") if isinstance(country, dict) else ""
+            self.shipping_countries_listbox.insert("end", f"{country_name} ({option_count})")
+
+        if not countries:
+            self.shipping_country_var.set("")
+            self.refresh_shipping_options_listbox()
+            return
+
+        selected_index = min(current_selection or 0, len(countries) - 1)
+        self.shipping_countries_listbox.selection_set(selected_index)
+        self.load_selected_shipping_country()
+
+    def load_selected_shipping_country(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            self.shipping_country_var.set("")
+            self.refresh_shipping_options_listbox()
+            return
+
+        country = countries[country_index]
+        self.shipping_country_var.set(country.get("country", ""))
+        if not isinstance(country.get("options"), list):
+            country["options"] = []
+        self.refresh_shipping_options_listbox()
+
+    def apply_shipping_country_changes(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            return
+
+        country_name = self.shipping_country_var.get().strip()
+        if not country_name:
+            messagebox.showerror("VASO-Admin", "Le nom du pays est obligatoire.")
+            return
+
+        if any(
+            index != country_index and country.get("country", "").strip().lower() == country_name.lower()
+            for index, country in enumerate(countries)
+            if isinstance(country, dict)
+        ):
+            messagebox.showerror("VASO-Admin", f"Le pays existe deja : {country_name}")
+            return
+
+        countries[country_index]["country"] = country_name
+        self.refresh_shipping_countries_listbox()
+        self.shipping_countries_listbox.selection_clear(0, "end")
+        self.shipping_countries_listbox.selection_set(country_index)
+        self.load_selected_shipping_country()
+        self.log(f"Pays livraison mis a jour : {country_name}")
+
+    def add_shipping_country(self) -> None:
+        countries = self.get_shipping_config().setdefault("countries", [])
+        existing_names = {
+            country.get("country", "").strip()
+            for country in countries
+            if isinstance(country, dict) and country.get("country", "").strip()
+        }
+        base_name = "Nouveau pays"
+        counter = 1
+        candidate = base_name
+        while candidate in existing_names:
+            counter += 1
+            candidate = f"{base_name} {counter}"
+
+        countries.append({"country": candidate, "options": []})
+        self.refresh_shipping_countries_listbox()
+        self.shipping_countries_listbox.selection_clear(0, "end")
+        self.shipping_countries_listbox.selection_set(len(countries) - 1)
+        self.load_selected_shipping_country()
+        self.log(f"Pays livraison ajoute : {candidate}")
+
+    def remove_shipping_country(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            return
+
+        country = countries.pop(country_index)
+        self.refresh_shipping_countries_listbox()
+        self.log(f"Pays livraison supprime : {country.get('country', '')}")
+
+    def move_shipping_country(self, direction: int) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None:
+            return
+
+        target_index = country_index + direction
+        if target_index < 0 or target_index >= len(countries):
+            return
+
+        countries[country_index], countries[target_index] = countries[target_index], countries[country_index]
+        self.refresh_shipping_countries_listbox()
+        self.shipping_countries_listbox.selection_clear(0, "end")
+        self.shipping_countries_listbox.selection_set(target_index)
+        self.load_selected_shipping_country()
+
+    def refresh_shipping_options_listbox(self) -> None:
+        self.shipping_options_listbox.delete(0, "end")
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            self.clear_shipping_option_form()
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        for option in options:
+            label = option.get("label", "")
+            provider = option.get("provider", "")
+            price = self.format_price_preview(int(option.get("priceCents", 0)))
+            self.shipping_options_listbox.insert("end", f"{option.get('id', '')} · {label} · {provider} · {price}")
+
+        if options:
+            self.shipping_options_listbox.selection_set(0)
+            self.load_selected_shipping_option()
+        else:
+            self.clear_shipping_option_form()
+
+    def clear_shipping_option_form(self) -> None:
+        self.shipping_option_id_var.set("relay")
+        self.shipping_option_label_var.set("")
+        self.shipping_option_provider_var.set("")
+        self.shipping_option_euros_var.set("0")
+        self.shipping_option_cents_var.set("00")
+        self.update_shipping_price_preview()
+
+    def load_selected_shipping_option(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            self.clear_shipping_option_form()
+            return
+
+        options = countries[country_index].get("options", [])
+        if option_index >= len(options):
+            self.clear_shipping_option_form()
+            return
+
+        option = options[option_index]
+        price_cents = int(option.get("priceCents", 0))
+        self.shipping_option_id_var.set(option.get("id", "relay"))
+        self.shipping_option_label_var.set(option.get("label", ""))
+        self.shipping_option_provider_var.set(option.get("provider", ""))
+        self.shipping_option_euros_var.set(str(price_cents // 100))
+        self.shipping_option_cents_var.set(f"{price_cents % 100:02d}")
+        self.update_shipping_price_preview()
+
+    def apply_shipping_option_changes(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        if option_index >= len(options):
+            return
+
+        option_id = self.shipping_option_id_var.get().strip()
+        if option_id not in SHIPPING_MODE_LABELS:
+            messagebox.showerror("VASO-Admin", "Le type livraison doit etre relay, home ou pickup.")
+            return
+
+        if any(
+            index != option_index and option.get("id") == option_id
+            for index, option in enumerate(options)
+            if isinstance(option, dict)
+        ):
+            messagebox.showerror("VASO-Admin", f"Le mode {option_id} existe deja pour ce pays.")
+            return
+
+        try:
+            price_cents = self.parse_shipping_option_price_cents()
+        except ValueError as error:
+            messagebox.showerror("VASO-Admin", str(error))
+            return
+
+        options[option_index] = {
+            "id": option_id,
+            "label": self.shipping_option_label_var.get().strip() or SHIPPING_MODE_LABELS[option_id],
+            "provider": self.shipping_option_provider_var.get().strip(),
+            "priceCents": price_cents,
+        }
+        self.refresh_shipping_options_listbox()
+        self.shipping_options_listbox.selection_clear(0, "end")
+        self.shipping_options_listbox.selection_set(option_index)
+        self.load_selected_shipping_option()
+        self.log("Mode livraison mis a jour")
+
+    def add_shipping_option(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries):
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        existing_ids = {option.get("id") for option in options if isinstance(option, dict)}
+        option_id = next((mode_id for mode_id in SHIPPING_MODE_LABELS if mode_id not in existing_ids), None)
+        if option_id is None:
+            messagebox.showinfo("VASO-Admin", "Ce pays possede deja tous les modes livraison.")
+            return
+
+        options.append(
+            {
+                "id": option_id,
+                "label": SHIPPING_MODE_LABELS[option_id],
+                "provider": SHIPPING_MODE_PROVIDERS[option_id],
+                "priceCents": 0,
+            }
+        )
+        self.refresh_shipping_options_listbox()
+        self.shipping_options_listbox.selection_clear(0, "end")
+        self.shipping_options_listbox.selection_set(len(options) - 1)
+        self.load_selected_shipping_option()
+        self.log("Mode livraison ajoute")
+
+    def remove_shipping_option(self) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        if option_index >= len(options):
+            return
+
+        option = options.pop(option_index)
+        self.refresh_shipping_options_listbox()
+        self.log(f"Mode livraison supprime : {option.get('id', '')}")
+
+    def move_shipping_option(self, direction: int) -> None:
+        country_index = self.get_selected_shipping_country_index()
+        option_index = self.get_selected_shipping_option_index()
+        countries = self.get_shipping_config().get("countries", [])
+        if country_index is None or country_index >= len(countries) or option_index is None:
+            return
+
+        options = countries[country_index].setdefault("options", [])
+        target_index = option_index + direction
+        if target_index < 0 or target_index >= len(options):
+            return
+
+        options[option_index], options[target_index] = options[target_index], options[option_index]
+        self.refresh_shipping_options_listbox()
+        self.shipping_options_listbox.selection_clear(0, "end")
+        self.shipping_options_listbox.selection_set(target_index)
+        self.load_selected_shipping_option()
 
     def ensure_printer_volume_config(self) -> dict:
         printer_volume = self.config_data.get("printerVolume")
@@ -1509,6 +2216,8 @@ class VasoAdminApp(tk.Tk):
         try:
             if self.hero_preview_temp_path.exists():
                 self.hero_preview_temp_path.unlink()
+            if self.container_preview_temp_path.exists():
+                self.container_preview_temp_path.unlink()
         except OSError:
             pass
         self.destroy()
@@ -1548,6 +2257,251 @@ class VasoAdminApp(tk.Tk):
         self.hero_listbox.selection_clear(0, "end")
         self.hero_listbox.selection_set(target_index)
         self.load_selected_hero_image()
+
+    def ensure_container_images_config(self) -> list[dict]:
+        container_images = self.config_data.get("containerImages")
+        if isinstance(container_images, list):
+            return container_images
+
+        default_images = [
+            {
+                "path": "images/containers/eco-cup-50cl.jpg",
+                "label": "Eco-Cup 50 cl",
+                "alt": "Eco-Cup 50 cl",
+                "enabled": True,
+            },
+            {
+                "path": "images/containers/Eco-Cup 25cl.png",
+                "label": "Eco Cup 25Cl",
+                "alt": "Eco Cup 25Cl",
+                "enabled": True,
+            },
+            {
+                "path": "images/containers/Eco-cup 12,5 cl.png",
+                "label": "Eco Cup 12,5 Cl",
+                "alt": "Eco Cup 12,5 Cl",
+                "enabled": True,
+            },
+            {
+                "path": "images/containers/tube-a-essai.jpg",
+                "label": "Tube à essai",
+                "alt": "Tube à essai",
+                "enabled": True,
+            },
+        ]
+        self.config_data["containerImages"] = default_images
+        return default_images
+
+    def refresh_containers_listbox(self) -> None:
+        self.containers_listbox.delete(0, "end")
+        for container_image in self.ensure_container_images_config():
+            status = "ON" if container_image.get("enabled", True) else "OFF"
+            label = container_image.get("label", "") or container_image.get("path", "")
+            self.containers_listbox.insert("end", f"{status} · {label}")
+
+        if self.containers_listbox.size():
+            self.containers_listbox.selection_set(0)
+            self.load_selected_container_image()
+        else:
+            self.container_path_var.set("")
+            self.container_label_var.set("")
+            self.container_alt_var.set("")
+            self.container_order_var.set("")
+            self.container_enabled_var.set(False)
+            self.update_selected_container_preview()
+
+    def load_selected_container_image(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            self.container_path_var.set("")
+            self.container_label_var.set("")
+            self.container_alt_var.set("")
+            self.container_order_var.set("")
+            self.container_enabled_var.set(False)
+            self.update_selected_container_preview()
+            return
+
+        container_image = self.ensure_container_images_config()[selection[0]]
+        self.container_path_var.set(container_image.get("path", ""))
+        self.container_label_var.set(container_image.get("label", ""))
+        self.container_alt_var.set(container_image.get("alt", ""))
+        self.container_order_var.set(str(selection[0] + 1))
+        self.container_enabled_var.set(bool(container_image.get("enabled", True)))
+        self.update_selected_container_preview()
+
+    def apply_container_changes(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        container_image = self.ensure_container_images_config()[selection[0]]
+        label = self.container_label_var.get().strip()
+        alt = self.container_alt_var.get().strip()
+        container_image["path"] = self.container_path_var.get().strip()
+        container_image["label"] = label
+        container_image["alt"] = alt or label
+        container_image["enabled"] = bool(self.container_enabled_var.get())
+        self.refresh_containers_listbox()
+        self.containers_listbox.selection_set(selection[0])
+        self.load_selected_container_image()
+        self.log("Photo contenant mise a jour")
+
+    def add_container_images(self) -> None:
+        selected_paths = filedialog.askopenfilenames(
+            title="Ajouter des photos de contenants",
+            filetypes=[
+                ("Images", "*.png *.jpg *.jpeg *.webp *.avif"),
+                ("Tous les fichiers", "*.*"),
+            ],
+        )
+        if not selected_paths:
+            return
+
+        CONTAINERS_DIR.mkdir(parents=True, exist_ok=True)
+        container_images = self.ensure_container_images_config()
+        for source in selected_paths:
+            source_path = Path(source)
+            target_path = self.unique_container_target(source_path.name)
+            shutil.copy2(source_path, target_path)
+            label = target_path.stem.replace("-", " ").replace("_", " ").strip().title()
+            container_images.append(
+                {
+                    "path": f"images/containers/{target_path.name}",
+                    "label": label,
+                    "alt": label,
+                    "enabled": True,
+                }
+            )
+
+        self.refresh_containers_listbox()
+        self.containers_listbox.selection_clear(0, "end")
+        self.containers_listbox.selection_set(len(container_images) - 1)
+        self.load_selected_container_image()
+        self.log(f"{len(selected_paths)} photo(s) de contenant ajoutee(s)")
+
+    def unique_container_target(self, file_name: str) -> Path:
+        target_path = CONTAINERS_DIR / file_name
+        stem = target_path.stem
+        suffix = target_path.suffix
+        counter = 2
+        while target_path.exists():
+            target_path = CONTAINERS_DIR / f"{stem}-{counter}{suffix}"
+            counter += 1
+        return target_path
+
+    def remove_container_image(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        container_image = self.ensure_container_images_config().pop(selection[0])
+        relative_path = container_image.get("path", "")
+        absolute_path = self.resolve_public_asset_path(relative_path)
+        if absolute_path.is_file() and absolute_path.is_relative_to(CONTAINERS_DIR):
+            try:
+                absolute_path.unlink()
+            except OSError:
+                pass
+
+        self.refresh_containers_listbox()
+        self.log(f"Photo contenant supprimee : {relative_path}")
+
+    def move_container_image(self, direction: int) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        index = selection[0]
+        target_index = index + direction
+        container_images = self.ensure_container_images_config()
+        if target_index < 0 or target_index >= len(container_images):
+            return
+
+        self.reorder_container_image(index, target_index)
+
+    def apply_container_order(self) -> None:
+        selection = self.containers_listbox.curselection()
+        if not selection:
+            return
+
+        container_images = self.ensure_container_images_config()
+        try:
+            target_position = int(self.container_order_var.get())
+        except ValueError:
+            messagebox.showerror("Ordre invalide", "Indiquez une position sous forme de nombre.")
+            self.container_order_var.set(str(selection[0] + 1))
+            return
+
+        target_index = max(0, min(target_position - 1, len(container_images) - 1))
+        self.reorder_container_image(selection[0], target_index)
+
+    def reorder_container_image(self, index: int, target_index: int) -> None:
+        container_images = self.ensure_container_images_config()
+        if index == target_index or index < 0 or target_index < 0:
+            self.container_order_var.set(str(index + 1))
+            return
+        if index >= len(container_images) or target_index >= len(container_images):
+            return
+
+        container_image = container_images.pop(index)
+        container_images.insert(target_index, container_image)
+        self.refresh_containers_listbox()
+        self.containers_listbox.selection_clear(0, "end")
+        self.containers_listbox.selection_set(target_index)
+        self.load_selected_container_image()
+        self.log(f"Ordre des contenants mis a jour : position {target_index + 1}")
+
+    def get_selected_container_path(self) -> Path | None:
+        relative_path = self.container_path_var.get().strip()
+        if not relative_path:
+            return None
+
+        return self.resolve_public_asset_path(relative_path)
+
+    def display_container_preview_image(self, image: Image.Image | None, status: str, title: str = "") -> None:
+        if image is None:
+            self.container_preview_photo = None
+            self.container_preview_label.configure(image="", text=title or "Apercu indisponible")
+            self.container_preview_status_var.set(status)
+            return
+
+        if ImageTk is not None:
+            preview_photo = ImageTk.PhotoImage(image)
+        else:
+            image.save(self.container_preview_temp_path, format="PNG")
+            preview_photo = tk.PhotoImage(file=str(self.container_preview_temp_path))
+        self.container_preview_photo = preview_photo
+        self.container_preview_label.configure(image=preview_photo, text="")
+        self.container_preview_status_var.set(status)
+
+    def update_selected_container_preview(self) -> None:
+        if Image is None or ImageOps is None:
+            self.display_container_preview_image(
+                None,
+                "Pillow n'est pas installe. Lancez : python3 -m pip install -r admin/requirements.txt",
+                title="Pillow requis",
+            )
+            return
+
+        image_path = self.get_selected_container_path()
+        if image_path is None:
+            self.display_container_preview_image(None, "Selectionnez une photo de contenant pour afficher son apercu.")
+            return
+
+        image = self.load_preview_image(image_path)
+        if image is None:
+            self.display_container_preview_image(
+                None,
+                f"Impossible de charger {image_path.name}.",
+                title=image_path.name,
+            )
+            return
+
+        enabled_label = "active" if self.container_enabled_var.get() else "inactive"
+        self.display_container_preview_image(
+            image,
+            f"Apercu : {image_path.name} ({enabled_label})",
+        )
 
     def reload_from_disk(self) -> None:
         self.stop_hero_preview_animation()
@@ -1658,12 +2612,11 @@ class VasoAdminApp(tk.Tk):
         return process
 
     def refresh_orders(self) -> None:
-        api_url = self.orders_api_url_var.get().strip()
+        api_url = self.orders_api_url_var.get().strip() or DEFAULT_ORDERS_API_URL
+        if self.orders_api_url_var.get().strip() != api_url:
+            self.orders_api_url_var.set(api_url)
+            self.save_settings()
         api_token = self.get_session_admin_token()
-
-        if not api_url:
-            messagebox.showerror("VASO-Admin", "Renseigne l'URL de l'API commandes.")
-            return
 
         if not api_token:
             return
@@ -1699,6 +2652,19 @@ class VasoAdminApp(tk.Tk):
             body = error.read().decode("utf-8", errors="replace").strip()
             message = body or f"HTTP {error.code}"
             self.log(f"Erreur API commandes : {message}")
+            if error.code == 401:
+                self.session_admin_token = ""
+                self.session_auth_status_var.set("Token Netlify refusé")
+                messagebox.showerror(
+                    "VASO-Admin",
+                    (
+                        "Impossible de charger les commandes.\n"
+                        "Le token admin a ete refuse par Netlify.\n"
+                        "Renseigne la valeur exacte de ADMIN_ORDERS_TOKEN."
+                    ),
+                )
+                self.prompt_session_admin_token()
+                return
             messagebox.showerror("VASO-Admin", f"Impossible de charger les commandes.\n{message}")
             return
         except (urllib_error.URLError, TimeoutError, json.JSONDecodeError) as error:
@@ -1711,13 +2677,30 @@ class VasoAdminApp(tk.Tk):
 
         for order in self.orders_data:
             created_at = f"{order.get('createdAt', '')}".replace("T", " ").replace("Z", "")
+            order_items = self.get_order_cart_items(order)
+            item_count = self.get_order_item_count(order_items)
+            seeds = ", ".join(
+                f"{item.get('seed', '')}".strip()
+                for item in order_items[:3]
+                if f"{item.get('seed', '')}".strip()
+            )
+            if len(order_items) > 3:
+                seeds = f"{seeds}, ..." if seeds else "..."
             customer_name = " ".join(
                 part.strip()
                 for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
                 if isinstance(part, str) and part.strip()
             ).strip()
             summary = " | ".join(
-                part for part in [created_at[:16], order.get("orderRef", ""), customer_name, f"vase {order.get('seed', '')}"] if part
+                part
+                for part in [
+                    created_at[:16],
+                    order.get("orderRef", ""),
+                    customer_name,
+                    f"{item_count} article(s)",
+                    f"vase(s) {seeds}" if seeds else "",
+                ]
+                if part
             )
             self.orders_listbox.insert("end", summary or "Commande")
 
@@ -1804,27 +2787,31 @@ class VasoAdminApp(tk.Tk):
     def prompt_session_admin_token(self) -> None:
         token = simpledialog.askstring(
             "VASO-Admin",
-            "Renseigne le mot de passe admin pour cette session :",
+            "Collez la valeur de ADMIN_ORDERS_TOKEN :",
             parent=self,
             show="*",
         )
 
         if token is None:
             if not self.session_admin_token:
-                self.session_auth_status_var.set("Session admin verrouillée")
-                self.log("Mot de passe session non renseigne.")
+                self.session_auth_status_var.set("Token Netlify non renseigné")
+                self.log("Token Netlify non renseigne.")
             return
 
         cleaned_token = token.strip()
         if not cleaned_token:
             self.session_admin_token = ""
-            self.session_auth_status_var.set("Session admin verrouillée")
-            self.log("Mot de passe session vide.")
+            self.session_auth_status_var.set("Token Netlify non renseigné")
+            self.save_settings()
+            self.log("Token Netlify vide.")
             return
 
         self.session_admin_token = cleaned_token
-        self.session_auth_status_var.set("Session admin déverrouillée")
-        self.log("Mot de passe session enregistre pour cette ouverture.")
+        self.session_auth_status_var.set(
+            "Token Netlify mémorisé" if self.remember_admin_token_var.get() else "Token Netlify renseigné"
+        )
+        self.save_settings()
+        self.log("Token Netlify admin renseigne.")
 
     def get_session_admin_token(self) -> str:
         if self.session_admin_token:
@@ -1834,9 +2821,65 @@ class VasoAdminApp(tk.Tk):
         if not self.session_admin_token:
             messagebox.showerror(
                 "VASO-Admin",
-                "Le mot de passe de session est requis pour acceder aux commandes et aux tests Discord.",
+                "Le token Netlify est requis pour acceder aux commandes et aux tests Discord.",
             )
         return self.session_admin_token
+
+    def get_order_cart_items(self, order: dict) -> list[dict]:
+        cart_items = order.get("cartItems")
+        if isinstance(cart_items, list):
+            normalized_items = [item for item in cart_items if isinstance(item, dict)]
+            if normalized_items:
+                return normalized_items
+
+        return [
+            {
+                "seed": order.get("seed"),
+                "version": order.get("version"),
+                "heightMm": order.get("heightMm"),
+                "minDiameterMm": order.get("minDiameterMm"),
+                "maxDiameterMm": order.get("maxDiameterMm"),
+                "waterproofInsertLabel": order.get("waterproofInsertLabel"),
+                "solifloreChoiceLabel": order.get("solifloreChoiceLabel"),
+                "forceTestTubeSupport": order.get("forceTestTubeSupport") in [True, "yes"],
+                "suppressTestTubeSupport": order.get("suppressTestTubeSupport") in [True, "yes"],
+                "material": order.get("material"),
+                "colorLabel": order.get("colorLabel"),
+                "quantity": order.get("itemCount", 1),
+            }
+        ]
+
+    def get_order_item_count(self, order_items: list[dict]) -> int:
+        total = 0
+        for item in order_items:
+            try:
+                total += max(1, int(item.get("quantity", 1)))
+            except (TypeError, ValueError):
+                total += 1
+        return total
+
+    def format_bool_fr(self, value: object) -> str:
+        return "oui" if value in [True, "yes"] else "non"
+
+    def format_order_item_detail(self, item: dict, index: int) -> str:
+        dimensions = []
+        if item.get("heightMm"):
+            dimensions.append(f"H {item.get('heightMm')} mm")
+        if item.get("minDiameterMm") and item.get("maxDiameterMm"):
+            dimensions.append(f"Ø {item.get('minDiameterMm')} à {item.get('maxDiameterMm')} mm")
+
+        details = [
+            f"{item.get('quantity', 1)} x Vase n° {item.get('seed', 'n/a')}",
+            f"Version {item.get('version')}" if item.get("version") else "",
+            " · ".join(dimensions),
+            f"Couleur : {item.get('colorLabel')}" if item.get("colorLabel") else "",
+            f"Contenant : {item.get('waterproofInsertLabel')}" if item.get("waterproofInsertLabel") else "",
+            f"Usage : {item.get('solifloreChoiceLabel')}" if item.get("solifloreChoiceLabel") else "",
+            f"Support tube : {self.format_bool_fr(item.get('forceTestTubeSupport'))}",
+            "Support supprime" if item.get("suppressTestTubeSupport") in [True, "yes"] else "",
+            f"Materiau : {item.get('material')}" if item.get("material") else "",
+        ]
+        return f"{index + 1}. " + " | ".join(part for part in details if part)
 
     def load_selected_order(self) -> None:
         selection = self.orders_listbox.curselection()
@@ -1844,6 +2887,8 @@ class VasoAdminApp(tk.Tk):
             return
 
         order = self.orders_data[selection[0]]
+        production_files = self.get_order_production_files(order)
+        order_items = self.get_order_cart_items(order)
         customer_full_name = " ".join(
             part.strip()
             for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
@@ -1871,11 +2916,11 @@ class VasoAdminApp(tk.Tk):
         detail_lines = [
             f"Reference : {order.get('orderRef', 'n/a')}",
             f"Date : {order.get('createdAt', 'n/a')}",
-            f"Vase : n° {order.get('seed', 'n/a')}",
-            f"Couleur : {order.get('colorLabel', 'n/a')}",
-            f"Contenant compatible : {order.get('waterproofInsertLabel', 'n/a')}",
-            f"Materiau : {order.get('material', 'n/a')}",
-            f"Hauteur : {order.get('heightMm', 'n/a')} mm",
+            f"Articles : {self.get_order_item_count(order_items)}",
+            f"JSON production : {'disponible' if production_files else 'absent'}",
+            "",
+            "Vases :",
+            *[self.format_order_item_detail(item, index) for index, item in enumerate(order_items)],
             "",
             f"Client : {customer_full_name or 'n/a'}",
             f"Email : {order.get('customerEmail', 'n/a')}",
@@ -1886,14 +2931,295 @@ class VasoAdminApp(tk.Tk):
             f"Transporteur : {order.get('shippingProvider', 'n/a')}",
             f"Point relais : {', '.join(line for line in relay_lines if isinstance(line, str) and line.strip()) or 'non'}",
             "",
-            f"Montant : {order.get('amountTotal', 'n/a')} {order.get('currency', '')}",
+            f"Montant : {self.format_order_amount(order.get('amountTotal'), order.get('currency'))}",
             f"Statut paiement : {order.get('paymentStatus', 'n/a')}",
         ]
 
         if order.get("customerMessage"):
             detail_lines.extend(["", f"Message client : {order.get('customerMessage')}"])
 
+        if production_files:
+            detail_lines.extend(
+                [
+                    "",
+                    "Fichiers production :",
+                    *[f"- {production_file.get('filename', 'vase-production.json')}" for production_file in production_files],
+                ]
+            )
+
         self.write_text(self.orders_detail_text, "\n".join(detail_lines))
+
+    def get_selected_order(self) -> dict | None:
+        selection = self.orders_listbox.curselection()
+        if not selection:
+            messagebox.showinfo("VASO-Admin", "Selectionnez d'abord une commande.")
+            return None
+
+        return self.orders_data[selection[0]]
+
+    def get_order_production_files(self, order: dict) -> list[dict]:
+        production_files = order.get("productionVaseFiles")
+        if isinstance(production_files, list):
+            return [production_file for production_file in production_files if isinstance(production_file, dict)]
+
+        cart_items = order.get("cartItems")
+        if not isinstance(cart_items, list):
+            return []
+
+        fallback_files: list[dict] = []
+        for index, item in enumerate(cart_items):
+            if not isinstance(item, dict) or not isinstance(item.get("params"), dict):
+                continue
+            seed = item.get("seed", order.get("seed", ""))
+            seed_label = str(seed).zfill(8) if str(seed).isdigit() else str(seed or "vase")
+            fallback_files.append(
+                {
+                    "filename": f"{order.get('orderRef', 'commande')}-vase-{index + 1}-{seed_label}.json",
+                    "content": {
+                        "schema": "vaso-production-vase-v1",
+                        "orderRef": order.get("orderRef"),
+                        "itemIndex": index,
+                        "seed": seed,
+                        "version": item.get("version", order.get("version")),
+                        "colorId": item.get("colorId", order.get("colorId")),
+                        "colorLabel": item.get("colorLabel", order.get("colorLabel")),
+                        "material": item.get("material", order.get("material")),
+                        "waterproofInsertLabel": item.get(
+                            "waterproofInsertLabel",
+                            order.get("waterproofInsertLabel"),
+                        ),
+                        "solifloreChoice": item.get("solifloreChoice", order.get("solifloreChoice")),
+                        "solifloreChoiceLabel": item.get(
+                            "solifloreChoiceLabel",
+                            order.get("solifloreChoiceLabel"),
+                        ),
+                        "forceTestTubeSupport": item.get(
+                            "forceTestTubeSupport",
+                            order.get("forceTestTubeSupport"),
+                        ),
+                        "suppressTestTubeSupport": item.get(
+                            "suppressTestTubeSupport",
+                            order.get("suppressTestTubeSupport"),
+                        ),
+                        "quantity": item.get("quantity", 1),
+                        "params": item["params"],
+                    },
+                }
+            )
+        return fallback_files
+
+    def sanitize_filename(self, filename: str) -> str:
+        safe = "".join(char if char.isalnum() or char in "._-" else "-" for char in filename)
+        safe = "-".join(part for part in safe.split("-") if part)
+        return safe or "vaso-production.json"
+
+    def write_production_file(self, path: Path, production_file: dict) -> None:
+        content = production_file.get("content")
+        if not isinstance(content, dict):
+            content = production_file
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(content, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+
+    def format_production_number(self, value: object, decimals: int = 1) -> str:
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return "n/a"
+
+        if numeric_value.is_integer():
+            return str(int(numeric_value))
+
+        return f"{numeric_value:.{decimals}f}".replace(".", ",")
+
+    def format_production_bool(self, value: object) -> str:
+        return "oui" if value in [True, "yes", "true", "1"] else "non"
+
+    def format_profile_label(self, index: int, total: int) -> str:
+        if total == 1:
+            return "Profil"
+        if index == 0:
+            return "Base"
+        if index == total - 1:
+            return "Haut"
+        if total == 3 and index == 1:
+            return "Milieu"
+        return f"Intermédiaire {index}"
+
+    def build_production_sheet_text(self, order: dict, production_files: list[dict]) -> str:
+        customer_full_name = " ".join(
+            part.strip()
+            for part in [order.get("customerFirstName", ""), order.get("customerLastName", "")]
+            if isinstance(part, str) and part.strip()
+        ).strip()
+        address_lines = [
+            order.get("customerAddress", ""),
+            " ".join(
+                part.strip()
+                for part in [order.get("customerPostalCode", ""), order.get("customerCity", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip(),
+            order.get("customerCountry", ""),
+        ]
+        relay_lines = [
+            order.get("relayName", ""),
+            order.get("relayAddress", ""),
+            " ".join(
+                part.strip()
+                for part in [order.get("relayPostalCode", ""), order.get("relayCity", "")]
+                if isinstance(part, str) and part.strip()
+            ).strip(),
+            order.get("relayCountry", ""),
+        ]
+        order_items = self.get_order_cart_items(order)
+        lines = [
+            "FICHE DE PRODUCTION VASO",
+            "",
+            f"Commande : {order.get('orderRef', 'n/a')}",
+            f"Date : {order.get('createdAt', 'n/a')}",
+            f"Client : {customer_full_name or 'n/a'}",
+            f"Email : {order.get('customerEmail', 'n/a')}",
+            f"Telephone : {order.get('customerPhone', 'non renseigne')}",
+            f"Adresse : {', '.join(line for line in address_lines if isinstance(line, str) and line.strip()) or 'n/a'}",
+            f"Livraison : {order.get('shippingMode', 'n/a')}",
+            f"Transporteur : {order.get('shippingProvider', 'n/a')}",
+            f"Point relais : {', '.join(line for line in relay_lines if isinstance(line, str) and line.strip()) or 'non'}",
+            f"Montant : {self.format_order_amount(order.get('amountTotal'), order.get('currency'))}",
+            f"Statut paiement : {order.get('paymentStatus', 'n/a')}",
+            f"Quantité totale : {self.get_order_item_count(order_items)}",
+            "",
+        ]
+
+        for index, production_file in enumerate(production_files):
+            content = production_file.get("content")
+            if not isinstance(content, dict):
+                content = production_file
+            params = content.get("params") if isinstance(content.get("params"), dict) else {}
+            profiles = params.get("profiles") if isinstance(params.get("profiles"), list) else []
+            quantity = content.get("quantity", 1)
+
+            lines.extend(
+                [
+                    f"VASE {index + 1}",
+                    f"N° : {content.get('seed', 'n/a')}",
+                    f"Version moteur : {content.get('version', 'n/a')}",
+                    f"Quantité : {quantity}",
+                    f"Couleur : {content.get('colorLabel', 'n/a')}",
+                    f"Matière : {content.get('material', 'n/a')}",
+                    f"Contenant : {content.get('waterproofInsertLabel', 'n/a')}",
+                    f"Mode soliflore : {self.format_production_bool(content.get('solifloreChoice') == 'yes')}",
+                    f"Support tube dans le STL : {self.format_production_bool(content.get('forceTestTubeSupport'))}",
+                    f"Support tube supprimé : {self.format_production_bool(content.get('suppressTestTubeSupport'))}",
+                    "",
+                    "Dimensions",
+                    f"Hauteur : {self.format_production_number(params.get('heightMm'))} mm",
+                    f"Épaisseur paroi : {self.format_production_number(params.get('wallThicknessMm'))} mm",
+                    f"Épaisseur fond : {self.format_production_number(params.get('bottomThicknessMm'))} mm",
+                    "",
+                    "Texture",
+                    f"Mode : {params.get('textureMode', 'n/a')}",
+                    f"Type principal : {params.get('textureType', 'n/a')}",
+                    f"Zoom principal : {params.get('textureZoom', 'n/a')}",
+                    f"Type secondaire : {params.get('textureType2', 'n/a')}",
+                    f"Zoom secondaire : {params.get('textureZoom2', 'n/a')}",
+                    "",
+                    "Profils",
+                ]
+            )
+
+            if profiles:
+                for profile_index, profile in enumerate(profiles):
+                    if not isinstance(profile, dict):
+                        continue
+                    label = self.format_profile_label(profile_index, len(profiles))
+                    lines.append(
+                        (
+                            f"{label} : diamètre {self.format_production_number(profile.get('diameter'))} mm"
+                            f" · {profile.get('sides', 'n/a')} côtés"
+                            f" · rotation {self.format_production_number(profile.get('rotationDeg'))}°"
+                            f" · décalage X {self.format_production_number(profile.get('offsetX'))}"
+                            f" · décalage Y {self.format_production_number(profile.get('offsetY'))}"
+                        )
+                    )
+            else:
+                lines.append("Aucun profil détaillé disponible.")
+
+            lines.extend(["", "-" * 42, ""])
+
+        return "\n".join(lines).strip() + "\n"
+
+    def export_selected_order_production_json(self) -> None:
+        order = self.get_selected_order()
+        if not order:
+            return
+
+        production_files = self.get_order_production_files(order)
+        if not production_files:
+            messagebox.showwarning(
+                "VASO-Admin",
+                "Cette commande ne contient pas encore de JSON production.",
+            )
+            return
+
+        if len(production_files) == 1:
+            filename = self.sanitize_filename(
+                str(production_files[0].get("filename", "vaso-production.json"))
+            )
+            target = filedialog.asksaveasfilename(
+                title="Exporter le JSON production",
+                initialfile=filename,
+                defaultextension=".json",
+                filetypes=[("JSON", "*.json"), ("Tous les fichiers", "*.*")],
+            )
+            if not target:
+                return
+            self.write_production_file(Path(target), production_files[0])
+            self.log(f"JSON production exporte : {target}")
+            messagebox.showinfo("VASO-Admin", "JSON production exporte.")
+            return
+
+        target_dir = filedialog.askdirectory(title="Choisir le dossier d'export production")
+        if not target_dir:
+            return
+
+        for production_file in production_files:
+            filename = self.sanitize_filename(
+                str(production_file.get("filename", "vaso-production.json"))
+            )
+            self.write_production_file(Path(target_dir) / filename, production_file)
+
+        self.log(f"JSON production exportes : {len(production_files)} fichier(s) dans {target_dir}")
+        messagebox.showinfo("VASO-Admin", f"{len(production_files)} JSON production exporte(s).")
+
+    def export_selected_order_production_sheet(self) -> None:
+        order = self.get_selected_order()
+        if not order:
+            return
+
+        production_files = self.get_order_production_files(order)
+        if not production_files:
+            messagebox.showwarning(
+                "VASO-Admin",
+                "Cette commande ne contient pas encore de données de production.",
+            )
+            return
+
+        order_ref = self.sanitize_filename(str(order.get("orderRef", "commande")))
+        target = filedialog.asksaveasfilename(
+            title="Exporter la fiche de production",
+            initialfile=f"{order_ref}-fiche-production.txt",
+            defaultextension=".txt",
+            filetypes=[("Texte", "*.txt"), ("Tous les fichiers", "*.*")],
+        )
+        if not target:
+            return
+
+        sheet_text = self.build_production_sheet_text(order, production_files)
+        with Path(target).open("w", encoding="utf-8") as handle:
+            handle.write(sheet_text)
+
+        self.log(f"Fiche de production exportee : {target}")
+        messagebox.showinfo("VASO-Admin", "Fiche de production exportee.")
 
     def write_text(self, widget: tk.Text, value: str) -> None:
         widget.delete("1.0", "end")
@@ -2020,6 +3346,19 @@ class VasoAdminApp(tk.Tk):
             highlightbackground=theme["ACCENT"],
             highlightcolor=theme["ACCENT"],
         )
+        self.container_preview_label.configure(
+            bg=theme["FIELD"],
+            fg=theme["FIELD_FG"],
+            highlightbackground=theme["PANEL"],
+            highlightcolor=theme["ACCENT"],
+            padx=10,
+            pady=10,
+        )
+        self.container_preview_surface.configure(
+            bg=theme["PANEL"],
+            highlightbackground=theme["ACCENT"],
+            highlightcolor=theme["ACCENT"],
+        )
 
         self.save_settings()
 
@@ -2030,10 +3369,12 @@ class VasoAdminApp(tk.Tk):
 
 def select_packaged_repository() -> bool:
     """Locate writable shop data outside the read-only AppImage."""
-    global REPO_ROOT, CONFIG_PATH, HERO_DIR, ADMIN_SETTINGS_PATH
+    global REPO_ROOT, CONFIG_PATH, HERO_DIR, CONTAINERS_DIR, ADMIN_SETTINGS_PATH
     state_dir = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "vaso-admin"
     state_path = state_dir / "repository.json"
     candidates = []
+    if os.environ.get("VASO_SHOP_ROOT"):
+        candidates.append(Path(os.environ["VASO_SHOP_ROOT"]).expanduser())
     if os.environ.get("VASO_SHOP_DIR"):
         candidates.append(Path(os.environ["VASO_SHOP_DIR"]).expanduser())
     try:
@@ -2043,6 +3384,7 @@ def select_packaged_repository() -> bool:
     if os.environ.get("APPIMAGE"):
         candidates.append(Path(os.environ["APPIMAGE"]).resolve().parent)
     candidates.append(Path.cwd())
+    candidates.append(REPO_ROOT)
     repo = next((p for candidate in candidates for p in (candidate, *candidate.parents)
                  if (p / "public/config/shop-config.json").is_file() and (p / ".git").exists()), None)
     if repo is None:
@@ -2061,6 +3403,7 @@ def select_packaged_repository() -> bool:
     REPO_ROOT = repo.resolve()
     CONFIG_PATH = REPO_ROOT / "public/config/shop-config.json"
     HERO_DIR = REPO_ROOT / "public/images/hero"
+    CONTAINERS_DIR = REPO_ROOT / "public/images/containers"
     ADMIN_SETTINGS_PATH = REPO_ROOT / "admin/.vaso_admin_settings.json"
     try:
         state_dir.mkdir(parents=True, exist_ok=True)

@@ -1,7 +1,61 @@
 import { describe, it, expect } from "vitest";
-import { generateVaseMesh, generateOuterProfilePoints, generateTopOuterContour } from "./mesh-builder";
-import { countBoundaryEdges, countConnectedMeshComponents } from "./mesh-cleanup";
-import { defaultVaseParameters, createProfile } from "./types";
+import robotoFontJson from "../../public/fonts/Roboto.json?raw";
+import {
+  generateVaseMesh,
+  generateVaseMeshWithEngraving,
+  generateOuterProfilePoints,
+  generateTopOuterContour,
+} from "./mesh-builder";
+import { buildSTLBuffer } from "./exporter";
+import {
+  countBoundaryEdges,
+  countConnectedMeshComponents,
+  countNonManifoldEdges,
+} from "./mesh-cleanup";
+import { getPipelineTraceEntries } from "./pipeline-trace";
+import { defaultVaseParameters, createProfile, type VaseParameters } from "./types";
+
+function createTwoProfileVase(
+  heightMm: number,
+  bottomOuterDiameterMm: number,
+  topOuterDiameterMm: number,
+): VaseParameters {
+  const params = defaultVaseParameters();
+  params.heightMm = heightMm;
+  params.wallThicknessMm = 2.4;
+  params.bottomThicknessMm = 3;
+  params.radialSamples = 48;
+  params.verticalSamples = 32;
+  params.profiles = [
+    createProfile({ zRatio: 0, diameter: bottomOuterDiameterMm, sides: 64, rotationDeg: 0 }),
+    createProfile({ zRatio: 1, diameter: topOuterDiameterMm, sides: 64, rotationDeg: 0 }),
+  ];
+  return params;
+}
+
+function hasTestTubeSupportVertices(mesh: ReturnType<typeof generateVaseMesh>): boolean {
+  return getTestTubeSupportZRange(mesh) !== null;
+}
+
+function getTestTubeSupportZRange(
+  mesh: ReturnType<typeof generateVaseMesh>,
+): { minZ: number; maxZ: number } | null {
+  let minZ = Number.POSITIVE_INFINITY;
+  let maxZ = Number.NEGATIVE_INFINITY;
+
+  for (let index = 0; index < mesh.vertices.length; index += 3) {
+    const x = mesh.vertices[index];
+    const y = mesh.vertices[index + 1];
+    const z = mesh.vertices[index + 2];
+    const radius = Math.hypot(x, y);
+    if (radius >= 14 && radius <= 16.4 && z > 2.5) {
+      minZ = Math.min(minZ, z);
+      maxZ = Math.max(maxZ, z);
+    }
+  }
+
+  return Number.isFinite(minZ) && Number.isFinite(maxZ) ? { minZ, maxZ } : null;
+}
 
 describe("generateVaseMesh", () => {
   it("generates a valid mesh from default parameters", () => {
@@ -72,7 +126,7 @@ describe("generateVaseMesh", () => {
   });
 
   it("generates a single closed component for a closed-bottom vase", () => {
-    const params = defaultVaseParameters();
+    const params = createTwoProfileVase(180, 74, 96);
     params.radialSamples = 32;
     params.verticalSamples = 16;
     params.closeBottom = true;
@@ -83,8 +137,110 @@ describe("generateVaseMesh", () => {
     expect(countBoundaryEdges(mesh)).toBe(0);
   });
 
+  it("keeps Eco-Cup-compatible vases free of tube support geometry", () => {
+    const params = createTwoProfileVase(180, 74, 96);
+    const mesh = generateVaseMesh(params);
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(false);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
+  it("can force tube support geometry for an Eco-Cup-compatible soliflore", () => {
+    const params = createTwoProfileVase(180, 74, 96);
+    const mesh = generateVaseMesh(params, { forceTestTubeSupport: true });
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(true);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
+  it("adds a closed minimal support when only a test tube fits", () => {
+    const params = createTwoProfileVase(125, 52, 42);
+    const mesh = generateVaseMesh(params);
+    const supportRange = getTestTubeSupportZRange(mesh);
+
+    expect(supportRange).not.toBeNull();
+    expect(supportRange?.minZ).toBeCloseTo(params.bottomThicknessMm, 0);
+    expect(supportRange?.maxZ).toBeGreaterThan(params.bottomThicknessMm + 38);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+    expect(countNonManifoldEdges(mesh)).toBe(0);
+  });
+
+  it("can suppress tube support geometry when a test-tube-compatible vase is ordered without water use", () => {
+    const params = createTwoProfileVase(125, 52, 42);
+    const mesh = generateVaseMesh(params, { suppressTestTubeSupport: true });
+
+    expect(hasTestTubeSupportVertices(mesh)).toBe(false);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+  });
+
+  it("engraves text under the base when the test tube support is present", async () => {
+    const params = createTwoProfileVase(125, 52, 42);
+    params.radialSamples = 72;
+    const baseMesh = generateVaseMesh(params, { forceTestTubeSupport: true });
+    const fontJson = JSON.parse(robotoFontJson);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(fontJson), { status: 200 });
+
+    let mesh: Awaited<ReturnType<typeof generateVaseMeshWithEngraving>>;
+    try {
+      mesh = await generateVaseMeshWithEngraving(params, 12345678, false, {
+        forceTestTubeSupport: true,
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(mesh.indices.length).toBeGreaterThan(baseMesh.indices.length);
+    expect(countBoundaryEdges(mesh)).toBe(0);
+    expect(buildSTLBuffer(mesh).byteLength).toBeGreaterThan(84);
+  }, 20000);
+
+  it("keeps test-tube vase engraving outside even when support geometry is suppressed", async () => {
+    const params = createTwoProfileVase(125, 52, 42);
+    params.radialSamples = 72;
+    const fontJson = JSON.parse(robotoFontJson);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(fontJson), { status: 200 });
+
+    try {
+      await generateVaseMeshWithEngraving(params, 12345678, false, {
+        suppressTestTubeSupport: true,
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    const trace = getPipelineTraceEntries().join("\n");
+    expect(trace).toContain("[engraving] after underside subtractive text");
+    expect(trace).not.toContain("[engraving] after additive text merge");
+  }, 20000);
+
+  it("keeps underside engraving watertight on low-poly test-tube vases", async () => {
+    const params = createTwoProfileVase(180, 60, 42);
+    params.radialSamples = 96;
+    params.verticalSamples = 120;
+    params.textureMode = "Texture imposée";
+    params.textureType = "LowPoly";
+    params.textureZoom = "Moyen";
+    const fontJson = JSON.parse(robotoFontJson);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify(fontJson), { status: 200 });
+
+    let mesh: Awaited<ReturnType<typeof generateVaseMeshWithEngraving>>;
+    try {
+      mesh = await generateVaseMeshWithEngraving(params, 60774141, true, {
+        forceTestTubeSupport: true,
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+
+    expect(countBoundaryEdges(mesh)).toBe(0);
+    expect(buildSTLBuffer(mesh).byteLength).toBeGreaterThan(84);
+  }, 30000);
+
   it("aligns inner and outer wall layers on the same body z slices", () => {
-    const params = defaultVaseParameters();
+    const params = createTwoProfileVase(180, 74, 96);
     params.radialSamples = 16;
     params.verticalSamples = 8;
     params.bottomThicknessMm = 3;
@@ -99,8 +255,10 @@ describe("generateVaseMesh", () => {
     expect(countsByZ.get(0)).toBe(params.radialSamples + 1);
     expect(countsByZ.get(3)).toBe(params.radialSamples + 1);
 
-    const sharedBodyLayers = [...countsByZ.entries()]
-      .filter(([z, count]) => z > params.bottomThicknessMm && z <= params.heightMm && count === params.radialSamples * 2);
+    const sharedBodyLayers = [...countsByZ.entries()].filter(
+      ([z, count]) =>
+        z > params.bottomThicknessMm && z <= params.heightMm && count === params.radialSamples * 2,
+    );
     expect(sharedBodyLayers.length).toBe(params.verticalSamples - 1);
   });
 
@@ -183,9 +341,11 @@ describe("generateTopOuterContour", () => {
     const params = defaultVaseParameters();
     params.radialSamples = 48;
     params.verticalSamples = 2;
+    params.textureMode = "Texture imposée";
+    params.textureType = "Cannelures";
     params.profiles = [
       createProfile({ zRatio: 0, diameter: 80, sides: 6, rotationDeg: 0 }),
-      createProfile({ zRatio: 1, diameter: 60, sides: 6, rotationDeg: 30 }),
+      createProfile({ zRatio: 1, diameter: 80, sides: 6, rotationDeg: 30 }),
     ];
 
     const contour = generateTopOuterContour(params);

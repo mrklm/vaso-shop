@@ -13,6 +13,303 @@ et ce projet suit un versioning de type **SemVer**.
 - Build Linux AppImage de VASO-Admin avec Python, Tkinter et Pillow embarqués.
 - Sélection et mémorisation du dépôt vaso-shop pour le lancement de l’application autonome.
 
+## [1.1.131] - 2026-09-06
+
+### Modifié
+- Précise dans la sélection du contenant que les Eco-Cup ne sont pas fournis.
+- Indique que le tube à essai est fourni lorsque le vase est commandé en mode soliflore.
+
+## [1.1.130] - 2026-09-05
+
+### Modifié
+- Affiche le détail du point relais Mondial Relay sélectionné dans le récapitulatif de livraison avant paiement.
+
+## [1.1.129] - 2026-09-05
+
+### Modifié
+- Complète la fiche de production TXT avec les informations logistiques de commande : email, téléphone, adresse, livraison, transporteur, point relais, montant et statut paiement.
+
+## [1.1.128] - 2026-09-05
+
+### Ajouté
+- Ajoute l'export TXT d'une fiche de production lisible depuis l'onglet Commandes de VASO-Admin.
+- Détaille dans la fiche de production les vases, couleurs, contenants, dimensions, textures et profils.
+
+### Corrigé
+- Affiche les montants Stripe en euros lisibles dans VASO-Admin au lieu des centimes bruts.
+
+## [1.1.127] - 2026-09-05
+
+### Ajouté
+- Ajoute l'affichage de tous les numéros de vases sur la page de confirmation Stripe.
+- Ajoute la possibilité de mémoriser localement le token Netlify des commandes dans VASO-Admin.
+- Ajoute une aide au survol pour identifier la variable Netlify `ADMIN_ORDERS_TOKEN`.
+
+### Modifié
+- Sépare le mot de passe local d'ouverture de VASO-Admin du token Netlify utilisé par l'onglet Commandes.
+- Rétablit le verrou d'ouverture de VASO-Admin avec un mot de passe local hashé.
+- Utilise automatiquement l'URL commandes par défaut lorsque le réglage local est vide.
+- Clarifie les libellés et messages liés au token Netlify dans VASO-Admin.
+
+### Corrigé
+- Vide silencieusement le panier après retour Stripe réussi.
+- Conserve le panier lorsque le paiement Stripe est interrompu.
+
+## [1.1.126] - 2026-09-05
+
+### Ajouté
+- Ajoute le retrait à l'Atelier Vaso comme mode de livraison gratuit pour la France.
+- Affiche les miniatures des vases dans le récapitulatif de commande.
+
+### Modifié
+- Améliore le parcours checkout avec un scroll automatique vers le récapitulatif puis le paiement.
+- Met en valeur les zones clés de livraison, montant et paiement dans le tunnel de commande.
+- Adapte VASO-Admin et les fonctions Netlify aux commandes multi-vases et au mode retrait atelier.
+
+## [1.1.125] - 2026-09-05
+
+### Ajouté
+- Transmet les paramètres complets des vases au checkout pour figer la recette de production.
+- Stocke les fichiers JSON production côté Netlify et les rattache aux commandes validées.
+- Ajoute un export JSON production dans l'onglet Commandes de VASO-Admin.
+
+### Technique
+- Utilise Netlify Blobs pour conserver les données de production hors métadonnées Stripe.
+
+## [1.1.124] - 2026-09-05
+
+### Corrigé
+- Supprime la fausse gravure de prévisualisation visible à l'intérieur des vases tube à essai dans l'aperçu couleur translucide.
+
+## [1.1.123] - 2026-09-05
+
+### Corrigé
+- Empêche la boutique de proposer un vase sans contenant compatible après durcissement des règles.
+- Vérifie qu'un vase annoncé tube à essai peut réellement générer son support STL.
+- Force la gravure des vases tube à essai à rester sous la base plutôt qu'à l'intérieur du vase.
+
+### Tests
+- Ajoute des tests de génération boutique pour garantir un contenant compatible.
+- Ajoute un test empêchant le retour de la gravure intérieure sur les vases tube à essai.
+
+## [1.1.122] - 2026-09-05
+
+### Modifié
+- Durcit la compatibilité Eco Cup avec un contrôle de passage sur axe vertical continu.
+- Exige une marge réelle de 0,5 mm pour annoncer un vase compatible Eco Cup.
+
+### Tests
+- Ajoute des tests pour rejeter les vases désaxés et les profils Eco Cup trop limites.
+
+## [1.1.121] - 2026-09-05
+
+### Modifié
+- Aligne la gravure standard sur Vaso Web pour supprimer le second N° de vase sur les modèles sans tube.
+- Conserve la gravure extérieure sous la base pour les modèles soliflore avec tube à essai.
+
+### Tests
+- Met à jour les tests de gravure et d'export moteur autour des modèles sans tube et tube à essai.
+
+## [1.1.120] - 2026-09-04
+
+### Modifié
+- Réduit la hauteur de l'étape de sélection du contenant en supprimant les étirements verticaux inutiles.
+- Réaligne le carrousel des contenants avec le schéma de compatibilité.
+
+## [1.1.119] - 2026-08-31
+
+### Modifié
+- Place la hauteur sur une ligne dédiée dans le panier, entre le numéro du vase et les diamètres.
+- Adoucit l'affichage de la sélection du contenant lorsque le vase impose uniquement le mode soliflore.
+- Désactive la modification du contenant dans le panier pour les vases déjà ajoutés en soliflore.
+
+## [1.1.118] - 2026-08-31
+
+### Ajouté
+- Ajoute un bouton d'activation de la manipulation 3D dans l'aperçu du vase.
+- Ajoute des icônes ON/OFF dédiées pour signaler l'état de la vue 3D.
+
+### Modifié
+- Verrouille l'interaction 3D par défaut afin de laisser le scroll de page naturel.
+- Aligne les icônes 3D pour éviter tout déplacement visuel au changement d'état.
+
+## [1.1.117] - 2026-08-31
+
+### Modifié
+- Aère la carte Atelier Vaso avec des sections dédiées à la situation géographique et au matériau.
+- Déplace le texte de présentation des modèles générés dans la colonne de droite de l'écran de génération.
+- Ajuste la colonne Modèle actuel pour conserver une présentation lisible sur un écran complet.
+
+## [1.1.116] - 2026-08-30
+
+### Ajouté
+- Ajoute des miniatures de vases réelles dans le panier à partir de la capture 3D du modèle sélectionné.
+
+### Modifié
+- Ajuste le cadrage des miniatures pour mieux conserver le vase entier dans le cadre du panier.
+
+## [1.1.115] - 2026-08-30
+
+### Ajouté
+- Ajoute un panier persistant avec quantité, suppression, modification du contenant et modification de la couleur.
+- Ajoute une icône de panier dédiée et les visuels Atelier Vaso dans l'écran d'accueil.
+
+### Modifié
+- Revoit le parcours boutique pour intégrer le panier avant les coordonnées et le paiement.
+- Adapte la sélection du contenant selon la compatibilité réelle du vase : soliflore imposé ou choix Eco-Cup / soliflore.
+- Clarifie les dimensions dans le panier avec les libellés hauteur et diamètre.
+- Ajuste les textes, espacements et boutons des écrans d'accueil, de contenant, de couleur et de coordonnées.
+- Prépare le paiement Stripe et le webhook à recevoir plusieurs articles dans une même commande.
+
+## [1.1.114] - 2026-08-30
+
+### Modifié
+- Déplace les boutons de validation des étapes de commande vers le bas de chaque carte d'étape.
+- Conserve l'alignement horizontal des actions tout en rendant la progression plus visible après lecture du contenu.
+
+## [1.1.113] - 2026-08-30
+
+### Corrigé
+- Renforce l'amplitude minimale de la texture LowPoly pour qu'elle reste visible avec les zooms fins.
+
+### Tests
+- Ajoute un test vérifiant que le relief LowPoly reste mesurable en zoom Très fin.
+
+## [1.1.112] - 2026-08-29
+
+### Ajouté
+- Synchronise le moteur Vaso avec Vaso Web 1.0.80 pour générer une vraie texture LowPoly en géométrie facettée.
+
+### Modifié
+- Affiche automatiquement les vases LowPoly avec des faces plates dans l'aperçu 3D boutique.
+- Conserve les options boutique de forçage et de suppression du support tube à essai avec le moteur mis à jour.
+
+### Corrigé
+- Déplace la gravure des vases avec support tube à essai sous la face extérieure de la base, en soustraction de matière.
+- Préserve la finesse de la gravure extérieure sous la base sur les vases LowPoly.
+- Corrige le raccord du patch de gravure LowPoly pour conserver un STL étanche à l'export.
+
+### Tests
+- Ajoute un test d'export LowPoly avec support tube à essai et numéro de vase modifié.
+- Met à jour les tests de gravure pour valider le numéro sous la base.
+
+## [1.1.111] - 2026-08-15
+
+### Modifié
+- Clarifie les libellés des options de contenants pour indiquer que chaque vase VASO reste prévu pour un contenant étanche compatible.
+- Précise que le mode soliflore force l'ajout du support tube à essai dans le STL, même lorsqu'un Eco-Cup est compatible.
+
+## [1.1.110] - 2026-08-14
+
+### Modifié
+- Applique une enveloppe minimale compatible tube à essai à tous les vases générés et réglés manuellement.
+- Relève la hauteur minimale des paramètres à 115 mm pour garantir l'usage soliflore.
+- Calibre l'ouverture haute minimale pour tube à essai à 29 mm pour un tube de 25 mm.
+
+## [1.1.109] - 2026-08-14
+
+### Modifié
+- Adoucit la transition du carrousel des contenants avec un fondu croisé plus lent et un mouvement discret.
+
+## [1.1.108] - 2026-08-14
+
+### Ajouté
+- Ajoute un réglage de position d'affichage des contenants dans VASO Admin local.
+- Définit l'ordre par défaut du carrousel des contenants : Eco-Cup 50 cl, Eco-Cup 25 cl, Eco-Cup 12,5 cl, puis tube à essai.
+
+## [1.1.107] - 2026-08-14
+
+### Modifié
+- Ajuste l'alignement et le rythme du carrousel des contenants dans la validation du modèle.
+- Place le bouton de validation au-dessus du contenant compatible et conserve le schéma affiché pour les choix soliflore Oui et Non.
+
+## [1.1.106] - 2026-08-14
+
+### Modifié
+- Replace les illustrations des contenants dans la colonne titre de la validation du modèle avec un défilement automatique.
+
+## [1.1.105] - 2026-08-14
+
+### Ajouté
+- Ajoute les illustrations JPG des contenants Eco-Cup 50 cl et tube à essai dans la validation du modèle.
+
+## [1.1.104] - 2026-08-12
+
+### Modifié
+- Retire la mention des contenants compatibles du bloc Attention pour la réserver au bloc soliflore.
+
+## [1.1.103] - 2026-08-12
+
+### Modifié
+- Scinde l'avertissement PLA et le choix soliflore en deux blocs distincts dans la validation du modèle.
+- Clarifie le texte sur les contenants compatibles Eco-Cup et le passage en mode soliflore avec tube à essai.
+
+## [1.1.102] - 2026-08-11
+
+### Modifié
+- Affiche le tube à essai avec une base plate dans la visualisation en coupe.
+- Clarifie la mention du support pour tube à essai en verre dans la validation du modèle.
+
+## [1.1.101] - 2026-08-11
+
+### Modifié
+- Aligne les contenants tube à essai sur les formats 100 mm et 120 mm en diamètre 25,4 mm.
+- Corrige les supports tube à essai compensés pour qu'ils partent de la base du vase.
+- Remplace la signature de gravure par le N° de vase et masque les caractères situés sous le support.
+- Aligne la prévisualisation boutique sur la gravure exportée pour les vases avec support tube à essai.
+
+## [1.1.100] - 2026-07-13
+
+### Modifié
+- Réduit la taille des inscriptions exportées sur les vases avec support tube à essai.
+
+## [1.1.99] - 2026-07-13
+
+### Modifié
+- Replace les inscriptions des vases avec support tube à essai sur le fond intérieur, au-dessus et au-dessous du support.
+
+## [1.1.98] - 2026-07-12
+
+### Ajouté
+- Ajoute le choix obligatoire d'usage soliflore avec support tube à essai dans la validation du modèle
+
+### Modifié
+- Remplace le support tube par une bague fendue en trois sections et décale la gravure du N° de vase
+- Fiabilise l'affichage 3D du vase lors des générations successives
+
+## [1.1.97] - 2026-06-09
+
+### Modifié
+- Replace le tube à essai en haut de l'aperçu en coupe avec un fond arrondi
+- Renomme la couleur Terracotta sans la mention lie de vin
+
+## [1.1.96] - 2026-06-09
+
+### Ajouté
+- Génère un support haut automatique pour les vases compatibles tube à essai
+
+### Modifié
+- Remplace la structure basse par un anneau de maintien avec trois bras inclinés vers la paroi
+
+## [1.1.95] - 2026-06-09
+
+### Modifié
+- Remplace le tube à essai compatible par un format 75 × 12 mm
+
+## [1.1.94] - 2026-06-08
+
+### Modifié
+- Injecte le secret GitHub Actions `VITE_MONDIAL_RELAY_BRAND` dans le build GitHub Pages
+
+## [1.1.93] - 2026-06-08
+
+### Ajouté
+- Branche le widget Mondial Relay v4 dans le parcours de commande en point relais
+
+### Modifié
+- Rend le code Brand Mondial Relay configurable via `VITE_MONDIAL_RELAY_BRAND`
+- Réactive le mode de livraison en point relais dans la configuration publique
+
 ## [1.1.92] - 2026-05-16
 
 ### Modifié

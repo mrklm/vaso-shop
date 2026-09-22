@@ -99,13 +99,79 @@ function parseStripeEvent(rawBody) {
   }
 }
 
+function parseCartItemsMetadata(value) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsedValue = JSON.parse(value);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildSafeOrderRef(orderReference) {
+  return (
+    `${orderReference ?? "unknown"}`
+      .replace(/[^A-Za-z0-9_-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "unknown"
+  );
+}
+
+async function readPendingProductionOrder(orderReference) {
+  if (!orderReference) {
+    return null;
+  }
+
+  try {
+    const ordersStore = getStore("vaso-orders");
+    return await ordersStore.get(`pending-production/${buildSafeOrderRef(orderReference)}.json`, {
+      type: "json",
+    });
+  } catch (error) {
+    console.error(
+      `[stripe-webhook] pending production read failed ${
+        error instanceof Error ? error.message : "unexpected error"
+      }`,
+    );
+    return null;
+  }
+}
+
+function mergeProductionData(order, pendingProductionOrder) {
+  if (!pendingProductionOrder || typeof pendingProductionOrder !== "object") {
+    return order;
+  }
+
+  const productionVaseFiles = Array.isArray(pendingProductionOrder.productionVaseFiles)
+    ? pendingProductionOrder.productionVaseFiles
+    : [];
+  const cartItems = Array.isArray(pendingProductionOrder.cartItems)
+    ? pendingProductionOrder.cartItems
+    : order.cartItems;
+
+  return {
+    ...order,
+    cartItems,
+    productionVaseFiles,
+    productionDataAvailable: productionVaseFiles.length > 0,
+  };
+}
+
 function normalizeCheckoutSession(session) {
   const metadata = session.metadata ?? {};
   const customerDetails = session.customer_details ?? {};
   const customerAddress = customerDetails.address ?? {};
+  const cartItems = parseCartItemsMetadata(metadata.cart_items_json);
 
   return {
     orderRef: metadata.order_ref ?? session.client_reference_id ?? null,
+    itemCount: metadata.item_count ?? null,
+    cartSummary: metadata.cart_summary ?? null,
+    cartItems,
     seed: metadata.seed ?? null,
     version: metadata.version ?? null,
     colorId: metadata.color_id ?? null,
@@ -115,6 +181,11 @@ function normalizeCheckoutSession(session) {
     minDiameterMm: metadata.min_diameter_mm ?? null,
     maxDiameterMm: metadata.max_diameter_mm ?? null,
     waterproofInsertLabel: metadata.waterproof_insert_label ?? null,
+    solifloreChoice: metadata.soliflore_choice ?? null,
+    solifloreChoiceLabel: metadata.soliflore_choice_label ?? null,
+    wantsSoliflore: metadata.wants_soliflore ?? null,
+    forceTestTubeSupport: metadata.force_test_tube_support ?? null,
+    suppressTestTubeSupport: metadata.suppress_test_tube_support ?? null,
     customerFirstName: metadata.customer_first_name ?? null,
     customerLastName: metadata.customer_last_name ?? null,
     customerEmail: metadata.customer_email ?? customerDetails.email ?? session.customer_email ?? null,
@@ -202,6 +273,58 @@ function formatOrderDateTime(createdAt) {
   }).format(parsedDate);
 }
 
+function getOrderCartItems(order) {
+  if (Array.isArray(order.cartItems) && order.cartItems.length > 0) {
+    return order.cartItems.filter((item) => item && typeof item === "object");
+  }
+
+  return [
+    {
+      seed: order.seed,
+      version: order.version,
+      heightMm: order.heightMm,
+      minDiameterMm: order.minDiameterMm,
+      maxDiameterMm: order.maxDiameterMm,
+      waterproofInsertLabel: order.waterproofInsertLabel,
+      solifloreChoiceLabel: order.solifloreChoiceLabel,
+      forceTestTubeSupport: order.forceTestTubeSupport === "yes",
+      suppressTestTubeSupport: order.suppressTestTubeSupport === "yes",
+      material: order.material,
+      colorLabel: order.colorLabel,
+      quantity: order.itemCount ?? 1,
+    },
+  ];
+}
+
+function formatBooleanLabel(value) {
+  return value === true || value === "yes" ? "oui" : "non";
+}
+
+function formatOrderItemLine(item, index) {
+  const dimensions = [
+    item.heightMm ? `H ${item.heightMm} mm` : "",
+    item.minDiameterMm && item.maxDiameterMm
+      ? `Ø ${item.minDiameterMm}-${item.maxDiameterMm} mm`
+      : "",
+  ].filter(Boolean);
+  const details = [
+    item.colorLabel,
+    item.waterproofInsertLabel,
+    item.solifloreChoiceLabel,
+    `support tube ${formatBooleanLabel(item.forceTestTubeSupport)}`,
+    item.suppressTestTubeSupport ? "support supprime" : "",
+    item.material,
+  ].filter(Boolean);
+
+  return [
+    `${index + 1}. ${item.quantity ?? 1}x vase n° ${item.seed ?? "n/a"}`,
+    dimensions.join(", "),
+    details.join(", "),
+  ]
+    .filter(Boolean)
+    .join(" - ");
+}
+
 function buildDiscordMessage(order) {
   const customerFullName = [order.customerFirstName, order.customerLastName]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
@@ -220,15 +343,20 @@ function buildDiscordMessage(order) {
     [order.relayPostalCode, order.relayCity].filter(Boolean).join(" ").trim(),
     order.relayCountry,
   ].filter((value) => typeof value === "string" && value.trim().length > 0);
+  const orderItems = getOrderCartItems(order);
+  const productionFileCount = Array.isArray(order.productionVaseFiles)
+    ? order.productionVaseFiles.length
+    : 0;
 
   const lines = [
     "**Nouvelle commande Vaso**",
     `Date : ${formatOrderDateTime(order.createdAt) ?? "n/a"}`,
     `Reference : ${order.orderRef ?? "n/a"}`,
-    `Vase : n° ${order.seed ?? "n/a"}${order.heightMm ? ` · ${order.heightMm} mm` : ""}`,
-    `Couleur : ${order.colorLabel ?? "n/a"}`,
-    `Contenant compatible : ${order.waterproofInsertLabel ?? "n/a"}`,
-    `Materiau : ${order.material ?? "n/a"}`,
+    `Panier : ${order.cartSummary ?? `Vase n° ${order.seed ?? "n/a"}`}`,
+    `Articles : ${order.itemCount ?? "1"}`,
+    "Vases :",
+    ...orderItems.map(formatOrderItemLine),
+    `JSON production : ${productionFileCount > 0 ? `${productionFileCount} fichier(s)` : "absent"}`,
     `Montant : ${formatAmountFromMinorUnits(order.amountTotal, order.currency) ?? "n/a"}`,
     `Client : ${customerFullName || "n/a"}`,
     `Email : ${order.customerEmail ?? "n/a"}`,
@@ -277,10 +405,7 @@ async function sendDiscordNotification(order) {
 
 async function persistOrder(order) {
   const ordersStore = getStore("vaso-orders");
-  const safeOrderRef = `${order.orderRef ?? "unknown"}`
-    .replace(/[^A-Za-z0-9_-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "") || "unknown";
+  const safeOrderRef = buildSafeOrderRef(order.orderRef);
   const key = `orders/${order.createdAt ?? new Date().toISOString()}-${safeOrderRef}.json`;
   const customerFullName = [order.customerFirstName, order.customerLastName]
     .filter((value) => typeof value === "string" && value.trim().length > 0)
@@ -303,7 +428,12 @@ async function handleStripeEvent(event) {
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const order = normalizeOrderRecord(normalizeCheckoutSession(session), event);
+      const baseOrder = normalizeCheckoutSession(session);
+      const pendingProductionOrder = await readPendingProductionOrder(baseOrder.orderRef);
+      const order = normalizeOrderRecord(
+        mergeProductionData(baseOrder, pendingProductionOrder),
+        event,
+      );
       logWebhookEvent(event.type, {
         ...buildGenericEventSummary(event),
         order,

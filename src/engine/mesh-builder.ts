@@ -1,5 +1,10 @@
 import type { VaseParameters, MeshData } from "./types";
-import { appendPipelineTrace, dumpPipelineTrace, getPipelineTrace, resetPipelineTrace } from "./pipeline-trace";
+import {
+  appendPipelineTrace,
+  dumpPipelineTrace,
+  getPipelineTrace,
+  resetPipelineTrace,
+} from "./pipeline-trace";
 import { validateParams } from "./validation";
 import {
   alignContourToPrevious,
@@ -8,25 +13,62 @@ import {
   interpolateContours,
   regularPolygonVertices,
 } from "./geometry";
-import { applyTexture } from "./textures";
+import { applyTexture, getLowPolyMeshResolution } from "./textures";
 import {
   maxSupportlessRadialStep,
   limitContourStepFromPrevious,
   computeInnerContour,
 } from "./constraints";
-import { getMeshDifferenceDiagnostics, logMeshDiagnostics } from "./mesh-cleanup";
+import {
+  getMeshDifferenceDiagnostics,
+  logMeshDiagnostics,
+  removeDegenerateTriangles,
+} from "./mesh-cleanup";
+import {
+  analyzeWaterproofInsertCompatibility,
+  getInsertPresetById,
+  getPreferredTestTubePreset,
+  getTestTubePlacement,
+  type InsertPreset,
+} from "./insert-compatibility";
+import { engraveBaseText } from "./engraving";
 
 const APP_VERSION = typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "test";
 const ENGRAVING_PIPELINE_MARKER = `Vaso Engraving ${APP_VERSION}`;
 const FACETED_SEAM_MAX_PROFILE_SIDES = 12;
 const SEAM_BACK_ANGLE_RAD = -Math.PI / 2;
+const TEST_TUBE_SUPPORT_INNER_RADIUS_MM = 14.2;
+const TEST_TUBE_SUPPORT_THICKNESS_MM = 2;
+const TEST_TUBE_SUPPORT_OUTER_RADIUS_MM =
+  TEST_TUBE_SUPPORT_INNER_RADIUS_MM + TEST_TUBE_SUPPORT_THICKNESS_MM;
+const TEST_TUBE_SUPPORT_SLOT_COUNT = 3;
+const TEST_TUBE_SUPPORT_SLOT_ANGLE_RAD = Math.PI / 9;
+const TEST_TUBE_SUPPORT_SEGMENTS_PER_SECTION = 18;
+const TEST_TUBE_SUPPORT_WALL_MARGIN_MM = 0.8;
+const TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM = 0.3;
+const TEST_TUBE_PEDESTAL_BAR_THICKNESS_MM = 2.4;
+
+interface GenerateVaseMeshOptions {
+  includeTestTubeSupport?: boolean;
+  forceTestTubeSupport?: boolean;
+  suppressTestTubeSupport?: boolean;
+  customTestTubePreset?: InsertPreset;
+}
+
+function hasActiveTexture(params: VaseParameters): boolean {
+  if (params.textureMode === "Pas de texture") return false;
+  if (params.textureMode === "Double texture") {
+    return params.textureType !== "Aucune" || params.textureType2 !== "Aucune";
+  }
+  return params.textureType !== "Aucune";
+}
 
 function shouldKeepFacetEdgeSeamIdentity(profiles: VaseParameters["profiles"]): boolean {
-  const sideCount = profiles[0]?.sides ?? 0;
+  if (profiles.length === 0) return false;
+  const firstSides = profiles[0].sides;
   return (
-    sideCount >= 3 &&
-    sideCount <= FACETED_SEAM_MAX_PROFILE_SIDES &&
-    profiles.every((profile) => profile.sides === sideCount)
+    firstSides <= FACETED_SEAM_MAX_PROFILE_SIDES &&
+    profiles.every((profile) => profile.sides === firstSides)
   );
 }
 
@@ -60,14 +102,6 @@ function computeSharedFacetSeamVertexIndex(profiles: VaseParameters["profiles"])
   return bestIndex;
 }
 
-function hasActiveTexture(params: VaseParameters): boolean {
-  if (params.textureMode === "Pas de texture") return false;
-  if (params.textureMode === "Double texture") {
-    return params.textureType !== "Aucune" || params.textureType2 !== "Aucune";
-  }
-  return params.textureType !== "Aucune";
-}
-
 function linspace(start: number, end: number, count: number): Float64Array {
   const result = new Float64Array(count);
   if (count <= 1) {
@@ -88,6 +122,69 @@ function scaleMeshData(mesh: MeshData, scale: number): MeshData {
     vertices: scaledVertices,
     indices: mesh.indices,
   };
+}
+
+function pointInContour(contour: Float64Array, x: number, y: number): boolean {
+  const count = contour.length / 2;
+  let isInside = false;
+
+  for (let index = 0, previous = count - 1; index < count; previous = index++) {
+    const xi = contour[index * 2];
+    const yi = contour[index * 2 + 1];
+    const xj = contour[previous * 2];
+    const yj = contour[previous * 2 + 1];
+    const intersects =
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi || Number.EPSILON) + xi;
+    if (intersects) {
+      isInside = !isInside;
+    }
+  }
+
+  return isInside;
+}
+
+function distanceToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const abx = bx - ax;
+  const aby = by - ay;
+  const apx = px - ax;
+  const apy = py - ay;
+  const squaredLength = abx * abx + aby * aby;
+
+  if (squaredLength <= Number.EPSILON) {
+    return Math.hypot(px - ax, py - ay);
+  }
+
+  const projected = Math.max(0, Math.min(1, (apx * abx + apy * aby) / squaredLength));
+  return Math.hypot(px - (ax + projected * abx), py - (ay + projected * aby));
+}
+
+function distanceFromOriginToContourEdges(contour: Float64Array): number {
+  const count = contour.length / 2;
+  let minimumDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < count; index++) {
+    const nextIndex = (index + 1) % count;
+    minimumDistance = Math.min(
+      minimumDistance,
+      distanceToSegment(
+        0,
+        0,
+        contour[index * 2],
+        contour[index * 2 + 1],
+        contour[nextIndex * 2],
+        contour[nextIndex * 2 + 1],
+      ),
+    );
+  }
+
+  return minimumDistance;
 }
 
 function interpolatedOuterContour(params: VaseParameters, zMm: number): Float64Array {
@@ -200,24 +297,346 @@ function buildInnerWallSourceContours(
   return { zInner, sourceContours };
 }
 
+function addSegmentedTubeSupport(
+  verts: number[],
+  faces: number[],
+  innerRadius: number,
+  outerRadius: number,
+  zBottom: number,
+  zTop: number,
+  slotCount: number,
+  slotAngleRad: number,
+  segmentsPerSection: number,
+) {
+  if (
+    innerRadius <= 0 ||
+    outerRadius <= innerRadius ||
+    zTop <= zBottom ||
+    slotCount < 1 ||
+    slotAngleRad <= 0 ||
+    segmentsPerSection < 1
+  ) {
+    return;
+  }
+
+  const sectionAngle = (Math.PI * 2) / slotCount;
+  const arcAngle = sectionAngle - slotAngleRad;
+  if (arcAngle <= 0) {
+    return;
+  }
+
+  for (let sectionIndex = 0; sectionIndex < slotCount; sectionIndex += 1) {
+    const sectionCenterAngle = sectionIndex * sectionAngle;
+    const startAngle = sectionCenterAngle - arcAngle / 2;
+    const angleStep = arcAngle / segmentsPerSection;
+    const outerBottomStart = verts.length / 3;
+
+    for (let index = 0; index <= segmentsPerSection; index += 1) {
+      const angle = startAngle + angleStep * index;
+      verts.push(Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius, zBottom);
+    }
+
+    const outerTopStart = verts.length / 3;
+    for (let index = 0; index <= segmentsPerSection; index += 1) {
+      const angle = startAngle + angleStep * index;
+      verts.push(Math.cos(angle) * outerRadius, Math.sin(angle) * outerRadius, zTop);
+    }
+
+    const innerBottomStart = verts.length / 3;
+    for (let index = 0; index <= segmentsPerSection; index += 1) {
+      const angle = startAngle + angleStep * index;
+      verts.push(Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius, zBottom);
+    }
+
+    const innerTopStart = verts.length / 3;
+    for (let index = 0; index <= segmentsPerSection; index += 1) {
+      const angle = startAngle + angleStep * index;
+      verts.push(Math.cos(angle) * innerRadius, Math.sin(angle) * innerRadius, zTop);
+    }
+
+    for (let index = 0; index < segmentsPerSection; index += 1) {
+      const outerBottomA = outerBottomStart + index;
+      const outerBottomB = outerBottomStart + index + 1;
+      const outerTopA = outerTopStart + index;
+      const outerTopB = outerTopStart + index + 1;
+      const innerBottomA = innerBottomStart + index;
+      const innerBottomB = innerBottomStart + index + 1;
+      const innerTopA = innerTopStart + index;
+      const innerTopB = innerTopStart + index + 1;
+
+      faces.push(outerBottomA, outerBottomB, outerTopA, outerBottomB, outerTopB, outerTopA);
+      faces.push(innerBottomA, innerTopA, innerBottomB, innerBottomB, innerTopA, innerTopB);
+      faces.push(outerTopA, outerTopB, innerTopA, outerTopB, innerTopB, innerTopA);
+      faces.push(
+        outerBottomA,
+        innerBottomA,
+        outerBottomB,
+        outerBottomB,
+        innerBottomA,
+        innerBottomB,
+      );
+    }
+
+    const startOuterBottom = outerBottomStart;
+    const startOuterTop = outerTopStart;
+    const startInnerBottom = innerBottomStart;
+    const startInnerTop = innerTopStart;
+    faces.push(
+      startOuterBottom,
+      startOuterTop,
+      startInnerBottom,
+      startInnerBottom,
+      startOuterTop,
+      startInnerTop,
+    );
+
+    const endOuterBottom = outerBottomStart + segmentsPerSection;
+    const endOuterTop = outerTopStart + segmentsPerSection;
+    const endInnerBottom = innerBottomStart + segmentsPerSection;
+    const endInnerTop = innerTopStart + segmentsPerSection;
+    faces.push(
+      endOuterBottom,
+      endInnerBottom,
+      endOuterTop,
+      endInnerBottom,
+      endInnerTop,
+      endOuterTop,
+    );
+  }
+}
+
+function addBox(
+  verts: number[],
+  faces: number[],
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  minZ: number,
+  maxZ: number,
+) {
+  if (maxX <= minX || maxY <= minY || maxZ <= minZ) return;
+
+  const start = verts.length / 3;
+  verts.push(
+    minX,
+    minY,
+    minZ,
+    maxX,
+    minY,
+    minZ,
+    maxX,
+    maxY,
+    minZ,
+    minX,
+    maxY,
+    minZ,
+    minX,
+    minY,
+    maxZ,
+    maxX,
+    minY,
+    maxZ,
+    maxX,
+    maxY,
+    maxZ,
+    minX,
+    maxY,
+    maxZ,
+  );
+
+  faces.push(
+    start,
+    start + 1,
+    start + 2,
+    start,
+    start + 2,
+    start + 3,
+    start + 4,
+    start + 6,
+    start + 5,
+    start + 4,
+    start + 7,
+    start + 6,
+    start,
+    start + 4,
+    start + 1,
+    start + 1,
+    start + 4,
+    start + 5,
+    start + 1,
+    start + 5,
+    start + 2,
+    start + 2,
+    start + 5,
+    start + 6,
+    start + 2,
+    start + 6,
+    start + 3,
+    start + 3,
+    start + 6,
+    start + 7,
+    start + 3,
+    start + 7,
+    start,
+    start,
+    start + 7,
+    start + 4,
+  );
+}
+
+function addCrossPedestal(
+  verts: number[],
+  faces: number[],
+  radius: number,
+  zBottom: number,
+  zTop: number,
+) {
+  if (zTop <= zBottom + 0.5) return;
+
+  const halfThickness = TEST_TUBE_PEDESTAL_BAR_THICKNESS_MM / 2;
+  addBox(verts, faces, -radius, radius, -halfThickness, halfThickness, zBottom, zTop);
+  addBox(verts, faces, -halfThickness, halfThickness, -radius, radius, zBottom, zTop);
+}
+
+function canFitCenteredTestTubeSupport(
+  params: VaseParameters,
+  zValues: readonly number[],
+  requiredRadius: number,
+): boolean {
+  for (const zMm of zValues) {
+    const outerContour = interpolatedOuterContour(params, zMm);
+    const innerContour = computeInnerContour(outerContour, params.wallThicknessMm);
+    if (!pointInContour(innerContour, 0, 0)) {
+      return false;
+    }
+
+    if (
+      distanceFromOriginToContourEdges(innerContour) <
+      requiredRadius + TEST_TUBE_SUPPORT_WALL_MARGIN_MM
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function addTestTubeSupportIfNeeded(
+  params: VaseParameters,
+  verts: number[],
+  faces: number[],
+  options: GenerateVaseMeshOptions = {},
+) {
+  if (options.includeTestTubeSupport === false || options.suppressTestTubeSupport) {
+    return;
+  }
+
+  const compatibility = analyzeWaterproofInsertCompatibility(params);
+  if (!options.forceTestTubeSupport && compatibility.type !== "test_tube") {
+    return;
+  }
+  const preset = options.forceTestTubeSupport
+    ? (options.customTestTubePreset ?? getPreferredTestTubePreset(params.heightMm))
+    : getInsertPresetById(compatibility.presetId);
+  if (!preset) {
+    return;
+  }
+  const supportInnerRadius = Math.max(5, preset.topDiameterMm / 2 + preset.clearanceMm);
+  const supportOuterRadius = supportInnerRadius + TEST_TUBE_SUPPORT_THICKNESS_MM;
+
+  const placement = getTestTubePlacement(params, preset);
+  const supportBottomZ = placement.supportBottomZ;
+  const supportTopZ = placement.supportTopZ;
+
+  if (supportTopZ <= supportBottomZ) {
+    return;
+  }
+
+  const fitSamples = [
+    supportBottomZ + 0.5,
+    supportBottomZ + (supportTopZ - supportBottomZ) * 0.33,
+    supportBottomZ + (supportTopZ - supportBottomZ) * 0.66,
+    supportTopZ,
+  ];
+  if (!canFitCenteredTestTubeSupport(params, fitSamples, supportOuterRadius)) {
+    return;
+  }
+
+  addCrossPedestal(
+    verts,
+    faces,
+    supportOuterRadius,
+    placement.pedestalBottomZ,
+    placement.pedestalTopZ,
+  );
+
+  addSegmentedTubeSupport(
+    verts,
+    faces,
+    supportInnerRadius,
+    supportOuterRadius,
+    supportBottomZ,
+    supportTopZ,
+    TEST_TUBE_SUPPORT_SLOT_COUNT,
+    TEST_TUBE_SUPPORT_SLOT_ANGLE_RAD,
+    TEST_TUBE_SUPPORT_SEGMENTS_PER_SECTION,
+  );
+}
+
+function addFlatInnerBottomCap(
+  verts: number[],
+  faces: number[],
+  innerBottomStart: number,
+  segments: number,
+  zInnerBottom: number,
+) {
+  const innerCenter = verts.length / 3;
+  verts.push(0, 0, zInnerBottom);
+  for (let i = 0; i < segments; i++) {
+    const a = innerBottomStart + i;
+    const b = innerBottomStart + ((i + 1) % segments);
+    faces.push(innerCenter, a, b);
+  }
+}
+
+function addInnerBottomCap(
+  params: VaseParameters,
+  verts: number[],
+  faces: number[],
+  innerBottomStart: number,
+  zInnerBottom: number,
+  options: GenerateVaseMeshOptions,
+) {
+  addFlatInnerBottomCap(verts, faces, innerBottomStart, params.radialSamples, zInnerBottom);
+  addTestTubeSupportIfNeeded(params, verts, faces, options);
+}
+
 /**
  * Generate the full vase mesh. Returns vertices (Float32Array, xyz flat) and indices (Uint32Array).
  */
-export function generateVaseMesh(params: VaseParameters): MeshData {
-  return generateVaseMeshInternal(params);
+export function generateVaseMesh(
+  params: VaseParameters,
+  options: GenerateVaseMeshOptions = {},
+): MeshData {
+  return generateVaseMeshInternal(params, options);
 }
 
 function generateVaseMeshInternal(
   params: VaseParameters,
+  options: GenerateVaseMeshOptions = {},
 ): MeshData {
-  validateParams(params);
+  const lowPolyResolution = getLowPolyMeshResolution(params);
+  const meshParams = lowPolyResolution ? { ...params, ...lowPolyResolution } : params;
 
-  const ringSize = params.radialSamples;
-  const layers = params.verticalSamples;
+  validateParams(meshParams);
 
-  const zOuter = linspace(0, params.heightMm, layers);
-  const zInnerBottom = Math.min(params.bottomThicknessMm, params.heightMm);
-  const outerContours = generateSupportSafeOuterContours(params, zOuter);
+  const ringSize = meshParams.radialSamples;
+  const layers = meshParams.verticalSamples;
+
+  const zOuter = linspace(0, meshParams.heightMm, layers);
+  const zInnerBottom = Math.min(meshParams.bottomThicknessMm, meshParams.heightMm);
+  const outerContours = generateSupportSafeOuterContours(meshParams, zOuter);
   const { zInner, sourceContours: innerSourceContours } = buildInnerWallSourceContours(
     outerContours,
     zOuter,
@@ -243,7 +662,7 @@ function generateVaseMeshInternal(
 
   // Inner wall vertices
   for (let layer = 0; layer < zInner.length; layer++) {
-    const innerContour = computeInnerContour(innerSourceContours[layer], params.wallThicknessMm);
+    const innerContour = computeInnerContour(innerSourceContours[layer], meshParams.wallThicknessMm);
     const ringStart = verts.length / 3;
     const z = zInner[layer];
     for (let i = 0; i < ringSize; i++) {
@@ -291,7 +710,7 @@ function generateVaseMeshInternal(
   }
 
   // Bottom cap
-  if (params.closeBottom) {
+  if (meshParams.closeBottom) {
     const outerBottom = outerRingStarts[0];
     const outerCenter = verts.length / 3;
     verts.push(0, 0, 0);
@@ -303,44 +722,65 @@ function generateVaseMeshInternal(
 
     // Inner bottom floor cap
     const innerBottom = innerRingStarts[0];
-    const innerCenter = verts.length / 3;
-    verts.push(0, 0, zInnerBottom);
-    for (let i = 0; i < ringSize; i++) {
-      const a = innerBottom + i;
-      const b = innerBottom + ((i + 1) % ringSize);
-      faces.push(innerCenter, a, b);
-    }
+    addInnerBottomCap(
+      meshParams,
+      verts,
+      faces,
+      innerBottom,
+      zInnerBottom,
+      options,
+    );
   }
 
-  return {
+  return removeDegenerateTriangles({
     vertices: new Float32Array(verts),
     indices: new Uint32Array(faces),
-  };
+  });
 }
 
 export async function generateVaseMeshWithEngraving(
   params: VaseParameters,
   seed: number,
   isSeedModified = false,
+  options: GenerateVaseMeshOptions = {},
 ): Promise<MeshData> {
   validateParams(params);
   resetPipelineTrace();
 
   try {
-    const { engraveBaseText } = await import("./engraving");
-    const zOuter = linspace(0, params.heightMm, params.verticalSamples);
-    const outerContours = generateSupportSafeOuterContours(params, zOuter);
-    const mesh = generateVaseMeshInternal(params);
+    const lowPolyResolution = getLowPolyMeshResolution(params);
+    const meshParams = lowPolyResolution ? { ...params, ...lowPolyResolution } : params;
+    const zOuter = linspace(0, meshParams.heightMm, meshParams.verticalSamples);
+    const outerContours = generateSupportSafeOuterContours(meshParams, zOuter);
+    const mesh = generateVaseMeshInternal(params, options);
     logMeshDiagnostics("[mesh-builder] base mesh", mesh);
     appendPipelineTrace(
       `[mesh-builder] base mesh:v=${mesh.vertices.length / 3},t=${mesh.indices.length / 3}`,
     );
-    const engravedMesh = await engraveBaseText(mesh, params, outerContours[0], seed, isSeedModified);
+    const compatibility = analyzeWaterproofInsertCompatibility(params);
+    const shouldUseUndersideEngraving =
+      options.forceTestTubeSupport || compatibility.type === "test_tube";
+    const supportOuterRadius = options.customTestTubePreset
+      ? options.customTestTubePreset.topDiameterMm / 2 + options.customTestTubePreset.clearanceMm + TEST_TUBE_SUPPORT_THICKNESS_MM
+      : TEST_TUBE_SUPPORT_OUTER_RADIUS_MM;
+    const engravedMesh = await engraveBaseText(
+      mesh,
+      params,
+      outerContours[0],
+      seed,
+      isSeedModified,
+      shouldUseUndersideEngraving
+        ? supportOuterRadius + TEST_TUBE_SUPPORT_ENGRAVING_CLEARANCE_MM
+        : 0,
+    );
     const difference = getMeshDifferenceDiagnostics(mesh, engravedMesh);
     appendPipelineTrace(
       `[mesh-builder] final compare vs base:identical=${difference.identical ? 1 : 0},sharedT=${difference.sharedTriangles},removedT=${difference.removedTriangles},addedT=${difference.addedTriangles},sharedRatio=${difference.sharedTriangleRatio.toFixed(4)}`,
     );
-    if (difference.identical || (difference.addedTriangles === 0 && difference.removedTriangles === 0)) {
+    if (
+      difference.identical ||
+      (difference.addedTriangles === 0 && difference.removedTriangles === 0)
+    ) {
       dumpPipelineTrace(ENGRAVING_PIPELINE_MARKER);
       throw new Error(
         `Engraving pipeline produced a mesh identical to the base mesh. trace=${getPipelineTrace()}`,

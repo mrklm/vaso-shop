@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 import { MAX_SEED } from "../engine/engraving-text";
+import {
+  analyzeWaterproofInsertCompatibility,
+  enforceMinimumTestTubeCompatibility,
+  MIN_TEST_TUBE_VASE_HEIGHT_MM,
+} from "../engine/insert-compatibility";
 import { clampParamsToBuildVolume, type BuildVolume } from "../engine/printer-volume";
 import type {
   VaseParameters,
@@ -13,6 +18,8 @@ import type {
 } from "../engine/types";
 import { defaultVaseParameters, createProfile } from "../engine/types";
 import { useUIStore } from "./ui-store";
+
+const MAX_COMPATIBLE_GENERATION_ATTEMPTS = 200;
 
 interface VaseState {
   params: VaseParameters;
@@ -107,7 +114,7 @@ function randomizeParams(
     sidesMax = 10;
   let rotMin = 0,
     rotMax = 60;
-  let heightMin = 100,
+  let heightMin = MIN_TEST_TUBE_VASE_HEIGHT_MM,
     heightMax = 250;
 
   switch (style) {
@@ -187,7 +194,8 @@ function randomizeParams(
       break;
   }
 
-  const height = triangular(rng, heightMin, heightMax, (heightMin + heightMax) / 2);
+  const safeHeightMin = Math.max(MIN_TEST_TUBE_VASE_HEIGHT_MM, heightMin);
+  const height = triangular(rng, safeHeightMin, heightMax, (safeHeightMin + heightMax) / 2);
 
   // Generate profiles
   const profiles: Profile[] = [];
@@ -258,14 +266,14 @@ function randomizeParams(
     }
   }
 
-  return {
+  return enforceMinimumTestTubeCompatibility({
     ...currentParams,
     heightMm: Math.round(height),
     profiles,
     textureMode,
     textureType,
     textureZoom,
-  };
+  });
 }
 
 function getActiveBuildVolume(): BuildVolume {
@@ -279,25 +287,74 @@ function getActiveBuildVolume(): BuildVolume {
 }
 
 function constrainToActiveBuildVolume(params: VaseParameters): VaseParameters {
+  const safeParams = enforceMinimumTestTubeCompatibility(params);
   if (!useUIStore.getState().enforcePrinterVolume) {
-    return params;
+    return safeParams;
   }
-  return clampParamsToBuildVolume(params, getActiveBuildVolume());
+  return enforceMinimumTestTubeCompatibility(
+    clampParamsToBuildVolume(safeParams, getActiveBuildVolume()),
+  );
 }
 
-const INITIAL_SEED = Math.floor(Math.random() * (MAX_SEED + 1));
+function normalizeSeed(seed: number): number {
+  if (!Number.isFinite(seed)) return 0;
+  return Math.max(0, Math.min(MAX_SEED, Math.floor(seed)));
+}
+
+function nextSeed(seed: number): number {
+  return seed >= MAX_SEED ? 0 : seed + 1;
+}
+
+function generateCompatibleRandomParams(
+  seed: number,
+  style: RandomStyle,
+  complexity: ComplexityLevel,
+  forceComplexity: boolean,
+  forceTexture: boolean,
+  currentParams: VaseParameters,
+): { seed: number; params: VaseParameters } {
+  let candidateSeed = normalizeSeed(seed);
+
+  for (let attempt = 0; attempt < MAX_COMPATIBLE_GENERATION_ATTEMPTS; attempt += 1) {
+    const params = constrainToActiveBuildVolume(
+      randomizeParams(
+        candidateSeed,
+        style,
+        complexity,
+        forceComplexity,
+        forceTexture,
+        currentParams,
+      ),
+    );
+
+    if (analyzeWaterproofInsertCompatibility(params).type !== "none") {
+      return { seed: candidateSeed, params };
+    }
+
+    candidateSeed = nextSeed(candidateSeed);
+  }
+
+  const fallbackParams = constrainToActiveBuildVolume(
+    enforceMinimumTestTubeCompatibility(defaultVaseParameters()),
+  );
+  return { seed: candidateSeed, params: fallbackParams };
+}
+
+const REQUESTED_INITIAL_SEED = Math.floor(Math.random() * (MAX_SEED + 1));
 const INITIAL_RANDOM_STYLE: RandomStyle = "Soft";
 const INITIAL_COMPLEXITY: ComplexityLevel = "Moyen";
 const INITIAL_FORCE_COMPLEXITY = false;
 const INITIAL_FORCE_TEXTURE = false;
-const INITIAL_PARAMS = randomizeParams(
-  INITIAL_SEED,
+const INITIAL_GENERATION = generateCompatibleRandomParams(
+  REQUESTED_INITIAL_SEED,
   INITIAL_RANDOM_STYLE,
   INITIAL_COMPLEXITY,
   INITIAL_FORCE_COMPLEXITY,
   INITIAL_FORCE_TEXTURE,
   defaultVaseParameters(),
 );
+const INITIAL_SEED = INITIAL_GENERATION.seed;
+const INITIAL_PARAMS = INITIAL_GENERATION.params;
 
 export const useVaseStore = create<VaseState>()(temporal((set, get) => ({
   params: INITIAL_PARAMS,
@@ -383,7 +440,7 @@ export const useVaseStore = create<VaseState>()(temporal((set, get) => ({
 
   applySeed: () => {
     const state = get();
-    const params = randomizeParams(
+    const generation = generateCompatibleRandomParams(
       state.seed,
       state.randomStyle,
       state.complexity,
@@ -391,21 +448,20 @@ export const useVaseStore = create<VaseState>()(temporal((set, get) => ({
       state.forceTexture,
       state.params,
     );
-    set({ params: constrainToActiveBuildVolume(params), isSeedModified: false });
+    set({ params: generation.params, seed: generation.seed, isSeedModified: false });
   },
 
   randomize: () => {
     const state = get();
-    const newSeed = Math.floor(Math.random() * (MAX_SEED + 1));
-    const params = randomizeParams(
-      newSeed,
+    const generation = generateCompatibleRandomParams(
+      Math.floor(Math.random() * (MAX_SEED + 1)),
       state.randomStyle,
       state.complexity,
       state.forceComplexity,
       state.forceTexture,
       state.params,
     );
-    set({ params: constrainToActiveBuildVolume(params), seed: newSeed, isSeedModified: false });
+    set({ params: generation.params, seed: generation.seed, isSeedModified: false });
   },
 }), {
   limit: 50,

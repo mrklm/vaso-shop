@@ -1,4 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { generateVaseMesh } from "../engine/mesh-builder";
+import {
+  analyzeWaterproofInsertCompatibility,
+  MIN_TEST_TUBE_VASE_HEIGHT_MM,
+} from "../engine/insert-compatibility";
 import { useVaseStore } from "./vase-store";
 import { useUIStore } from "./ui-store";
 
@@ -20,8 +25,10 @@ describe("vaseStore", () => {
     expect(params.heightMm).toBeGreaterThan(0);
     expect(params.profiles.length).toBeGreaterThanOrEqual(2);
     expect(params.profiles.length).toBeLessThanOrEqual(10);
+    expect(params.heightMm).toBeGreaterThanOrEqual(MIN_TEST_TUBE_VASE_HEIGHT_MM);
     expect(params.profiles[0].zRatio).toBe(0);
     expect(params.profiles[params.profiles.length - 1].zRatio).toBe(1);
+    expect(analyzeWaterproofInsertCompatibility(params).type).not.toBe("none");
   });
 
   it("initial seed reproduces the initial vase when reapplied", () => {
@@ -36,6 +43,11 @@ describe("vaseStore", () => {
     useVaseStore.getState().setHeight(200);
     expect(useVaseStore.getState().params.heightMm).toBe(180);
     expect(useVaseStore.getState().isSeedModified).toBe(true);
+  });
+
+  it("does not allow manual height below the test tube-compatible minimum", () => {
+    useVaseStore.getState().setHeight(80);
+    expect(useVaseStore.getState().params.heightMm).toBe(MIN_TEST_TUBE_VASE_HEIGHT_MM);
   });
 
   it("setProfileCount adds profiles", () => {
@@ -72,6 +84,25 @@ describe("vaseStore", () => {
     expect(seedAfter).not.toBe(seedBefore);
     expect(useVaseStore.getState().isSeedModified).toBe(false);
   });
+
+  it("generates renderable preview meshes after repeated randomization", () => {
+    for (let index = 0; index < 12; index += 1) {
+      useVaseStore.getState().randomize();
+      const { params, seed } = useVaseStore.getState();
+      const previewParams = {
+        ...params,
+        radialSamples: Math.min(params.radialSamples, 72),
+        verticalSamples: Math.min(params.verticalSamples, 96),
+      };
+
+      const mesh = generateVaseMesh(previewParams);
+      expect(mesh.vertices.length, `seed ${seed}`).toBeGreaterThan(0);
+      expect(mesh.indices.length, `seed ${seed}`).toBeGreaterThan(0);
+      for (let vertexIndex = 0; vertexIndex < mesh.vertices.length; vertexIndex += 1) {
+        expect(Number.isFinite(mesh.vertices[vertexIndex]), `seed ${seed}`).toBe(true);
+      }
+    }
+  }, 20000);
 
   it("setTextureMode updates texture mode", () => {
     useVaseStore.getState().setTextureMode("Double texture");
@@ -123,5 +154,32 @@ describe("vaseStore", () => {
     useVaseStore.getState().updateProfile(0, { diameter: 260 });
     expect(useVaseStore.getState().params.heightMm).toBe(300);
     expect(useVaseStore.getState().params.profiles[0].diameter).toBe(260);
+  });
+
+  it("keeps every generated vase compatible with at least a test tube", () => {
+    useUIStore.setState({ enforcePrinterVolume: false });
+    for (let index = 0; index < 30; index += 1) {
+      useVaseStore.getState().randomize();
+      const { params, seed } = useVaseStore.getState();
+      expect(params.heightMm, `seed ${seed}`).toBeGreaterThanOrEqual(MIN_TEST_TUBE_VASE_HEIGHT_MM);
+      expect(analyzeWaterproofInsertCompatibility(params).type, `seed ${seed}`).not.toBe("none");
+    }
+  }, 20000);
+
+  it("keeps a previously unsupported requested seed compatible after generation", () => {
+    useUIStore.setState({ enforcePrinterVolume: false });
+    useVaseStore.setState({
+      seed: 71748756,
+      randomStyle: "Soft",
+      complexity: "Moyen",
+      forceComplexity: false,
+      forceTexture: false,
+    });
+
+    useVaseStore.getState().applySeed();
+
+    const { params, seed } = useVaseStore.getState();
+    expect(seed).toBe(71748756);
+    expect(analyzeWaterproofInsertCompatibility(params).type, `seed ${seed}`).not.toBe("none");
   });
 });

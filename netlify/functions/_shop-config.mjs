@@ -9,6 +9,11 @@ const DEFAULT_STATUS_LABELS = {
   holiday: "Vacances",
   closed: "Fermeture temporaire",
 };
+const DEFAULT_SHIPPING_LABELS = {
+  relay: "Point relais",
+  home: "Livraison à domicile",
+  pickup: "Retrait à l'Atelier Vaso",
+};
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -46,13 +51,13 @@ function normalizeShippingOption(value) {
   }
 
   const id = normalizeString(value.id).trim();
-  if (id !== "relay" && id !== "home") {
+  if (id !== "relay" && id !== "home" && id !== "pickup") {
     return null;
   }
 
   return {
     id,
-    label: normalizeString(value.label).trim() || (id === "relay" ? "Point relais" : "Livraison à domicile"),
+    label: normalizeString(value.label).trim() || DEFAULT_SHIPPING_LABELS[id],
     provider: normalizeString(value.provider).trim(),
     priceCents: Math.max(0, normalizeNumber(value.priceCents, 0)),
   };

@@ -1,6 +1,6 @@
 export const SHOP_NETLIFY_SITE_URL = "https://vaso-shop.netlify.app";
 export const SHOP_PUBLIC_SITE_URL = "https://mrklm.github.io/vaso-shop/";
-export const SHOP_MONDIAL_RELAY_BRAND = "";
+export const SHOP_MONDIAL_RELAY_BRAND = import.meta.env.VITE_MONDIAL_RELAY_BRAND ?? "";
 export const DEFAULT_HERO_GALLERY_TRANSITION_MS = 8200;
 export const DEFAULT_HERO_GALLERY_FADE_IN_MS = 3200;
 export const DEFAULT_HERO_GALLERY_FADE_OUT_MS = 3200;
@@ -8,7 +8,7 @@ export const DEFAULT_HERO_GALLERY_FADE_OUT_MS = 3200;
 const SHOP_PUBLIC_CONFIG_URL = `${import.meta.env.BASE_URL}config/shop-config.json`;
 
 export type ShopStatusState = "open" | "slowed" | "holiday" | "closed";
-export type ShopShippingModeId = "relay" | "home";
+export type ShopShippingModeId = "relay" | "home" | "pickup";
 
 export interface ShopColor {
   id: string;
@@ -23,6 +23,13 @@ export interface ShopColor {
 
 export interface ShopHeroImage {
   path: string;
+  enabled: boolean;
+}
+
+export interface ShopContainerImage {
+  path: string;
+  label: string;
+  alt: string;
   enabled: boolean;
 }
 
@@ -94,6 +101,7 @@ export interface ShopPublicConfig {
   printerVolume: ShopPrinterVolumeConfig;
   colors: ShopColor[];
   heroImages: ShopHeroImage[];
+  containerImages: ShopContainerImage[];
   heroGallery: ShopHeroGalleryConfig;
   messages: ShopMessagesConfig;
   shopStatus: ShopStatusConfig;
@@ -109,6 +117,11 @@ const DEFAULT_STATUS_LABELS: Record<ShopStatusState, string> = {
 
 const DEFAULT_SHIPPING_UNSUPPORTED_MESSAGE =
   "Nous contacter avant commande pour organiser la livraison vers ce pays.";
+const DEFAULT_SHIPPING_LABELS: Record<ShopShippingModeId, string> = {
+  relay: "Point relais",
+  home: "Livraison à domicile",
+  pickup: "Retrait à l'Atelier Vaso",
+};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -152,12 +165,14 @@ function normalizeColorId(rawColor: Record<string, unknown>, index: number): str
     return `color-${index + 1}`;
   }
 
-  return label
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || `color-${index + 1}`;
+  return (
+    label
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || `color-${index + 1}`
+  );
 }
 
 function normalizeColor(value: unknown, index: number): ShopColor | null {
@@ -169,7 +184,10 @@ function normalizeColor(value: unknown, index: number): ShopColor | null {
   const hex = normalizeString(value.hex, "#d9d2c7").trim() || "#d9d2c7";
   const previewHex = normalizeString(value.previewHex).trim();
   const opacity = Math.min(1, Math.max(0.08, normalizeNumber(value.opacity, 1)));
-  const previewEmissiveIntensity = Math.min(0.5, Math.max(0, normalizeNumber(value.previewEmissiveIntensity, 0)));
+  const previewEmissiveIntensity = Math.min(
+    0.5,
+    Math.max(0, normalizeNumber(value.previewEmissiveIntensity, 0)),
+  );
   const previewShading = Math.min(100, Math.max(0, normalizeNumber(value.previewShading, 50)));
   if (!label) {
     return null;
@@ -207,13 +225,38 @@ function normalizeHeroImage(value: unknown): ShopHeroImage | null {
   };
 }
 
+function normalizeContainerImage(value: unknown): ShopContainerImage | null {
+  if (typeof value === "string" && value.trim()) {
+    const path = value.trim();
+    return { path, label: "", alt: "", enabled: true };
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const path = normalizeString(value.path).trim();
+  if (!path) {
+    return null;
+  }
+
+  const label = normalizeString(value.label).trim();
+  const alt = normalizeString(value.alt).trim();
+  return {
+    path,
+    label: label || alt,
+    alt: alt || label || "Contenant compatible",
+    enabled: normalizeBoolean(value.enabled, true),
+  };
+}
+
 function normalizeShippingOption(value: unknown): ShopShippingOption | null {
   if (!isRecord(value)) {
     return null;
   }
 
   const id = normalizeString(value.id).trim();
-  if (id !== "relay" && id !== "home") {
+  if (id !== "relay" && id !== "home" && id !== "pickup") {
     return null;
   }
 
@@ -223,7 +266,7 @@ function normalizeShippingOption(value: unknown): ShopShippingOption | null {
 
   return {
     id,
-    label: label || (id === "relay" ? "Point relais" : "Livraison à domicile"),
+    label: label || DEFAULT_SHIPPING_LABELS[id],
     provider,
     priceCents,
   };
@@ -277,6 +320,34 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
   const rawStatus = isRecord(rawConfig.shopStatus) ? rawConfig.shopStatus : {};
   const rawShipping = isRecord(rawConfig.shipping) ? rawConfig.shipping : {};
   const rawHeroGallery = isRecord(rawConfig.heroGallery) ? rawConfig.heroGallery : {};
+  const rawContainerImages = Array.isArray(rawConfig.containerImages)
+    ? rawConfig.containerImages
+    : [
+        {
+          path: "images/containers/eco-cup-50cl.jpg",
+          label: "Eco-Cup 50 cl",
+          alt: "Eco-Cup 50 cl",
+          enabled: true,
+        },
+        {
+          path: "images/containers/Eco-Cup 25cl.png",
+          label: "Eco Cup 25Cl",
+          alt: "Eco Cup 25Cl",
+          enabled: true,
+        },
+        {
+          path: "images/containers/Eco-cup 12,5 cl.png",
+          label: "Eco Cup 12,5 Cl",
+          alt: "Eco Cup 12,5 Cl",
+          enabled: true,
+        },
+        {
+          path: "images/containers/tube-a-essai.jpg",
+          label: "Tube à essai",
+          alt: "Tube à essai",
+          enabled: true,
+        },
+      ];
   const statusState = normalizeStatusState(rawStatus.state);
   const printerProfiles = Array.isArray(rawPrinterVolume.profiles)
     ? rawPrinterVolume.profiles
@@ -284,18 +355,20 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
         .filter((profile): profile is ShopPrinterProfile => profile !== null)
     : [];
   const activePrinterProfile = normalizeString(rawPrinterVolume.activeProfile).trim();
-  const safePrinterProfiles = printerProfiles.length > 0 ? printerProfiles : [{ name: "Alfawise U30", width: 220, depth: 220, height: 250 }];
-  const safeActivePrinterProfile = safePrinterProfiles.some((profile) => profile.name === activePrinterProfile)
+  const safePrinterProfiles =
+    printerProfiles.length > 0
+      ? printerProfiles
+      : [{ name: "Alfawise U30", width: 220, depth: 220, height: 250 }];
+  const safeActivePrinterProfile = safePrinterProfiles.some(
+    (profile) => profile.name === activePrinterProfile,
+  )
     ? activePrinterProfile
     : safePrinterProfiles[0].name;
 
   const rawLegacyPrices = isRecord(rawPricing.pricesCents) ? rawPricing.pricesCents : {};
   const fallbackPriceCents = Math.max(
     0,
-    normalizeNumber(
-      rawLegacyPrices.M ?? rawLegacyPrices.S ?? rawLegacyPrices.L,
-      0,
-    ),
+    normalizeNumber(rawLegacyPrices.M ?? rawLegacyPrices.S ?? rawLegacyPrices.L, 0),
   );
   return {
     pricing: {
@@ -316,13 +389,22 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
           .map((image) => normalizeHeroImage(image))
           .filter((image): image is ShopHeroImage => image !== null)
       : [],
+    containerImages: rawContainerImages
+      .map((image) => normalizeContainerImage(image))
+      .filter((image): image is ShopContainerImage => image !== null),
     heroGallery: {
       transitionMs: Math.max(
         1000,
         normalizeNumber(rawHeroGallery.transitionMs, DEFAULT_HERO_GALLERY_TRANSITION_MS),
       ),
-      fadeInMs: Math.max(0, normalizeNumber(rawHeroGallery.fadeInMs, DEFAULT_HERO_GALLERY_FADE_IN_MS)),
-      fadeOutMs: Math.max(0, normalizeNumber(rawHeroGallery.fadeOutMs, DEFAULT_HERO_GALLERY_FADE_OUT_MS)),
+      fadeInMs: Math.max(
+        0,
+        normalizeNumber(rawHeroGallery.fadeInMs, DEFAULT_HERO_GALLERY_FADE_IN_MS),
+      ),
+      fadeOutMs: Math.max(
+        0,
+        normalizeNumber(rawHeroGallery.fadeOutMs, DEFAULT_HERO_GALLERY_FADE_OUT_MS),
+      ),
     },
     messages: {
       shippingLeadTime: normalizeString(rawMessages.shippingLeadTime).trim(),
@@ -335,10 +417,13 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
       colorPreviewNote:
         normalizeString(rawMessages.colorPreviewNote).trim() ||
         "Les aperçus 3D vous donnent une belle idée de la teinte, avec de légères nuances possibles selon la lumière, la matière et l'impression finale.",
-      contactPrompt: normalizeString(rawMessages.contactPrompt).trim() || "Vous avez des questions ?",
-      contactButtonLabel: normalizeString(rawMessages.contactButtonLabel).trim() || "Contactez nous",
+      contactPrompt:
+        normalizeString(rawMessages.contactPrompt).trim() || "Vous avez des questions ?",
+      contactButtonLabel:
+        normalizeString(rawMessages.contactButtonLabel).trim() || "Contactez nous",
       contactEmail: normalizeString(rawMessages.contactEmail).trim(),
-      contactEmailSubject: normalizeString(rawMessages.contactEmailSubject).trim() || "Contact VASO SHOP",
+      contactEmailSubject:
+        normalizeString(rawMessages.contactEmailSubject).trim() || "Contact VASO SHOP",
       contactEmailBody:
         normalizeString(rawMessages.contactEmailBody) ||
         "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :\n",
@@ -347,13 +432,17 @@ function normalizeShopConfig(rawValue: unknown): ShopPublicConfig {
       state: statusState,
       label: normalizeString(rawStatus.label).trim() || DEFAULT_STATUS_LABELS[statusState],
       message: normalizeString(rawStatus.message).trim(),
-      allowCheckout: normalizeBoolean(rawStatus.allowCheckout, statusState === "open" || statusState === "slowed"),
+      allowCheckout: normalizeBoolean(
+        rawStatus.allowCheckout,
+        statusState === "open" || statusState === "slowed",
+      ),
     },
     shipping: {
       suspendRelay: normalizeBoolean(rawShipping.suspendRelay, false),
       suspendHomeDelivery: normalizeBoolean(rawShipping.suspendHomeDelivery, false),
       unsupportedMessage:
-        normalizeString(rawShipping.unsupportedMessage).trim() || DEFAULT_SHIPPING_UNSUPPORTED_MESSAGE,
+        normalizeString(rawShipping.unsupportedMessage).trim() ||
+        DEFAULT_SHIPPING_UNSUPPORTED_MESSAGE,
       countries: Array.isArray(rawShipping.countries)
         ? rawShipping.countries
             .map((country) => normalizeShippingCountry(country))

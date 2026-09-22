@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PAGES_ARTIFACT_NAME: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+      VITE_MONDIAL_RELAY_BRAND: ${{ secrets.VITE_MONDIAL_RELAY_BRAND }}
 
     environment:
       name: github-pages

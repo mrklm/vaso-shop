@@ -93,6 +93,13 @@ Puis ouvrir :
 
 `http://localhost:5173`
 
+Pour tester le widget Point Relais Mondial Relay, renseigner aussi le code Brand fourni par
+Mondial Relay/InPost :
+
+```bash
+VITE_MONDIAL_RELAY_BRAND=BDTEST npm run dev
+```
+
 ### 4. Build production
 
 ```bash

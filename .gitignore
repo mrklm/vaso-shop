@@ -39,6 +39,12 @@ test-results/
 coverage/
 
 # ─────────────────────────────────────────────
+# Local attachments / screenshots
+# ─────────────────────────────────────────────
+PJ/
+pj/
+
+# ─────────────────────────────────────────────
 # Editor / IDE
 # ─────────────────────────────────────────────
 .vscode/*
@@ -77,3 +83,8 @@ admin/.vaso_admin_settings.json
 # VASO-Admin Linux build
 /dist-admin/
 /admin/.venv-build/
+
+# VASO-Admin packaging
+Vaso-Admin.spec
+releases/
+admin/assets/*.iconset/

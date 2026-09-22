@@ -151,7 +151,7 @@
     },
     {
       "id": "terracotta-wine",
-      "label": "Terracotta (lie de vin)",
+      "label": "Terracotta",
       "hex": "#a95849",
       "available": true
     },
@@ -202,10 +202,6 @@
   ],
   "heroImages": [
     {
-      "path": "images/hero/1.jpg",
-      "enabled": true
-    },
-    {
       "path": "images/hero/2.jpg",
       "enabled": true
     },
@@ -215,10 +211,6 @@
     },
     {
       "path": "images/hero/4.jpg",
-      "enabled": true
-    },
-    {
-      "path": "images/hero/5.jpg",
       "enabled": true
     },
     {
@@ -259,16 +251,42 @@
     "fadeInMs": 3200,
     "fadeOutMs": 3200
   },
+  "containerImages": [
+    {
+      "path": "images/containers/eco-cup-50cl.jpg",
+      "label": "Eco-Cup 50 cl",
+      "alt": "Eco-Cup 50 cl",
+      "enabled": true
+    },
+    {
+      "path": "images/containers/Eco-Cup 25cl.png",
+      "label": "Eco Cup 25Cl",
+      "alt": "Eco Cup 25Cl",
+      "enabled": true
+    },
+    {
+      "path": "images/containers/Eco-cup 12,5 cl.png",
+      "label": "Eco Cup 12,5 Cl",
+      "alt": "Eco Cup 12,5 Cl",
+      "enabled": true
+    },
+    {
+      "path": "images/containers/tube-a-essai.jpg",
+      "label": "Tube à essai",
+      "alt": "Tube à essai",
+      "enabled": true
+    }
+  ],
   "messages": {
     "shippingLeadTime": "Expédition sous 5 à 7 jours",
     "temporaryNotice": "",
-    "atelierNote": "L'atelier de fabrication se situe en Bretagne : chaque vase est imprimé à la demande, vérifié, protégé puis expédié avec soin.",
+    "atelierNote": "Situation géographique:\n\nL'atelier de fabrication se situe en Bretagne, en Ille-et-Vilaine, au nord de Rennes. Chaque vase est imprimé à la demande, vérifié, protégé puis expédié avec soin.\n\nMateriau:\n\nLes vases sont produits en acide polylactique, il s'agit d'un polymère biodégradable (P.L.A.) créé la plupart du temps à partir d'amidon de maïs. Le P.L.A. que nous utilisons à l'Atelier Vaso est produit en France, en Loire-Atlantique, près de Nantes.",
     "materialPlaNote": "Bioplastique sourcé à partir d'amidon végétal, principalement issu du maïs.",
-    "warningPla": "Nous attirons votre attention sur le fait qu’un vase imprimé en PLA n’est pas destiné à contenir directement de l’eau. Pour préserver durablement le modèle, chaque vase doit être utilisé avec un contenant étanche amovible inséré à l’intérieur. VASO indique automatiquement un contenant compatible.(type Eco-cup ou Tube à essai)",
+    "warningPla": "Nous attirons votre attention sur le fait qu’un vase imprimé en PLA n’est pas destiné à contenir directement de l’eau. Pour préserver durablement le modèle, chaque vase doit être utilisé avec un contenant étanche amovible inséré à l’intérieur.",
     "colorPreviewNote": "Les aperçus 3D vous donnent une idée de la teinte, cepandant les écrans peuvent être trompeurs, merci de prendre en compte que la couleur depuis votre écran ne sera pas forcement exactement le même que ce que vous optiendrez à l'impression finale.",
     "contactPrompt": "Vous avez des questions ?",
     "contactButtonLabel": "Contactez nous",
-    "contactEmail": "clementmorel@free.fr",
+    "contactEmail": "ateliervaso@gmail.com",
     "contactEmailSubject": "Contact VASO SHOP",
     "contactEmailBody": "Nom :\nPrenom :\nN° de tel :\nMail :\n\nMessage :"
   },
@@ -279,7 +297,7 @@
     "allowCheckout": true
   },
   "shipping": {
-    "suspendRelay": true,
+    "suspendRelay": false,
     "suspendHomeDelivery": false,
     "unsupportedMessage": "Nous contacter avant commande pour organiser la livraison vers ce pays.",
     "countries": [
@@ -297,6 +315,12 @@
             "label": "Livraison à domicile",
             "provider": "Mondial Relay Domicile",
             "priceCents": 749
+          },
+          {
+            "id": "pickup",
+            "label": "Retrait à l'Atelier Vaso",
+            "provider": "À 45 minutes au nord de Rennes / Ille-et-Vilaine",
+            "priceCents": 0
           }
         ]
       },

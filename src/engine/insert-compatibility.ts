@@ -1,11 +1,30 @@
-import { buildProfileContour, buildProfileContourFromVertex, interpolateContours, regularPolygonVertices } from "./geometry";
-import { computeInnerContour } from "./constraints";
+import {
+  computeInnerContour,
+  limitContourStepFromPrevious,
+  maxSupportlessRadialStep,
+} from "./constraints";
+import {
+  alignContourToPrevious,
+  buildProfileContour,
+  buildProfileContourFromVertex,
+  interpolateContours,
+  regularPolygonVertices,
+} from "./geometry";
+import { applyTexture, getMaxInwardTextureOffsetMm } from "./textures";
 import type { Profile, VaseParameters } from "./types";
 
 const FACETED_SEAM_MAX_PROFILE_SIDES = 12;
 const INSERT_SECTION_SAMPLES = 96;
 const INSERT_FIT_SAMPLES = 72;
 const INSERT_DIAMETER_TOLERANCE_MM = 0.35;
+const ECO_CUP_RIGID_MIN_CLEARANCE_MM = 0.5;
+const TEST_TUBE_SUPPORT_THICKNESS_MM = 2;
+const TEST_TUBE_SUPPORT_WALL_MARGIN_MM = 0.8;
+export const MIN_TEST_TUBE_VASE_HEIGHT_MM = 115;
+export const TEST_TUBE_LONG_VASE_HEIGHT_MM = 140;
+export const TEST_TUBE_TOP_CLEARANCE_MM = 20;
+export const TEST_TUBE_SUPPORT_HEIGHT_MM = 40;
+export const MIN_TEST_TUBE_TOP_OPENING_INNER_DIAMETER_MM = 29;
 
 export type InsertPreset = {
   id: string;
@@ -20,7 +39,7 @@ export type InsertPreset = {
 export type WaterproofInsertCompatibility = {
   presetId: string;
   label: string;
-  type: "eco_cup" | "test_tube";
+  type: "eco_cup" | "test_tube" | "none";
 };
 
 export const INSERT_PRESETS: readonly InsertPreset[] = [
@@ -28,39 +47,137 @@ export const INSERT_PRESETS: readonly InsertPreset[] = [
     id: "eco-cup-50cl",
     label: "Eco-Cup 50 cl",
     type: "eco_cup",
-    heightMm: 166,
-    topDiameterMm: 88,
-    bottomDiameterMm: 67,
+    heightMm: 163,
+    topDiameterMm: 85,
+    bottomDiameterMm: 64,
     clearanceMm: 3,
   },
   {
     id: "eco-cup-25cl",
     label: "Eco-Cup 25 cl",
     type: "eco_cup",
-    heightMm: 118,
-    topDiameterMm: 76,
-    bottomDiameterMm: 58,
+    heightMm: 115,
+    topDiameterMm: 73,
+    bottomDiameterMm: 55,
     clearanceMm: 3,
   },
   {
     id: "eco-cup-12-5cl",
     label: "Eco-Cup 12,5 cl",
     type: "eco_cup",
-    heightMm: 98,
-    topDiameterMm: 67,
-    bottomDiameterMm: 53,
+    heightMm: 95,
+    topDiameterMm: 64,
+    bottomDiameterMm: 50,
     clearanceMm: 3,
   },
   {
-    id: "test-tube-75x20",
-    label: "Tube à essai 75 × 20 mm",
+    id: "test-tube-100x25-4",
+    label: "Tube à essai 100 × 25,4 mm",
     type: "test_tube",
-    heightMm: 75,
-    topDiameterMm: 21.5,
-    bottomDiameterMm: 21.5,
+    heightMm: 100,
+    topDiameterMm: 25.4,
+    bottomDiameterMm: 25.4,
+    clearanceMm: 1.5,
+  },
+  {
+    id: "test-tube-120x25-4",
+    label: "Tube à essai 120 × 25,4 mm",
+    type: "test_tube",
+    heightMm: 120,
+    topDiameterMm: 25.4,
+    bottomDiameterMm: 25.4,
     clearanceMm: 1.5,
   },
 ] as const;
+
+export function getInsertPresetById(presetId: string): InsertPreset | null {
+  return INSERT_PRESETS.find((preset) => preset.id === presetId) ?? null;
+}
+
+export function getPreferredTestTubePreset(heightMm: number): InsertPreset {
+  const preferredId =
+    heightMm >= TEST_TUBE_LONG_VASE_HEIGHT_MM
+      ? "test-tube-120x25-4"
+      : "test-tube-100x25-4";
+  return (
+    INSERT_PRESETS.find((preset) => preset.id === preferredId) ??
+    INSERT_PRESETS[INSERT_PRESETS.length - 1]
+  );
+}
+
+export function getMinimumTestTubeProfileDiameterMm(
+  profile: Pick<Profile, "sides" | "scaleX" | "scaleY">,
+  wallThicknessMm: number,
+  textureInsetMm = 0,
+): number {
+  const sides = Math.max(3, Math.round(profile.sides));
+  const minScale = Math.max(0.1, Math.min(Math.abs(profile.scaleX), Math.abs(profile.scaleY)));
+  const apothemRatio = Math.cos(Math.PI / sides);
+  const minimumSupportInnerDiameterMm =
+    (25.4 / 2 +
+      1.5 +
+      TEST_TUBE_SUPPORT_THICKNESS_MM +
+      TEST_TUBE_SUPPORT_WALL_MARGIN_MM +
+      INSERT_DIAMETER_TOLERANCE_MM) *
+    2;
+  const minimumInnerDiameterMm = Math.max(
+    MIN_TEST_TUBE_TOP_OPENING_INNER_DIAMETER_MM,
+    minimumSupportInnerDiameterMm,
+  );
+  const requiredOuterApothemMm =
+    minimumInnerDiameterMm / 2 +
+    Math.max(0, textureInsetMm) +
+    Math.max(0, wallThicknessMm);
+
+  return (requiredOuterApothemMm / apothemRatio / minScale) * 2;
+}
+
+export function enforceMinimumTestTubeCompatibility(params: VaseParameters): VaseParameters {
+  const wallThicknessMm = Math.max(0, params.wallThicknessMm);
+  const textureInsetMm = getMaxInwardTextureOffsetMm(params);
+
+  return {
+    ...params,
+    heightMm: Math.max(MIN_TEST_TUBE_VASE_HEIGHT_MM, params.heightMm),
+    profiles: params.profiles.map((profile) => ({
+      ...profile,
+      diameter: Math.max(
+        profile.diameter,
+        getMinimumTestTubeProfileDiameterMm(profile, wallThicknessMm, textureInsetMm),
+      ),
+    })),
+  };
+}
+
+export function getTestTubePlacement(params: VaseParameters, preset: InsertPreset) {
+  const innerBottomZ = Math.min(params.bottomThicknessMm, params.heightMm);
+  const targetTopZ = params.heightMm - TEST_TUBE_TOP_CLEARANCE_MM;
+  const tubeBottomZ = Math.max(innerBottomZ, targetTopZ - preset.heightMm);
+  const tubeTopZ = tubeBottomZ + preset.heightMm;
+  const supportBottomZ = innerBottomZ;
+  const supportTopZ = Math.min(
+    params.heightMm - 1,
+    tubeBottomZ + TEST_TUBE_SUPPORT_HEIGHT_MM,
+    tubeTopZ,
+  );
+
+  return {
+    tubeBottomZ,
+    tubeTopZ,
+    supportBottomZ,
+    supportTopZ,
+    pedestalBottomZ: innerBottomZ,
+    pedestalTopZ: tubeBottomZ,
+  };
+}
+
+function hasActiveTexture(params: VaseParameters): boolean {
+  if (params.textureMode === "Pas de texture") return false;
+  if (params.textureMode === "Double texture") {
+    return params.textureType !== "Aucune" || params.textureType2 !== "Aucune";
+  }
+  return params.textureType !== "Aucune";
+}
 
 function shouldKeepFacetEdgeSeamIdentity(profiles: VaseParameters["profiles"]): boolean {
   const sideCount = profiles[0]?.sides ?? 0;
@@ -101,7 +218,10 @@ function computeSharedFacetSeamVertexIndex(profiles: VaseParameters["profiles"])
   return bestIndex;
 }
 
-function buildOrderedContours(params: VaseParameters): { profiles: Profile[]; zPositions: number[]; contours: Float64Array[] } {
+function buildOrderedContours(params: VaseParameters): {
+  zPositions: number[];
+  contours: Float64Array[];
+} {
   const profiles = [...params.profiles].sort((a, b) => a.zRatio - b.zRatio);
   const zPositions = profiles.map((profile) => profile.zRatio * params.heightMm);
   const sharedFacetSeamVertex = shouldKeepFacetEdgeSeamIdentity(profiles)
@@ -114,20 +234,21 @@ function buildOrderedContours(params: VaseParameters): { profiles: Profile[]; zP
       : buildProfileContourFromVertex(profile, params.radialSamples, sharedFacetSeamVertex),
   );
 
-  return { profiles, zPositions, contours };
+  return { zPositions, contours };
 }
 
 function interpolateOuterContourAtHeight(
   zMm: number,
   orderedContours: ReturnType<typeof buildOrderedContours>,
+  params: VaseParameters,
 ): Float64Array {
   const { zPositions, contours } = orderedContours;
 
   if (zMm <= zPositions[0]) {
-    return new Float64Array(contours[0]);
+    return applyTexture(new Float64Array(contours[0]), zMm, params);
   }
   if (zMm >= zPositions[zPositions.length - 1]) {
-    return new Float64Array(contours[contours.length - 1]);
+    return applyTexture(new Float64Array(contours[contours.length - 1]), zMm, params);
   }
 
   for (let index = 0; index < zPositions.length - 1; index++) {
@@ -135,15 +256,19 @@ function interpolateOuterContourAtHeight(
     const zEnd = zPositions[index + 1];
     if (zStart <= zMm && zMm <= zEnd) {
       if (zEnd === zStart) {
-        return new Float64Array(contours[index]);
+        return applyTexture(new Float64Array(contours[index]), zMm, params);
       }
 
       const interpolation = (zMm - zStart) / (zEnd - zStart);
-      return interpolateContours(contours[index], contours[index + 1], interpolation);
+      return applyTexture(
+        interpolateContours(contours[index], contours[index + 1], interpolation),
+        zMm,
+        params,
+      );
     }
   }
 
-  return new Float64Array(contours[contours.length - 1]);
+  return applyTexture(new Float64Array(contours[contours.length - 1]), zMm, params);
 }
 
 function pointInPolygon(contour: Float64Array, x: number, y: number): boolean {
@@ -282,16 +407,35 @@ function buildInnerAvailabilityProfile(params: VaseParameters) {
   const topZ = params.heightMm;
   const zValues = new Float64Array(INSERT_SECTION_SAMPLES);
   const availableDiameters = new Float64Array(INSERT_SECTION_SAMPLES);
+  const innerContours: Float64Array[] = [];
   const orderedContours = buildOrderedContours(params);
+  const texturedSeam = hasActiveTexture(params);
+  let previousContour: Float64Array | null = null;
+  let previousZ: number | null = null;
 
   for (let index = 0; index < zValues.length; index++) {
     const ratio = zValues.length === 1 ? 1 : index / (zValues.length - 1);
     const zMm = bottomZ + (topZ - bottomZ) * ratio;
     zValues[index] = zMm;
 
-    const outerContour = interpolateOuterContourAtHeight(zMm, orderedContours);
+    let outerContour = interpolateOuterContourAtHeight(zMm, orderedContours, params);
+    if (previousContour !== null && previousZ !== null) {
+      if (!texturedSeam) {
+        outerContour = alignContourToPrevious(outerContour, previousContour);
+      }
+      outerContour = limitContourStepFromPrevious(
+        previousContour,
+        outerContour,
+        maxSupportlessRadialStep(Math.abs(zMm - previousZ)),
+        params.wallThicknessMm,
+      );
+    }
+
     const innerContour = computeInnerContour(outerContour, params.wallThicknessMm);
+    innerContours.push(innerContour);
     availableDiameters[index] = computeLargestInscribedCircleDiameter(innerContour);
+    previousContour = outerContour;
+    previousZ = zMm;
   }
 
   return {
@@ -299,6 +443,7 @@ function buildInnerAvailabilityProfile(params: VaseParameters) {
     topZ,
     zValues,
     availableDiameters,
+    innerContours,
   };
 }
 
@@ -333,41 +478,268 @@ function getInterpolatedAvailableDiameter(
 function getPresetDiameterAtDepth(preset: InsertPreset, depthFromTopMm: number): number {
   const bottomDiameterMm = preset.bottomDiameterMm ?? preset.topDiameterMm;
   if (preset.heightMm <= Number.EPSILON) {
-    return Math.max(preset.topDiameterMm, bottomDiameterMm);
+    return Math.max(preset.topDiameterMm, bottomDiameterMm) + preset.clearanceMm;
   }
 
   const ratio = Math.max(0, Math.min(1, depthFromTopMm / preset.heightMm));
-  return preset.topDiameterMm * (1 - ratio) + bottomDiameterMm * ratio;
+  return preset.topDiameterMm * (1 - ratio) + bottomDiameterMm * ratio + preset.clearanceMm;
+}
+
+function getPresetRequiredHeight(preset: InsertPreset): number {
+  return preset.type === "eco_cup" ? preset.heightMm + preset.clearanceMm : preset.heightMm;
+}
+
+function getInterpolatedInnerContour(
+  zMm: number,
+  availabilityProfile: ReturnType<typeof buildInnerAvailabilityProfile>,
+): Float64Array {
+  const { zValues, innerContours } = availabilityProfile;
+  if (zMm <= zValues[0]) {
+    return innerContours[0];
+  }
+  if (zMm >= zValues[zValues.length - 1]) {
+    return innerContours[innerContours.length - 1];
+  }
+
+  for (let index = 0; index < zValues.length - 1; index++) {
+    const zStart = zValues[index];
+    const zEnd = zValues[index + 1];
+    if (zStart <= zMm && zMm <= zEnd) {
+      const startContour = innerContours[index];
+      const endContour = innerContours[index + 1];
+      if (zEnd === zStart || startContour.length !== endContour.length) {
+        return startContour;
+      }
+
+      const interpolation = (zMm - zStart) / (zEnd - zStart);
+      return interpolateContours(startContour, endContour, interpolation);
+    }
+  }
+
+  return innerContours[innerContours.length - 1];
+}
+
+function getContourBounds(contour: Float64Array) {
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (let index = 0; index < contour.length / 2; index++) {
+    const x = contour[index * 2];
+    const y = contour[index * 2 + 1];
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+  }
+
+  return { minX, maxX, minY, maxY };
+}
+
+function getCenterClearanceForRigidInsert(
+  contour: Float64Array,
+  centerX: number,
+  centerY: number,
+  requiredRadius: number,
+): number {
+  return pointInPolygon(contour, centerX, centerY)
+    ? distanceToPolygonEdges(contour, centerX, centerY) - requiredRadius
+    : Number.NEGATIVE_INFINITY;
+}
+
+function computeRigidEcoCupFitClearance(
+  preset: InsertPreset,
+  availabilityProfile: ReturnType<typeof buildInnerAvailabilityProfile>,
+): number {
+  const requiredHeight = getPresetRequiredHeight(preset);
+  const insertBottomZ = availabilityProfile.topZ - requiredHeight;
+  if (insertBottomZ + INSERT_DIAMETER_TOLERANCE_MM < availabilityProfile.bottomZ) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const sampledSections = Array.from({ length: INSERT_FIT_SAMPLES + 1 }, (_, sampleIndex) => {
+    const ratio = sampleIndex / INSERT_FIT_SAMPLES;
+    const depthFromTopMm = requiredHeight * ratio;
+    const zMm = availabilityProfile.topZ - depthFromTopMm;
+    const presetDepthFromTopMm = Math.min(preset.heightMm, depthFromTopMm);
+    return {
+      contour: getInterpolatedInnerContour(zMm, availabilityProfile),
+      requiredRadius: getPresetDiameterAtDepth(preset, presetDepthFromTopMm) / 2,
+    };
+  });
+
+  const initialBounds = sampledSections.reduce(
+    (bounds, section) => {
+      const sectionBounds = getContourBounds(section.contour);
+      return {
+        minX: Math.max(bounds.minX, sectionBounds.minX + section.requiredRadius),
+        maxX: Math.min(bounds.maxX, sectionBounds.maxX - section.requiredRadius),
+        minY: Math.max(bounds.minY, sectionBounds.minY + section.requiredRadius),
+        maxY: Math.min(bounds.maxY, sectionBounds.maxY - section.requiredRadius),
+      };
+    },
+    {
+      minX: Number.NEGATIVE_INFINITY,
+      maxX: Number.POSITIVE_INFINITY,
+      minY: Number.NEGATIVE_INFINITY,
+      maxY: Number.POSITIVE_INFINITY,
+    },
+  );
+
+  if (initialBounds.minX > initialBounds.maxX || initialBounds.minY > initialBounds.maxY) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  let bestCenter = {
+    x: Math.max(initialBounds.minX, Math.min(0, initialBounds.maxX)),
+    y: Math.max(initialBounds.minY, Math.min(0, initialBounds.maxY)),
+    clearance: Number.NEGATIVE_INFINITY,
+  };
+
+  const evaluateCenter = (centerX: number, centerY: number): number => {
+    let minimumClearance = Number.POSITIVE_INFINITY;
+    for (const section of sampledSections) {
+      minimumClearance = Math.min(
+        minimumClearance,
+        getCenterClearanceForRigidInsert(
+          section.contour,
+          centerX,
+          centerY,
+          section.requiredRadius,
+        ),
+      );
+      if (minimumClearance < bestCenter.clearance - 8) {
+        break;
+      }
+    }
+    return minimumClearance;
+  };
+
+  for (const step of [4, 2, 1, 0.5]) {
+    const minX =
+      bestCenter.clearance === Number.NEGATIVE_INFINITY
+        ? initialBounds.minX
+        : Math.max(initialBounds.minX, bestCenter.x - step * 4);
+    const maxX =
+      bestCenter.clearance === Number.NEGATIVE_INFINITY
+        ? initialBounds.maxX
+        : Math.min(initialBounds.maxX, bestCenter.x + step * 4);
+    const minY =
+      bestCenter.clearance === Number.NEGATIVE_INFINITY
+        ? initialBounds.minY
+        : Math.max(initialBounds.minY, bestCenter.y - step * 4);
+    const maxY =
+      bestCenter.clearance === Number.NEGATIVE_INFINITY
+        ? initialBounds.maxY
+        : Math.min(initialBounds.maxY, bestCenter.y + step * 4);
+
+    for (let x = minX; x <= maxX; x += step) {
+      for (let y = minY; y <= maxY; y += step) {
+        const clearance = evaluateCenter(x, y);
+        if (clearance > bestCenter.clearance) {
+          bestCenter = { x, y, clearance };
+        }
+      }
+    }
+  }
+
+  return bestCenter.clearance;
+}
+
+function canFitCenteredTestTubeSupport(
+  preset: InsertPreset,
+  availabilityProfile: ReturnType<typeof buildInnerAvailabilityProfile>,
+  params: VaseParameters,
+): boolean {
+  const supportInnerRadius = Math.max(5, preset.topDiameterMm / 2 + preset.clearanceMm);
+  const supportOuterRadius = supportInnerRadius + TEST_TUBE_SUPPORT_THICKNESS_MM;
+  const placement = getTestTubePlacement(params, preset);
+  const supportBottomZ = placement.supportBottomZ;
+  const supportTopZ = placement.supportTopZ;
+
+  if (supportTopZ <= supportBottomZ) {
+    return false;
+  }
+
+  const fitSamples = [
+    supportBottomZ + 0.5,
+    supportBottomZ + (supportTopZ - supportBottomZ) * 0.33,
+    supportBottomZ + (supportTopZ - supportBottomZ) * 0.66,
+    supportTopZ,
+  ];
+
+  for (const zMm of fitSamples) {
+    const innerContour = getInterpolatedInnerContour(zMm, availabilityProfile);
+    if (!pointInPolygon(innerContour, 0, 0)) {
+      return false;
+    }
+
+    if (
+      distanceToPolygonEdges(innerContour, 0, 0) <
+      supportOuterRadius + TEST_TUBE_SUPPORT_WALL_MARGIN_MM
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function isPresetCompatible(
   preset: InsertPreset,
   availabilityProfile: ReturnType<typeof buildInnerAvailabilityProfile>,
+  params: VaseParameters,
 ): boolean {
   const availableDepthMm = availabilityProfile.topZ - availabilityProfile.bottomZ;
-  if (availableDepthMm + INSERT_DIAMETER_TOLERANCE_MM < preset.heightMm) {
+  const requiredHeight = getPresetRequiredHeight(preset);
+  if (availableDepthMm + INSERT_DIAMETER_TOLERANCE_MM < requiredHeight) {
     return false;
   }
 
   const openingDiameter = getInterpolatedAvailableDiameter(availabilityProfile.topZ, availabilityProfile);
-  const largestPresetDiameter = Math.max(preset.topDiameterMm, preset.bottomDiameterMm ?? preset.topDiameterMm);
+  const largestPresetDiameter =
+    Math.max(preset.topDiameterMm, preset.bottomDiameterMm ?? preset.topDiameterMm) +
+    preset.clearanceMm;
   if (openingDiameter + INSERT_DIAMETER_TOLERANCE_MM < largestPresetDiameter) {
     return false;
   }
 
+  if (preset.type === "test_tube") {
+    const placement = getTestTubePlacement(params, preset);
+    if (
+      placement.tubeBottomZ + INSERT_DIAMETER_TOLERANCE_MM < availabilityProfile.bottomZ ||
+      placement.tubeTopZ > availabilityProfile.topZ + INSERT_DIAMETER_TOLERANCE_MM
+    ) {
+      return false;
+    }
+
+    for (let sampleIndex = 0; sampleIndex <= INSERT_FIT_SAMPLES; sampleIndex++) {
+      const ratio = sampleIndex / INSERT_FIT_SAMPLES;
+      const zMm = placement.tubeBottomZ * (1 - ratio) + placement.tubeTopZ * ratio;
+      const availableDiameter = getInterpolatedAvailableDiameter(zMm, availabilityProfile);
+      if (availableDiameter + INSERT_DIAMETER_TOLERANCE_MM < largestPresetDiameter) {
+        return false;
+      }
+    }
+
+    return canFitCenteredTestTubeSupport(preset, availabilityProfile, params);
+  }
+
   for (let sampleIndex = 0; sampleIndex <= INSERT_FIT_SAMPLES; sampleIndex++) {
     const ratio = sampleIndex / INSERT_FIT_SAMPLES;
-    const depthFromTopMm = preset.heightMm * ratio;
+    const depthFromTopMm = requiredHeight * ratio;
     const zMm = availabilityProfile.topZ - depthFromTopMm;
     const availableDiameter = getInterpolatedAvailableDiameter(zMm, availabilityProfile);
-    const requiredDiameter = getPresetDiameterAtDepth(preset, depthFromTopMm);
+    const presetDepthFromTopMm = Math.min(preset.heightMm, depthFromTopMm);
+    const requiredDiameter = getPresetDiameterAtDepth(preset, presetDepthFromTopMm);
 
     if (availableDiameter + INSERT_DIAMETER_TOLERANCE_MM < requiredDiameter) {
       return false;
     }
   }
 
-  return true;
+  return computeRigidEcoCupFitClearance(preset, availabilityProfile) >= ECO_CUP_RIGID_MIN_CLEARANCE_MM;
 }
 
 export function analyzeWaterproofInsertCompatibility(
@@ -376,7 +748,7 @@ export function analyzeWaterproofInsertCompatibility(
   const availabilityProfile = buildInnerAvailabilityProfile(params);
 
   for (const preset of INSERT_PRESETS) {
-    if (isPresetCompatible(preset, availabilityProfile)) {
+    if (preset.type === "eco_cup" && isPresetCompatible(preset, availabilityProfile, params)) {
       return {
         presetId: preset.id,
         label: preset.label,
@@ -385,10 +757,21 @@ export function analyzeWaterproofInsertCompatibility(
     }
   }
 
-  const fallbackPreset = INSERT_PRESETS[INSERT_PRESETS.length - 1];
+  const testTubePreset = getPreferredTestTubePreset(params.heightMm);
+  if (
+    params.heightMm >= MIN_TEST_TUBE_VASE_HEIGHT_MM &&
+    isPresetCompatible(testTubePreset, availabilityProfile, params)
+  ) {
+    return {
+      presetId: testTubePreset.id,
+      label: testTubePreset.label,
+      type: testTubePreset.type,
+    };
+  }
+
   return {
-    presetId: fallbackPreset.id,
-    label: fallbackPreset.label,
-    type: fallbackPreset.type,
+    presetId: "none",
+    label: "Aucun contenant compatible",
+    type: "none",
   };
 }

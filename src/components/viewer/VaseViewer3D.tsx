@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer, SSAO, ToneMapping } from "@react-three/postprocessing";
@@ -9,185 +9,25 @@ import { VaseMesh } from "./VaseMesh";
 import { useVaseStore } from "../../store/vase-store";
 import { useUIStore } from "../../store/ui-store";
 import { useVaseMesh } from "../../hooks/useVaseMesh";
-import { buildProfileContour } from "../../engine/geometry";
-import { formatEngravingLines } from "../../engine/engraving-text";
-import type { VaseParameters } from "../../engine/types";
+import { usesLowPolyTexture } from "../../engine/textures";
+import viewer3dOffIcon from "../../assets/shop/viewer-3d-off.png";
+import viewer3dOnIcon from "../../assets/shop/viewer-3d-on.png";
 
 const ROTATE_SPEED = 0.05;
-const PREVIEW_TEXT_FIT_MARGIN_MM = 4;
-const PREVIEW_TEXT_WIDTH_FACTOR = 1.9;
-const PREVIEW_TEXT_HEIGHT_FACTOR = 0.78;
-const PREVIEW_TEXT_CANVAS_WIDTH = 1536;
-const PREVIEW_TEXT_CANVAS_HEIGHT = 512;
-const PREVIEW_TEXT_Y_OFFSET = 0.08;
-const PREVIEW_TEXT_LINE_GAP_FACTOR = 0.55;
-const PREVIEW_TEXT_BASE_FONT_SIZES = [108, 96, 96] as const;
-const PREVIEW_TEXT_LINE_WIDTH_FACTORS = [0.98, 0.98] as const;
-const PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR = 0.92;
-const PREVIEW_TEXT_SIDE_MARGIN_PX = 29;
 
-function fitPreviewText(
-  context: CanvasRenderingContext2D,
-  text: string,
-  baseFontSize: number,
-  targetWidth: number,
-): number {
-  context.font = `700 ${baseFontSize}px Arial`;
-  const measuredWidth = context.measureText(text).width;
-  if (measuredWidth <= 0) return baseFontSize;
-  return (baseFontSize * targetWidth) / measuredWidth;
-}
-
-function computePreviewBottomFitRadius(params: VaseParameters): number {
-  const bottomProfiles = [...params.profiles]
-    .filter((profile) => profile.zRatio === 0)
-    .sort((a, b) => a.zRatio - b.zRatio);
-  const bottomProfile = bottomProfiles[0] ?? [...params.profiles].sort((a, b) => a.zRatio - b.zRatio)[0];
-  if (!bottomProfile) return 0;
-
-  const contour = buildProfileContour(bottomProfile, Math.min(params.radialSamples, 64));
-  let minRadius = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < contour.length / 2; i++) {
-    const x = contour[i * 2];
-    const y = contour[i * 2 + 1];
-    minRadius = Math.min(minRadius, Math.hypot(x, y));
-  }
-  return Math.max(0, minRadius - PREVIEW_TEXT_FIT_MARGIN_MM);
-}
-
-function PreviewEngravingOverlay(
-  { params, seed, isSeedModified }: { params: VaseParameters; seed: number; isSeedModified: boolean },
-) {
-  const lines = useMemo(() => formatEngravingLines(seed, isSeedModified), [isSeedModified, seed]);
-  const fitRadius = useMemo(() => computePreviewBottomFitRadius(params), [params]);
-
-  const texture = useMemo(() => {
-    if (!params.closeBottom || fitRadius <= 8) return null;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = PREVIEW_TEXT_CANVAS_WIDTH;
-    canvas.height = PREVIEW_TEXT_CANVAS_HEIGHT;
-    const context = canvas.getContext("2d");
-    if (!context) return null;
-
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.lineJoin = "round";
-    context.strokeStyle = "rgba(210,210,210,0.45)";
-    context.fillStyle = "rgba(28,28,28,0.45)";
-
-    const centerX = canvas.width / 2;
-    const lineFontSizes = lines.map((line, index) => {
-      const widthFactor = PREVIEW_TEXT_LINE_WIDTH_FACTORS[index];
-      if (widthFactor === undefined) {
-        return PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1];
-      }
-      return fitPreviewText(
-        context,
-        line,
-        PREVIEW_TEXT_BASE_FONT_SIZES[index] ?? PREVIEW_TEXT_BASE_FONT_SIZES[PREVIEW_TEXT_BASE_FONT_SIZES.length - 1],
-        canvas.width * widthFactor,
-      );
-    });
-    const referenceFontSize = lineFontSizes[Math.min(1, lineFontSizes.length - 1)] ?? PREVIEW_TEXT_BASE_FONT_SIZES[1];
-    for (let index = PREVIEW_TEXT_LINE_WIDTH_FACTORS.length; index < lineFontSizes.length; index += 1) {
-      lineFontSizes[index] = referenceFontSize * PREVIEW_TEXT_SIGNATURE_HEIGHT_FACTOR;
-    }
-    const maxHeight = canvas.height * 0.82;
-    const computeLayout = (fontSizes: number[]) => {
-      const lineGap = Math.max(20, Math.max(...fontSizes) * PREVIEW_TEXT_LINE_GAP_FACTOR);
-      const totalHeight =
-        fontSizes.reduce((sum, fontSize) => sum + fontSize, 0) +
-        lineGap * Math.max(0, fontSizes.length - 1);
-      const yScale = totalHeight > maxHeight ? maxHeight / totalHeight : 1;
-      const scaledLineHeights = fontSizes.map((fontSize) => fontSize * yScale);
-      const scaledGap = lineGap * yScale;
-      let currentY =
-        canvas.height * 0.5 -
-        (scaledLineHeights.reduce((sum, fontSize) => sum + fontSize, 0) +
-          scaledGap * Math.max(0, scaledLineHeights.length - 1)) *
-          0.5;
-      const lineCenters = scaledLineHeights.map((lineHeight) => {
-        const centerY = currentY + lineHeight * 0.5;
-        currentY += lineHeight + scaledGap;
-        return centerY;
-      });
-      return { lineGap, yScale, scaledLineHeights, scaledGap, lineCenters };
-    };
-
-    const firstLayout = computeLayout(lineFontSizes);
-    const previewRadiusY = maxHeight * 0.5;
-    const safeFontSizes = lineFontSizes.map((fontSize, index) => {
-      const dy = (firstLayout.lineCenters[index] ?? canvas.height * 0.5) - canvas.height * 0.5;
-      const halfChordFactor = Math.sqrt(Math.max(0, 1 - (dy / previewRadiusY) ** 2));
-      const baseWidth =
-        canvas.width *
-        (PREVIEW_TEXT_LINE_WIDTH_FACTORS[index] ??
-          (PREVIEW_TEXT_LINE_WIDTH_FACTORS[PREVIEW_TEXT_LINE_WIDTH_FACTORS.length - 1] * 0.55));
-      const allowedWidth = Math.max(0, baseWidth * halfChordFactor - PREVIEW_TEXT_SIDE_MARGIN_PX * 2);
-      if (allowedWidth <= 0) return fontSize;
-      context.font = `700 ${fontSize}px Arial`;
-      const measuredWidth = context.measureText(lines[index]).width;
-      if (measuredWidth <= 0 || measuredWidth <= allowedWidth) return fontSize;
-      return fontSize * (allowedWidth / measuredWidth);
-    });
-
-    const finalLayout = computeLayout(safeFontSizes);
-
-    lines.forEach((line, index) => {
-      const fontSize = safeFontSizes[index];
-      const lineCenterY = finalLayout.lineCenters[index];
-      context.font = `700 ${fontSize}px Arial`;
-      context.lineWidth = Math.max(4, fontSize * 0.09);
-      context.save();
-      context.translate(centerX, lineCenterY);
-      context.scale(1, finalLayout.yScale);
-      context.strokeText(line, 0, 0);
-      context.fillText(line, 0, 0);
-      context.restore();
-    });
-
-    const nextTexture = new THREE.CanvasTexture(canvas);
-    nextTexture.colorSpace = THREE.SRGBColorSpace;
-    nextTexture.needsUpdate = true;
-    return nextTexture;
-  }, [fitRadius, lines, params.closeBottom]);
-
-  useEffect(() => () => texture?.dispose(), [texture]);
-
-  if (!texture || !params.closeBottom || fitRadius <= 8) return null;
-
-  const width = fitRadius * PREVIEW_TEXT_WIDTH_FACTOR;
-  const height = fitRadius * PREVIEW_TEXT_HEIGHT_FACTOR;
-  const y = params.bottomThicknessMm - params.heightMm / 2 + PREVIEW_TEXT_Y_OFFSET;
-
-  return (
-    <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, y, 0]}
-      renderOrder={2}
-    >
-      <planeGeometry args={[width, height]} />
-      <meshBasicMaterial
-        map={texture}
-        transparent
-        opacity={0.72}
-        alphaTest={0.12}
-        side={THREE.DoubleSide}
-        depthWrite={false}
-        polygonOffset
-        polygonOffsetFactor={-1}
-      />
-    </mesh>
-  );
-}
-
-function KeyboardControls({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
+function KeyboardControls({
+  controlsRef,
+  enabled,
+}: {
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+  enabled: boolean;
+}) {
   const { camera } = useThree();
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      if (!enabled) return;
+
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
 
@@ -220,7 +60,7 @@ function KeyboardControls({ controlsRef }: { controlsRef: React.RefObject<OrbitC
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [camera, controlsRef]);
+  }, [camera, controlsRef, enabled]);
 
   return null;
 }
@@ -327,6 +167,9 @@ interface VaseViewer3DProps {
   colorOpacity?: number;
   colorEmissiveIntensity?: number;
   shadingOverride?: number;
+  forceTestTubeSupport?: boolean;
+  suppressTestTubeSupport?: boolean;
+  captureToStore?: boolean;
 }
 
 export function VaseViewer3D({
@@ -335,6 +178,9 @@ export function VaseViewer3D({
   colorOpacity = 1,
   colorEmissiveIntensity = 0,
   shadingOverride,
+  forceTestTubeSupport = false,
+  suppressTestTubeSupport = false,
+  captureToStore,
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
@@ -348,19 +194,19 @@ export function VaseViewer3D({
   const clippingHeight = useUIStore((s) => s.clippingHeight);
   const rotationMode = useUIStore((s) => s.rotationMode);
   const rotationSpeed = useUIStore((s) => s.rotationSpeed);
-  const meshData = useVaseMesh(params, seed);
-  // vaso-shop never exposes editable generation controls, so engraved seed labels stay canonical.
-  const showSeedModified = false;
+  const meshData = useVaseMesh(params, seed, forceTestTubeSupport, suppressTestTubeSupport);
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const lastTapRef = useRef(0);
+  const [interactionEnabled, setInteractionEnabled] = useState(false);
   const paramsKey = JSON.stringify(params);
   const isPreview = mode === "preview";
+  const shouldCaptureToStore = captureToStore ?? !isPreview;
   const resolvedColor = colorOverride ?? vaseColor;
   const resolvedOpacity = Math.min(1, Math.max(0.08, colorOpacity));
   const resolvedEmissiveIntensity = Math.min(0.5, Math.max(0, colorEmissiveIntensity));
   const resolvedShading = Math.min(100, Math.max(0, shadingOverride ?? shading));
   const resolvedWireframe = isPreview ? false : wireframe;
-  const resolvedFlatShading = isPreview ? false : flatShading;
+  const resolvedFlatShading = flatShading || usesLowPolyTexture(params);
   const resolvedRotationMode = isPreview ? "vase" : rotationMode;
   const resolvedRotationSpeed = isPreview ? 0.35 : rotationSpeed;
 
@@ -378,9 +224,34 @@ export function VaseViewer3D({
 
   return (
     <div
-      className={`viewer-3d${isPreview ? " viewer-3d-preview" : ""}`}
-      onTouchEnd={isPreview ? undefined : handleDoubleTap}
+      className={`viewer-3d${isPreview ? " viewer-3d-preview" : ""}${
+        !isPreview && interactionEnabled ? " viewer-3d-unlocked" : " viewer-3d-locked"
+      }`}
+      onTouchEnd={isPreview || !interactionEnabled ? undefined : handleDoubleTap}
     >
+      {!isPreview && (
+        <button
+          className={`viewer-3d-interaction-toggle${
+            interactionEnabled ? " viewer-3d-interaction-toggle-active" : ""
+          }`}
+          type="button"
+          onClick={() => setInteractionEnabled((currentValue) => !currentValue)}
+          aria-pressed={interactionEnabled}
+          aria-label={
+            interactionEnabled ? "Verrouiller la manipulation 3D" : "Activer la manipulation 3D"
+          }
+          title={
+            interactionEnabled ? "Manipulation 3D active" : "Activer la rotation et le zoom 3D"
+          }
+        >
+          <img
+            className="viewer-3d-toggle-icon"
+            src={interactionEnabled ? viewer3dOnIcon : viewer3dOffIcon}
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
+      )}
       <Canvas
         camera={{
           position: isPreview ? [175, 130, 175] : [220, 160, 220],
@@ -425,8 +296,6 @@ export function VaseViewer3D({
           />
         )}
 
-        <PreviewEngravingOverlay params={params} seed={seed} isSeedModified={showSeedModified} />
-
         {!isPreview && (
           <mesh
             rotation={[-Math.PI / 2, 0, 0]}
@@ -440,22 +309,26 @@ export function VaseViewer3D({
 
         {/* <ContactShadows position={[0, -0.01, 0]} opacity={0.4} scale={300} blur={2} far={200} /> */}
 
+        {shouldCaptureToStore && <ScreenshotBridge />}
+
         {!isPreview && (
           <>
             <OrbitControls
               ref={controlsRef}
+              enabled={interactionEnabled}
               enableDamping
               dampingFactor={0.1}
               minDistance={50}
               maxDistance={500}
             />
-            <ScreenshotBridge />
-            <KeyboardControls controlsRef={controlsRef} />
+            <KeyboardControls controlsRef={controlsRef} enabled={interactionEnabled} />
             <Autoplay controlsRef={controlsRef} paramsKey={paramsKey} rotationMode={rotationMode} />
           </>
         )}
 
-        {!isPreview && showClipping && <ClippingPlane heightPercent={clippingHeight} maxHeight={params.heightMm} />}
+        {!isPreview && showClipping && (
+          <ClippingPlane heightPercent={clippingHeight} maxHeight={params.heightMm} />
+        )}
         {!isPreview && showGrid && (
           <gridHelper
             args={[300, 30, "#333333", "#333333"]}
@@ -464,7 +337,7 @@ export function VaseViewer3D({
         )}
 
         {!isPreview && (
-          <EffectComposer>
+          <EffectComposer enableNormalPass>
             <SSAO radius={0.03} intensity={5} luminanceInfluence={0.3} />
             <ToneMapping mode={ToneMappingMode.AGX} />
           </EffectComposer>

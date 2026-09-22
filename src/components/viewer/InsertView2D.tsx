@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { generateOuterProfilePoints } from "../../engine/mesh-builder";
-import { INSERT_PRESETS, type WaterproofInsertCompatibility } from "../../engine/insert-compatibility";
+import {
+  INSERT_PRESETS,
+  type WaterproofInsertCompatibility,
+} from "../../engine/insert-compatibility";
 import type { VaseParameters } from "../../engine/types";
 
 interface InsertView2DProps {
@@ -8,12 +11,10 @@ interface InsertView2DProps {
   compatibility: WaterproofInsertCompatibility;
 }
 
-function formatInsertDimensions(
-  preset: (typeof INSERT_PRESETS)[number],
-): string {
+function formatInsertDimensions(preset: (typeof INSERT_PRESETS)[number]): string {
   const bottomDiameter = preset.bottomDiameterMm ?? preset.topDiameterMm;
   if (preset.type === "test_tube") {
-    return "Hauteur 75 mm · Ø 20 mm";
+    return "Hauteur 75 mm · Ø 12 mm · fond plat";
   }
 
   return `Hauteur ${preset.heightMm - 3} mm · Ø↑ ${preset.topDiameterMm - 3} mm · Ø↓ ${bottomDiameter - 3} mm`;
@@ -64,8 +65,14 @@ export function InsertView2D({ params, compatibility }: InsertView2DProps) {
   }
 
   const innerBottomZ = Math.min(params.bottomThicknessMm, params.heightMm);
-  const insertBottomZ = innerBottomZ;
-  const insertTopZ = Math.min(params.heightMm, innerBottomZ + preset.heightMm);
+  const insertTopZ =
+    preset.type === "test_tube"
+      ? Math.max(innerBottomZ, params.heightMm - 5)
+      : Math.min(params.heightMm, innerBottomZ + preset.heightMm);
+  const insertBottomZ =
+    preset.type === "test_tube"
+      ? Math.max(innerBottomZ, insertTopZ - preset.heightMm)
+      : innerBottomZ;
   const insertBottomRadius = (preset.bottomDiameterMm ?? preset.topDiameterMm) / 2;
   const insertTopRadius = preset.topDiameterMm / 2;
   const insertLeftBottomX = margin + plotWidth / 2 - (insertBottomRadius / maxR) * (plotWidth / 2);
@@ -74,13 +81,22 @@ export function InsertView2D({ params, compatibility }: InsertView2DProps) {
   const insertRightTopX = margin + plotWidth / 2 + (insertTopRadius / maxR) * (plotWidth / 2);
   const insertBottomY = height - margin - (insertBottomZ / maxZ) * plotHeight;
   const insertTopY = height - margin - (insertTopZ / maxZ) * plotHeight;
-  const insertPath = [
-    `M${insertLeftBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
-    `L${insertLeftTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
-    `L${insertRightTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
-    `L${insertRightBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
-    "Z",
-  ].join(" ");
+  const insertPath =
+    preset.type === "test_tube"
+      ? [
+          `M${insertLeftBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
+          `L${insertLeftTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
+          `L${insertRightTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
+          `L${insertRightBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
+          "Z",
+        ].join(" ")
+      : [
+          `M${insertLeftBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
+          `L${insertLeftTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
+          `L${insertRightTopX.toFixed(1)},${insertTopY.toFixed(1)}`,
+          `L${insertRightBottomX.toFixed(1)},${insertBottomY.toFixed(1)}`,
+          "Z",
+        ].join(" ");
 
   return (
     <div className="shop-insert-view-card">
