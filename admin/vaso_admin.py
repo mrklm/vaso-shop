@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 import shutil
 import subprocess
 import tempfile
@@ -1633,8 +1635,16 @@ class VasoAdminApp(tk.Tk):
         )
 
     def run_git_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        if getattr(sys, "frozen", False):
+            original = env.pop("LD_LIBRARY_PATH_ORIG", None)
+            if original is None:
+                env.pop("LD_LIBRARY_PATH", None)
+            else:
+                env["LD_LIBRARY_PATH"] = original
         process = subprocess.run(
             ["git", *args],
+            env=env,
             cwd=REPO_ROOT,
             text=True,
             capture_output=True,
@@ -2018,7 +2028,51 @@ class VasoAdminApp(tk.Tk):
         self.output_text.see("end")
 
 
+def select_packaged_repository() -> bool:
+    """Locate writable shop data outside the read-only AppImage."""
+    global REPO_ROOT, CONFIG_PATH, HERO_DIR, ADMIN_SETTINGS_PATH
+    state_dir = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "vaso-admin"
+    state_path = state_dir / "repository.json"
+    candidates = []
+    if os.environ.get("VASO_SHOP_DIR"):
+        candidates.append(Path(os.environ["VASO_SHOP_DIR"]).expanduser())
+    try:
+        candidates.append(Path(json.loads(state_path.read_text())["repository"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    if os.environ.get("APPIMAGE"):
+        candidates.append(Path(os.environ["APPIMAGE"]).resolve().parent)
+    candidates.append(Path.cwd())
+    repo = next((p for candidate in candidates for p in (candidate, *candidate.parents)
+                 if (p / "public/config/shop-config.json").is_file() and (p / ".git").exists()), None)
+    if repo is None:
+        root = tk.Tk()
+        root.withdraw()
+        while True:
+            selected = filedialog.askdirectory(parent=root, title="Sélectionner le dossier vaso-shop")
+            if not selected:
+                root.destroy()
+                return False
+            repo = Path(selected)
+            if (repo / "public/config/shop-config.json").is_file() and (repo / ".git").exists():
+                break
+            messagebox.showerror("VASO-Admin", "Choisis le dépôt vaso-shop contenant public/config/shop-config.json et .git.", parent=root)
+        root.destroy()
+    REPO_ROOT = repo.resolve()
+    CONFIG_PATH = REPO_ROOT / "public/config/shop-config.json"
+    HERO_DIR = REPO_ROOT / "public/images/hero"
+    ADMIN_SETTINGS_PATH = REPO_ROOT / "admin/.vaso_admin_settings.json"
+    try:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps({"repository": str(REPO_ROOT)}) + "\n")
+    except OSError:
+        pass  # The app remains usable when the preference cannot be saved.
+    return True
+
+
 def main() -> None:
+    if getattr(sys, "frozen", False) and not select_packaged_repository():
+        return
     if not CONFIG_PATH.exists():
         messagebox.showerror("VASO-Admin", f"Configuration introuvable : {CONFIG_PATH}")
         raise SystemExit(1)

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=VASO-Admin
+Comment=Gestion de la boutique VASO
+Exec=vaso-admin
+Icon=vaso-admin
+Terminal=false
+Categories=Office;

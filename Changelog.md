@@ -7,6 +7,12 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [Non publié]
+
+### Ajouté
+- Build Linux AppImage de VASO-Admin avec Python, Tkinter et Pillow embarqués.
+- Sélection et mémorisation du dépôt vaso-shop pour le lancement de l’application autonome.
+
 ## [1.1.92] - 2026-05-16
 
 ### Modifié
