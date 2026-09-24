@@ -7,6 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.136] - 2026-09-24
+
+### Modifié
+- Compacte les dimensions sur deux colonnes et réduit les illustrations et espacements du contenant sur mobile.
+
+### Corrigé
+- Permet le défilement tactile depuis la zone 3D lorsque la manipulation du vase est désactivée.
+
 ## [1.1.135] - 2026-09-24
 
 ### Modifié

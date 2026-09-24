@@ -268,6 +268,7 @@ export function VaseViewer3D({
         </div>
       )}
       <Canvas
+        className="viewer-3d-canvas"
         frameloop={!renderingActive ? "never" : isPreview && staticPreview ? "demand" : "always"}
         dpr={mobileQuality ? 1 : [1, 2]}
         camera={{

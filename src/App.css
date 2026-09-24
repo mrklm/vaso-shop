@@ -2126,6 +2126,16 @@
   pointer-events: none;
 }
 
+/* OrbitControls also captures gestures on the Canvas wrapper. */
+.viewer-3d-locked {
+  touch-action: pan-y pinch-zoom;
+}
+
+.viewer-3d-locked .viewer-3d-canvas {
+  pointer-events: none;
+  touch-action: pan-y pinch-zoom !important;
+}
+
 .viewer-3d-locked canvas {
   pointer-events: none;
 }
@@ -2526,4 +2536,35 @@
   place-items: center;
   pointer-events: none;
   color: var(--color-fg);
+}
+
+
+@media (width <= 900px) {
+  .shop-stats,
+  .shop-order-step-model .shop-order-summary-wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .shop-stats > .shop-stat:nth-child(n + 5) {
+    grid-column: 1 / -1;
+  }
+
+  .shop-stats > .shop-stat,
+  .shop-order-step-model .shop-order-summary-wide > .shop-stat {
+    min-width: 0;
+    padding: 8px 10px;
+    overflow-wrap: anywhere;
+  }
+
+  .shop-order-step-model .shop-container-illustrations {
+    margin-top: 8px;
+    width: min(61.3333%, 200px);
+    height: calc(clamp(220px, 25vw, 350px) * 2 / 3);
+  }
+
+  .shop-order-step-model .shop-insert-view-slot {
+    min-height: 0;
+    padding-top: 0;
+  }
 }
