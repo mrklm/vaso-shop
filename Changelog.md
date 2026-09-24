@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.137] - 2026-09-24
+
+### Corrigé
+- Recentre les illustrations du contenant et le bouton « Retour à la génération » sur mobile.
+
 ## [1.1.136] - 2026-09-24
 
 ### Modifié

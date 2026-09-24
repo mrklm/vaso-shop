@@ -2557,6 +2557,13 @@
     overflow-wrap: anywhere;
   }
 
+  /* Offset half of the step number column (38px + 10px gap). */
+  .shop-order-step-model .shop-container-illustrations,
+  .shop-order-step-model .shop-return-generation-button {
+    position: relative;
+    left: -24px;
+  }
+
   .shop-order-step-model .shop-container-illustrations {
     margin-top: 8px;
     width: min(61.3333%, 200px);
