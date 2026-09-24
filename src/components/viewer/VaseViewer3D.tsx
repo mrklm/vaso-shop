@@ -88,10 +88,12 @@ function Autoplay({
   controlsRef,
   paramsKey,
   rotationMode,
+  interactionEnabled,
 }: {
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
   paramsKey: string;
   rotationMode: "camera" | "vase";
+  interactionEnabled: boolean;
 }) {
   const autoRotate = useUIStore((s) => s.autoRotate);
   const setAutoRotate = useUIStore((s) => s.setAutoRotate);
@@ -101,7 +103,9 @@ function Autoplay({
     const controls = controlsRef.current;
     if (!controls) return;
 
-    const stop = () => setAutoRotate(false);
+    const stop = () => {
+      if (interactionEnabled) setAutoRotate(false);
+    };
 
     const dom = controls.domElement as HTMLElement | undefined;
     if (!dom) return;
@@ -114,7 +118,7 @@ function Autoplay({
       dom.removeEventListener("wheel", stop);
       dom.removeEventListener("touchstart", stop);
     };
-  }, [controlsRef, setAutoRotate]);
+  }, [controlsRef, setAutoRotate, interactionEnabled]);
 
   // Restart rotation when params change (new vase generated)
   useEffect(() => {
@@ -206,7 +210,7 @@ export function VaseViewer3D({
   const [interactionEnabled, setInteractionEnabled] = useState(false);
   const paramsKey = JSON.stringify(params);
   const isPreview = mode === "preview";
-  const shouldCaptureToStore = captureToStore ?? !isPreview;
+  const shouldCaptureToStore = (captureToStore ?? !isPreview) && meshData !== null;
   const resolvedColor = colorOverride ?? vaseColor;
   const resolvedOpacity = Math.min(1, Math.max(0.08, colorOpacity));
   const resolvedEmissiveIntensity = Math.min(0.5, Math.max(0, colorEmissiveIntensity));
@@ -257,6 +261,11 @@ export function VaseViewer3D({
             aria-hidden="true"
           />
         </button>
+      )}
+      {!meshData && (
+        <div className="shop-mesh-loading" role="status">
+          Calcul du modèle 3D…
+        </div>
       )}
       <Canvas
         frameloop={!renderingActive ? "never" : isPreview && staticPreview ? "demand" : "always"}
@@ -323,14 +332,21 @@ export function VaseViewer3D({
           <>
             <OrbitControls
               ref={controlsRef}
-              enabled={interactionEnabled}
+              enableRotate={interactionEnabled}
+              enableZoom={interactionEnabled}
+              enablePan={interactionEnabled}
               enableDamping
               dampingFactor={0.1}
               minDistance={50}
               maxDistance={500}
             />
             <KeyboardControls controlsRef={controlsRef} enabled={interactionEnabled} />
-            <Autoplay controlsRef={controlsRef} paramsKey={paramsKey} rotationMode={rotationMode} />
+            <Autoplay
+              controlsRef={controlsRef}
+              paramsKey={paramsKey}
+              rotationMode={rotationMode}
+              interactionEnabled={interactionEnabled}
+            />
           </>
         )}
 

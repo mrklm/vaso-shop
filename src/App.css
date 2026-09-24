@@ -2517,3 +2517,13 @@
   color: var(--color-fg);
   text-align: center;
 }
+
+.shop-mesh-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: var(--color-fg);
+}

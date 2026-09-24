@@ -7,6 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.135] - 2026-09-24
+
+### Modifié
+- Déplace le calcul du modèle 3D dans un Web Worker pour éviter de bloquer l’interface.
+
+### Corrigé
+- Rétablit la rotation automatique de la vue principale lorsque la manipulation tactile est verrouillée.
+
 ## [1.1.134] - 2026-09-24
 
 ### Modifié
