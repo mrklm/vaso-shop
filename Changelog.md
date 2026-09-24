@@ -13,6 +13,15 @@ et ce projet suit un versioning de type **SemVer**.
 - Build Linux AppImage de VASO-Admin avec Python, Tkinter et Pillow embarqués.
 - Sélection et mémorisation du dépôt vaso-shop pour le lancement de l’application autonome.
 
+## [1.1.132] - 2026-09-24
+
+### Modifié
+- Ajoute sur mobile une barre persistante avec statut boutique, panier et informations atelier dépliables.
+- Conserve la boutique à droite de l’accueil à 1024 px.
+
+### Corrigé
+- Évite le chevauchement du grand titre et du bandeau VASO SHOP sur mobile.
+
 ## [1.1.131] - 2026-09-06
 
 ### Modifié

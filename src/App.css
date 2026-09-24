@@ -2189,7 +2189,6 @@
 }
 
 @media (width <= 1080px) {
-  .shop-hero,
   .shop-stage,
   .shop-inline-actions,
   .shop-stage-intro,
@@ -2270,9 +2269,24 @@
     align-items: start;
   }
 
+  .shop-kicker {
+    position: static;
+    margin-bottom: 24px;
+  }
+
+  .shop-copy h1 {
+    max-width: 18ch;
+  }
+
   .shop-hero-media {
     width: min(100%, 420px);
     justify-content: flex-start;
+  }
+}
+
+@media (width <= 900px) {
+  .shop-hero {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2319,5 +2333,98 @@
 
   .shop-inline-actions {
     grid-template-columns: 1fr;
+  }
+}
+
+
+.shop-mobile-bar,
+.shop-mobile-info {
+  display: none;
+}
+
+@media (width <= 900px) {
+  .shop-mobile-bar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+    border-bottom: 1px solid var(--color-line);
+    background: #f7f1e8;
+  }
+
+  .shop-mobile-bar .shop-status-badge {
+    justify-self: start;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 0.68rem;
+  }
+
+  .shop-mobile-info-toggle {
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: var(--color-panel);
+    color: var(--color-fg);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .shop-mobile-info-toggle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .shop-mobile-bar .shop-cart-button {
+    justify-self: end;
+    width: 44px;
+    height: 44px;
+  }
+
+  .shop-mobile-bar .shop-cart-button img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .shop-mobile-info:not([hidden]) {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    background: #f7f1e8;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .shop-mobile-info .shop-status-banner {
+    margin-top: 0;
+  }
+
+  .shop-mobile-info .shop-story-workshop {
+    grid-template-rows: auto auto auto;
+    min-height: 0;
+  }
+
+  .shop-mobile-info .shop-story-contact {
+    margin-top: 12px;
+    padding-left: 0;
+  }
+
+  .shop-mobile-info .shop-workshop-title-icon {
+    margin-right: 8px;
+  }
+
+  .shop-mobile-info .shop-workshop-title-flag {
+    width: 48px;
+    margin-left: 8px;
+  }
+
+  .shop-hero > .shop-current-card {
+    display: none;
   }
 }

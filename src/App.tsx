@@ -510,6 +510,7 @@ function App() {
   const [shopConfigError, setShopConfigError] = useState("");
   const [cartItems, setCartItems] = useState<ShopCartItem[]>(() => readStoredCartItems());
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
+  const [isMobileInfoOpen, setIsMobileInfoOpen] = useState(false);
   const [cartItemBeingEditedId, setCartItemBeingEditedId] = useState<string | null>(null);
   const [isCheckoutSectionVisible, setIsCheckoutSectionVisible] = useState(false);
   const stageSectionRef = useRef<HTMLElement | null>(null);
@@ -1381,8 +1382,93 @@ function App() {
     );
   }
 
+  const workshopDetails = (
+    <div className="shop-story shop-story-workshop">
+              <div className="shop-story-head">
+                <div className="shop-workshop-title-row">
+                  <img
+                    className="shop-workshop-title-icon"
+                    src={workshopVasoIcon}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <p className="shop-panel-title shop-workshop-title">L'Atelier Vaso</p>
+                  <img
+                    className="shop-workshop-title-flag"
+                    src={workshopBretonFlag}
+                    alt=""
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+              <div className="shop-workshop-body">
+                <div className="shop-sublead shop-workshop-note">
+                  {renderWorkshopNote(shopConfig.messages.atelierNote)}
+                </div>
+              </div>
+              <div className="shop-story-contact">
+                <span>{shopConfig.messages.contactPrompt}</span>
+                <button
+                  className="shop-contact-button"
+                  type="button"
+                  disabled={!canContactShop}
+                  onClick={() => {
+                    if (!canContactShop) {
+                      return;
+                    }
+
+                    window.location.href = createShopContactMailto(
+                      contactEmail,
+                      contactEmailSubject,
+                      contactBodyWithModel,
+                    );
+                  }}
+                  title={canContactShop ? contactEmail : "Adresse mail de contact non renseignee"}
+                >
+                  {shopConfig.messages.contactButtonLabel}
+                </button>
+              </div>
+            </div>
+  );
+
   return (
     <div className="shop-app">
+      <header className="shop-mobile-bar" aria-label="Boutique">
+        <span className={`shop-status-badge shop-status-${shopConfig.shopStatus.state}`}>
+          {shopConfig.shopStatus.label}
+        </span>
+        <button
+          className="shop-mobile-info-toggle"
+          type="button"
+          aria-expanded={isMobileInfoOpen}
+          aria-controls="shop-mobile-info"
+          onClick={() => setIsMobileInfoOpen((open) => !open)}
+        >
+          Infos <span aria-hidden="true">{isMobileInfoOpen ? "▴" : "▾"}</span>
+        </button>
+        <button
+          className="shop-cart-button"
+          type="button"
+          onClick={() => setIsCartModalOpen(true)}
+          aria-label={`Panier, ${cartItemCount} article${cartItemCount > 1 ? "s" : ""}`}
+        >
+          <img src={cartIcon} alt="" aria-hidden="true" />
+          {cartItemCount > 0 ? <span className="shop-cart-badge">{cartItemCount}</span> : null}
+        </button>
+      </header>
+      <section
+        className="shop-mobile-info"
+        id="shop-mobile-info"
+        aria-label="Informations de l’Atelier Vaso"
+        hidden={!isMobileInfoOpen}
+      >
+        <div className="shop-status-banner">
+          {shopConfig.messages.shippingLeadTime ? <p className="shop-status-note">{shopConfig.messages.shippingLeadTime}</p> : null}
+          {shopConfig.shopStatus.message ? <p className="shop-status-note">{shopConfig.shopStatus.message}</p> : null}
+          {shopConfig.messages.temporaryNotice ? <p className="shop-status-note">{shopConfig.messages.temporaryNotice}</p> : null}
+        </div>
+        {workshopDetails}
+      </section>
       <main className="shop-shell">
         <section className="shop-hero">
           <div className="shop-copy">
@@ -1506,52 +1592,7 @@ function App() {
               </div>
             </div>
 
-            <div className="shop-story shop-story-workshop">
-              <div className="shop-story-head">
-                <div className="shop-workshop-title-row">
-                  <img
-                    className="shop-workshop-title-icon"
-                    src={workshopVasoIcon}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <p className="shop-panel-title shop-workshop-title">L'Atelier Vaso</p>
-                  <img
-                    className="shop-workshop-title-flag"
-                    src={workshopBretonFlag}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                </div>
-              </div>
-              <div className="shop-workshop-body">
-                <div className="shop-sublead shop-workshop-note">
-                  {renderWorkshopNote(shopConfig.messages.atelierNote)}
-                </div>
-              </div>
-              <div className="shop-story-contact">
-                <span>{shopConfig.messages.contactPrompt}</span>
-                <button
-                  className="shop-contact-button"
-                  type="button"
-                  disabled={!canContactShop}
-                  onClick={() => {
-                    if (!canContactShop) {
-                      return;
-                    }
-
-                    window.location.href = createShopContactMailto(
-                      contactEmail,
-                      contactEmailSubject,
-                      contactBodyWithModel,
-                    );
-                  }}
-                  title={canContactShop ? contactEmail : "Adresse mail de contact non renseignee"}
-                >
-                  {shopConfig.messages.contactButtonLabel}
-                </button>
-              </div>
-            </div>
+            {workshopDetails}
           </aside>
         </section>
 
