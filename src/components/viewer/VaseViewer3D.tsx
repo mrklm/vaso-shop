@@ -170,6 +170,7 @@ interface VaseViewer3DProps {
   forceTestTubeSupport?: boolean;
   suppressTestTubeSupport?: boolean;
   captureToStore?: boolean;
+  staticPreview?: boolean;
 }
 
 export function VaseViewer3D({
@@ -181,6 +182,7 @@ export function VaseViewer3D({
   forceTestTubeSupport = false,
   suppressTestTubeSupport = false,
   captureToStore,
+  staticPreview = false,
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
@@ -208,7 +210,7 @@ export function VaseViewer3D({
   const resolvedWireframe = isPreview ? false : wireframe;
   const resolvedFlatShading = flatShading || usesLowPolyTexture(params);
   const resolvedRotationMode = isPreview ? "vase" : rotationMode;
-  const resolvedRotationSpeed = isPreview ? 0.35 : rotationSpeed;
+  const resolvedRotationSpeed = isPreview ? (staticPreview ? 0 : 0.35) : rotationSpeed;
 
   const handleDoubleTap = useCallback(
     (e: React.TouchEvent) => {
@@ -253,6 +255,7 @@ export function VaseViewer3D({
         </button>
       )}
       <Canvas
+        frameloop={isPreview && staticPreview ? "demand" : "always"}
         camera={{
           position: isPreview ? [175, 130, 175] : [220, 160, 220],
           fov: 45,

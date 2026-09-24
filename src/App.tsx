@@ -461,6 +461,22 @@ function buildShopContactBody(
 }
 
 function App() {
+  const [isMobileColorLayout, setIsMobileColorLayout] = useState(
+    () => window.matchMedia("(max-width: 900px)").matches,
+  );
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const colorPickerToggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 900px)");
+    const update = () => {
+      setIsMobileColorLayout(query.matches);
+      setIsColorPickerOpen(false);
+    };
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
   const setShowGrid = useUIStore((s) => s.setShowGrid);
   const setWireframe = useUIStore((s) => s.setWireframe);
   const setFlatShading = useUIStore((s) => s.setFlatShading);
@@ -1382,53 +1398,74 @@ function App() {
     );
   }
 
+  const colorPreview = canAccessColorStep ? (
+    <div className="shop-color-preview-card">
+      <span className="shop-panel-title">Aperçu 3D couleur</span>
+      <strong>{selectedColorLabel}</strong>
+      <div className="shop-color-preview-viewer">
+        <VaseViewer3D
+          mode="preview"
+          staticPreview={isMobileColorLayout}
+          captureToStore
+          colorOverride={selectedColor?.previewHex ?? selectedColor?.hex ?? SHOP_NEUTRAL_VASE_COLOR}
+          colorOpacity={selectedColor?.opacity ?? 1}
+          colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
+          shadingOverride={selectedColor?.previewShading}
+          forceTestTubeSupport={wantsSoliflore}
+          suppressTestTubeSupport={suppressTestTubeSupport}
+        />
+      </div>
+      <div className="shop-color-preview-note">{shopConfig.messages.colorPreviewNote}</div>
+    </div>
+  ) : null;
+
   const workshopDetails = (
     <div className="shop-story shop-story-workshop">
-              <div className="shop-story-head">
-                <div className="shop-workshop-title-row">
-                  <img
-                    className="shop-workshop-title-icon"
-                    src={workshopVasoIcon}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <p className="shop-panel-title shop-workshop-title">L'Atelier Vaso</p>
-                  <img
-                    className="shop-workshop-title-flag"
-                    src={workshopBretonFlag}
-                    alt=""
-                    aria-hidden="true"
-                  />
-                </div>
-              </div>
-              <div className="shop-workshop-body">
-                <div className="shop-sublead shop-workshop-note">
-                  {renderWorkshopNote(shopConfig.messages.atelierNote)}
-                </div>
-              </div>
-              <div className="shop-story-contact">
-                <span>{shopConfig.messages.contactPrompt}</span>
-                <button
-                  className="shop-contact-button"
-                  type="button"
-                  disabled={!canContactShop}
-                  onClick={() => {
-                    if (!canContactShop) {
-                      return;
-                    }
+      <div className="shop-story-head">
+        <div className="shop-workshop-title-row">
+          <img
+            className="shop-workshop-title-icon"
+            src={workshopVasoIcon}
+            alt=""
+            aria-hidden="true"
+          />
+          <p className="shop-panel-title shop-workshop-title">L'Atelier Vaso</p>
+          <img
+            className="shop-workshop-title-flag"
+            src={workshopBretonFlag}
+            alt=""
+            aria-hidden="true"
+          />
+        </div>
+      </div>
+      <div className="shop-workshop-body">
+        <div className="shop-sublead shop-workshop-note">
+          {renderWorkshopNote(shopConfig.messages.atelierNote)}
+        </div>
+      </div>
+      <div className="shop-story-contact">
+        <span>{shopConfig.messages.contactPrompt}</span>
+        <button
+          className="shop-contact-button"
+          type="button"
+          disabled={!canContactShop}
+          onClick={() => {
+            if (!canContactShop) {
+              return;
+            }
 
-                    window.location.href = createShopContactMailto(
-                      contactEmail,
-                      contactEmailSubject,
-                      contactBodyWithModel,
-                    );
-                  }}
-                  title={canContactShop ? contactEmail : "Adresse mail de contact non renseignee"}
-                >
-                  {shopConfig.messages.contactButtonLabel}
-                </button>
-              </div>
-            </div>
+            window.location.href = createShopContactMailto(
+              contactEmail,
+              contactEmailSubject,
+              contactBodyWithModel,
+            );
+          }}
+          title={canContactShop ? contactEmail : "Adresse mail de contact non renseignee"}
+        >
+          {shopConfig.messages.contactButtonLabel}
+        </button>
+      </div>
+    </div>
   );
 
   return (
@@ -1463,9 +1500,15 @@ function App() {
         hidden={!isMobileInfoOpen}
       >
         <div className="shop-status-banner">
-          {shopConfig.messages.shippingLeadTime ? <p className="shop-status-note">{shopConfig.messages.shippingLeadTime}</p> : null}
-          {shopConfig.shopStatus.message ? <p className="shop-status-note">{shopConfig.shopStatus.message}</p> : null}
-          {shopConfig.messages.temporaryNotice ? <p className="shop-status-note">{shopConfig.messages.temporaryNotice}</p> : null}
+          {shopConfig.messages.shippingLeadTime ? (
+            <p className="shop-status-note">{shopConfig.messages.shippingLeadTime}</p>
+          ) : null}
+          {shopConfig.shopStatus.message ? (
+            <p className="shop-status-note">{shopConfig.shopStatus.message}</p>
+          ) : null}
+          {shopConfig.messages.temporaryNotice ? (
+            <p className="shop-status-note">{shopConfig.messages.temporaryNotice}</p>
+          ) : null}
         </div>
         {workshopDetails}
       </section>
@@ -1826,7 +1869,9 @@ function App() {
 
               {selectedEntry ? (
                 <>
-                  <article className={`${getOrderStepClassName(isModelStepConfirmed, true)} shop-order-step-model`}>
+                  <article
+                    className={`${getOrderStepClassName(isModelStepConfirmed, true)} shop-order-step-model`}
+                  >
                     <div className="shop-order-step-head">
                       <span className="shop-order-step-index">01</span>
                       <div>
@@ -1898,9 +1943,9 @@ function App() {
                           <p id="shop-soliflore-question">
                             Chaque vase VASO est prévu pour un contenant étanche compatible. Selon
                             ses dimensions, il sera possible d'y insérer un Eco-Cup 50 cl, 25 cl,
-                            12,5 cl, ou un tube à essai, ce qui fera du vase un soliflore.
-                            Les Eco-Cup ne sont pas fournis. Le tube à essai est fourni lorsque le
-                            mode soliflore est choisi.
+                            12,5 cl, ou un tube à essai, ce qui fera du vase un soliflore. Les
+                            Eco-Cup ne sont pas fournis. Le tube à essai est fourni lorsque le mode
+                            soliflore est choisi.
                           </p>
                           {isTestTubeCompatible ? (
                             <div className="shop-soliflore-only">
@@ -2010,73 +2055,102 @@ function App() {
                       </div>
                     </div>
                     <div className="shop-order-step-content">
+                      {isMobileColorLayout && colorPreview}
                       <div className="shop-color-block shop-color-block-journey">
-                        <label htmlFor="shop-color">Couleur PLA</label>
-                        <select
-                          id="shop-color"
-                          value={selectedColorId}
-                          onChange={(event) => setSelectedColorId(event.target.value)}
-                          disabled={!canAccessColorStep}
-                        >
-                          {availableColors.map((color) => (
-                            <option key={color.id} value={color.id}>
-                              {color.label}
-                            </option>
-                          ))}
-                        </select>
-
-                        <div className="shop-color-swatches" aria-label="Pastilles de couleur PLA">
-                          {availableColors.map((color) => (
-                            <button
-                              key={color.id}
-                              className={`shop-swatch-button ${selectedColorId === color.id ? "active" : ""}`}
-                              type="button"
-                              onClick={() => setSelectedColorId(color.id)}
+                        {isMobileColorLayout ? (
+                          <button
+                            ref={colorPickerToggleRef}
+                            className="shop-color-picker-toggle"
+                            type="button"
+                            disabled={!canAccessColorStep}
+                            aria-expanded={isColorPickerOpen}
+                            aria-controls="shop-color-grid"
+                            onClick={() => setIsColorPickerOpen((open) => !open)}
+                          >
+                            <span
+                              className="shop-swatch"
+                              style={{
+                                backgroundColor: selectedColor?.hex ?? SHOP_NEUTRAL_VASE_COLOR,
+                              }}
+                              aria-hidden="true"
+                            />
+                            <span>Couleur PLA : {selectedColorLabel}</span>
+                            <span aria-hidden="true">{isColorPickerOpen ? "▴" : "▾"}</span>
+                          </button>
+                        ) : (
+                          <>
+                            <label htmlFor="shop-color">Couleur PLA</label>
+                            <select
+                              id="shop-color"
+                              value={selectedColorId}
+                              onChange={(event) => setSelectedColorId(event.target.value)}
                               disabled={!canAccessColorStep}
-                              aria-pressed={selectedColorId === color.id}
-                              title={color.label}
                             >
-                              <span
-                                className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
-                                style={{ backgroundColor: color.hex }}
-                                aria-hidden="true"
-                              />
-                              <span className="shop-swatch-label">{color.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                        <p className="shop-color-helper">
-                          Cliquez sur une pastille pour mettre à jour la couleur sélectionnée dans
-                          la liste.
-                        </p>
+                              {availableColors.map((color) => (
+                                <option key={color.id} value={color.id}>
+                                  {color.label}
+                                </option>
+                              ))}
+                            </select>
+                          </>
+                        )}
+
+                        {(!isMobileColorLayout || isColorPickerOpen) && (
+                          <div
+                            id="shop-color-grid"
+                            className="shop-color-swatches"
+                            role="group"
+                            aria-label="Pastilles de couleur PLA"
+                            onKeyDown={(event) => {
+                              if (isMobileColorLayout && event.key === "Escape") {
+                                event.preventDefault();
+                                setIsColorPickerOpen(false);
+                                colorPickerToggleRef.current?.focus();
+                              }
+                            }}
+                          >
+                            {availableColors.map((color) => (
+                              <button
+                                key={color.id}
+                                className={`shop-swatch-button ${selectedColorId === color.id ? "active" : ""}`}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedColorId(color.id);
+                                  if (isMobileColorLayout) {
+                                    setIsColorPickerOpen(false);
+                                    colorPickerToggleRef.current?.focus();
+                                  }
+                                }}
+                                aria-label={color.label}
+                                disabled={!canAccessColorStep}
+                                aria-pressed={selectedColorId === color.id}
+                                title={color.label}
+                              >
+                                <span
+                                  className={`shop-swatch ${selectedColorId === color.id ? "active" : ""}`}
+                                  style={{ backgroundColor: color.hex }}
+                                  aria-hidden="true"
+                                />
+                                <span className="shop-swatch-label">{color.label}</span>
+                                {isMobileColorLayout && selectedColorId === color.id ? (
+                                  <span className="shop-color-check" aria-hidden="true">
+                                    ✓
+                                  </span>
+                                ) : null}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {!isMobileColorLayout && (
+                          <p className="shop-color-helper">
+                            Cliquez sur une pastille pour mettre à jour la couleur sélectionnée dans
+                            la liste.
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="shop-order-step-actions">
-                      {canAccessColorStep && (
-                        <div className="shop-color-preview-card">
-                          <span className="shop-panel-title">Aperçu 3D couleur</span>
-                          <strong>{selectedColorLabel}</strong>
-                          <div className="shop-color-preview-viewer">
-                            <VaseViewer3D
-                              mode="preview"
-                              captureToStore
-                              colorOverride={
-                                selectedColor?.previewHex ??
-                                selectedColor?.hex ??
-                                SHOP_NEUTRAL_VASE_COLOR
-                              }
-                              colorOpacity={selectedColor?.opacity ?? 1}
-                              colorEmissiveIntensity={selectedColor?.previewEmissiveIntensity ?? 0}
-                              shadingOverride={selectedColor?.previewShading}
-                              forceTestTubeSupport={wantsSoliflore}
-                              suppressTestTubeSupport={suppressTestTubeSupport}
-                            />
-                          </div>
-                          <div className="shop-color-preview-note">
-                            {shopConfig.messages.colorPreviewNote}
-                          </div>
-                        </div>
-                      )}
+                      {!isMobileColorLayout && colorPreview}
                       {canAccessColorStep ? (
                         <button
                           className="shop-button shop-button-accent"
@@ -2393,8 +2467,8 @@ function App() {
                         </div>
                       ) : selectedShippingOption.id === "pickup" ? (
                         <p className="shop-relay-hint">
-                          L'adresse exacte et le créneau de retrait seront transmis après
-                          validation de la commande.
+                          L'adresse exacte et le créneau de retrait seront transmis après validation
+                          de la commande.
                         </p>
                       ) : null}
                     </div>
@@ -2487,7 +2561,8 @@ function App() {
                             <div className="shop-relay-summary-compact">
                               <p>{relaySelection.name}</p>
                               <p>
-                                {relaySelection.address} · {relaySelection.postalCode} {relaySelection.city}
+                                {relaySelection.address} · {relaySelection.postalCode}{" "}
+                                {relaySelection.city}
                               </p>
                               <p>{relaySelection.country}</p>
                             </div>
@@ -2505,7 +2580,10 @@ function App() {
                         <p>Livraison : {shippingPriceLabel ?? "À confirmer"}</p>
                         <p>Total TTC : {shippingPriceLabel ? orderTotalLabel : "Nous contacter"}</p>
                       </div>
-                      <div className="shop-order-thumbnails" aria-label="Miniatures des vases de la commande">
+                      <div
+                        className="shop-order-thumbnails"
+                        aria-label="Miniatures des vases de la commande"
+                      >
                         {cartItems.map((item) => (
                           <div key={`${item.id}-thumb`} className="shop-order-thumbnail">
                             <img

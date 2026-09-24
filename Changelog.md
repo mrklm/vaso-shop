@@ -13,6 +13,13 @@ et ce projet suit un versioning de type **SemVer**.
 - Build Linux AppImage de VASO-Admin avec Python, Tkinter et Pillow embarqués.
 - Sélection et mémorisation du dépôt vaso-shop pour le lancement de l’application autonome.
 
+## [1.1.133] - 2026-09-24
+
+### Modifié
+- Réduit l’icône 3D d’un tiers et la rapproche du bord droit sur mobile.
+- Fige l’aperçu couleur 3D sur mobile et limite le rendu aux mises à jour.
+- Remplace la liste de couleurs mobile par un sélecteur compact avec grille de pastilles sous l’aperçu.
+
 ## [1.1.132] - 2026-09-24
 
 ### Modifié
