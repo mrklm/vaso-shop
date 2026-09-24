@@ -7,11 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
-## [Non publié]
+## [1.1.134] - 2026-09-24
 
-### Ajouté
-- Build Linux AppImage de VASO-Admin avec Python, Tkinter et Pillow embarqués.
-- Sélection et mémorisation du dépôt vaso-shop pour le lancement de l’application autonome.
+### Modifié
+- Diffère le chargement de la 3D sur mobile et suspend son rendu hors écran ou dans un onglet masqué.
+- Allège le rendu 3D mobile et remplace le diaporama d’accueil par une photo fixe.
 
 ## [1.1.133] - 2026-09-24
 
@@ -21,6 +21,10 @@ et ce projet suit un versioning de type **SemVer**.
 - Remplace la liste de couleurs mobile par un sélecteur compact avec grille de pastilles sous l’aperçu.
 
 ## [1.1.132] - 2026-09-24
+
+### Ajouté
+- Build Linux AppImage de VASO-Admin avec Python, Tkinter et Pillow embarqués.
+- Sélection et mémorisation du dépôt vaso-shop pour le lancement de l’application autonome.
 
 ### Modifié
 - Ajoute sur mobile une barre persistante avec statut boutique, panier et informations atelier dépliables.

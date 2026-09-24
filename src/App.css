@@ -2507,3 +2507,13 @@
     height: 280px;
   }
 }
+
+
+.shop-viewer-loading {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 20px;
+  color: var(--color-fg);
+  text-align: center;
+}

@@ -161,7 +161,7 @@ function ScreenshotBridge() {
   return null;
 }
 
-interface VaseViewer3DProps {
+export interface VaseViewer3DProps {
   mode?: "main" | "preview";
   colorOverride?: string;
   colorOpacity?: number;
@@ -171,6 +171,8 @@ interface VaseViewer3DProps {
   suppressTestTubeSupport?: boolean;
   captureToStore?: boolean;
   staticPreview?: boolean;
+  renderingActive?: boolean;
+  mobileQuality?: boolean;
 }
 
 export function VaseViewer3D({
@@ -183,6 +185,8 @@ export function VaseViewer3D({
   suppressTestTubeSupport = false,
   captureToStore,
   staticPreview = false,
+  renderingActive = true,
+  mobileQuality = false,
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
@@ -255,7 +259,8 @@ export function VaseViewer3D({
         </button>
       )}
       <Canvas
-        frameloop={isPreview && staticPreview ? "demand" : "always"}
+        frameloop={!renderingActive ? "never" : isPreview && staticPreview ? "demand" : "always"}
+        dpr={mobileQuality ? 1 : [1, 2]}
         camera={{
           position: isPreview ? [175, 130, 175] : [220, 160, 220],
           fov: 45,
@@ -264,13 +269,13 @@ export function VaseViewer3D({
         }}
         style={{ background: "var(--color-bg)" }}
         gl={{ preserveDrawingBuffer: true }}
-        shadows={!isPreview}
+        shadows={!isPreview && !mobileQuality}
       >
         <ambientLight intensity={isPreview ? 0.58 : 0.25} />
         <directionalLight
           position={[100, 200, 100]}
           intensity={isPreview ? 1.05 : 1.6}
-          castShadow={!isPreview}
+          castShadow={!isPreview && !mobileQuality}
           shadow-bias={-0.0005}
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
@@ -299,7 +304,7 @@ export function VaseViewer3D({
           />
         )}
 
-        {!isPreview && (
+        {!isPreview && !mobileQuality && (
           <mesh
             rotation={[-Math.PI / 2, 0, 0]}
             position={[0, -params.heightMm / 2 - 0.01, 0]}
@@ -339,7 +344,7 @@ export function VaseViewer3D({
           />
         )}
 
-        {!isPreview && (
+        {!isPreview && !mobileQuality && (
           <EffectComposer enableNormalPass>
             <SSAO radius={0.03} intensity={5} luminanceInfluence={0.3} />
             <ToneMapping mode={ToneMappingMode.AGX} />

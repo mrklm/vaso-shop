@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import { InsertView2D } from "./components/viewer/InsertView2D";
-import { VaseViewer3D } from "./components/viewer/VaseViewer3D";
+import { DeferredVaseViewer3D as VaseViewer3D } from "./components/viewer/DeferredVaseViewer3D";
 import { useUIStore } from "./store/ui-store";
 import type { VaseParameters } from "./engine/types";
 import { SHOP_COUNTRIES } from "./shop/shop-countries";
@@ -812,7 +812,7 @@ function App() {
   }, [availableColors, selectedColorId, setSelectedColorId]);
 
   useEffect(() => {
-    if (heroGalleryImages.length <= 1) {
+    if (isMobileColorLayout || heroGalleryImages.length <= 1) {
       setHeroGalleryIndex(0);
       setHeroGalleryPreviousIndex(null);
       return undefined;
@@ -841,6 +841,7 @@ function App() {
       }
     };
   }, [
+    isMobileColorLayout,
     heroGalleryFadeInMs,
     heroGalleryFadeOutMs,
     heroGalleryImages,
@@ -1404,6 +1405,7 @@ function App() {
       <strong>{selectedColorLabel}</strong>
       <div className="shop-color-preview-viewer">
         <VaseViewer3D
+          mobile={isMobileColorLayout}
           mode="preview"
           staticPreview={isMobileColorLayout}
           captureToStore
@@ -1786,6 +1788,7 @@ function App() {
             </div>
             <div className="shop-viewer-frame">
               <VaseViewer3D
+                mobile={isMobileColorLayout}
                 colorOverride={SHOP_NEUTRAL_VASE_COLOR}
                 forceTestTubeSupport={selectedEntry !== null && wantsSoliflore}
                 suppressTestTubeSupport={suppressTestTubeSupport}
