@@ -2585,6 +2585,20 @@
 
 /* Compact desktop layout between the mobile and wide-screen breakpoints. */
 @media (900px < width <= 1080px) {
+  .shop-stage {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+
+  .shop-viewer-card,
+  .shop-side-column {
+    min-width: 0;
+  }
+
+  .shop-viewer-frame {
+    height: calc(100dvh - 144px);
+    min-height: 380px;
+  }
+
   .shop-copy-top {
     grid-template-rows: auto auto auto;
     align-content: space-between;

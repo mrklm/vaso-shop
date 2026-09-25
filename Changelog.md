@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.139] - 2026-09-25
+
+### Corrigé
+- Maintient la vue 3D, les dimensions et le bouton de commande côte à côte entre 901 et 1080 px, avec une hauteur stable après redimensionnement.
+
 ## [1.1.138] - 2026-09-25
 
 ### Modifié
