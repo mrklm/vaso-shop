@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.141] - 2026-09-25
+
+### Modifié
+- Répartit la sélection du contenant entre 901 et 1080 px en trois colonnes : photo à gauche, dimensions et choix au centre, coupe et validation à droite.
+
 ## [1.1.140] - 2026-09-25
 
 ### Modifié
