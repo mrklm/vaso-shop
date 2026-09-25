@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.140] - 2026-09-25
+
+### Modifié
+- Compacte la sélection du contenant en deux colonnes entre 901 et 1080 px : illustration, coupe et validation à gauche, dimensions et options à droite.
+
 ## [1.1.139] - 2026-09-25
 
 ### Corrigé
