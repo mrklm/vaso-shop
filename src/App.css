@@ -2575,3 +2575,103 @@
     padding-top: 0;
   }
 }
+
+
+@media (width > 900px) {
+  .shop-cart-button img {
+    border-radius: 50%;
+  }
+}
+
+/* Compact desktop layout between the mobile and wide-screen breakpoints. */
+@media (900px < width <= 1080px) {
+  .shop-copy-top {
+    grid-template-rows: auto auto auto;
+    align-content: space-between;
+    gap: 16px;
+  }
+
+  .shop-hero-media {
+    justify-self: center;
+    justify-content: center;
+  }
+
+  .shop-hero-gallery-orb {
+    width: 280px;
+  }
+
+  .shop-current-card .shop-info-head-cart {
+    min-height: 76px;
+    padding-right: 88px;
+  }
+
+  .shop-status-banner-cart {
+    position: static;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .shop-status-banner-cart .shop-status-note {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .shop-current-card .shop-story-workshop {
+    grid-template-rows: auto auto auto;
+    min-height: 0;
+  }
+
+  .shop-current-card .shop-story-head {
+    margin-bottom: 12px;
+  }
+
+  .shop-current-card .shop-story-contact {
+    margin-top: 24px;
+    padding-left: 0;
+  }
+
+  .shop-inline-actions {
+    grid-template-columns: 1fr 1.3fr 1fr;
+  }
+
+  .shop-stats,
+  .shop-order-step-model .shop-order-summary-wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shop-stats > .shop-stat:nth-child(n + 5) {
+    grid-column: 1 / -1;
+  }
+
+  .shop-order-step-model .shop-container-illustrations {
+    margin-top: 12px;
+    width: 200px;
+    height: 180px;
+  }
+
+  .shop-order-step-model .shop-container-illustrations,
+  .shop-order-step-model .shop-return-generation-button {
+    position: relative;
+    left: -24px;
+  }
+
+  .shop-order-step-model .shop-insert-view-slot {
+    min-height: 0;
+    padding-top: 0;
+  }
+
+  .shop-order-step-color {
+    min-height: 0;
+  }
+
+  .shop-order-step-color .shop-color-swatches {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .shop-order-step-color .shop-swatch-button {
+    min-height: 44px;
+    padding: 8px;
+  }
+}

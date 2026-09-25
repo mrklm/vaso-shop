@@ -7,6 +7,14 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.138] - 2026-09-25
+
+### Modifié
+- Compacte l’accueil, les dimensions, les couleurs et les espaces du contenant entre 901 et 1080 px, en conservant la boutique à droite.
+
+### Corrigé
+- Évite le chevauchement du texte d’expédition avec le panier à ces largeurs et arrondit l’image du panier sur ordinateur.
+
 ## [1.1.137] - 2026-09-24
 
 ### Corrigé
