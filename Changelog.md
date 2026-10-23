@@ -7,6 +7,11 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.142] - 2026-10-23
+
+### Corrigé
+- Supprime la génération par double tap dans la vue 3D pour éviter qu’un zoom à deux doigts sur mobile génère un nouveau vase. La génération reste accessible via le bouton « Générer ».
+
 ## [1.1.141] - 2026-09-25
 
 ### Modifié

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import { EffectComposer, SSAO, ToneMapping } from "@react-three/postprocessing";
@@ -194,7 +194,6 @@ export function VaseViewer3D({
 }: VaseViewer3DProps) {
   const params = useVaseStore((s) => s.params);
   const seed = useVaseStore((s) => s.seed);
-  const randomize = useVaseStore((s) => s.randomize);
   const shading = useUIStore((s) => s.shading);
   const showGrid = useUIStore((s) => s.showGrid);
   const vaseColor = useUIStore((s) => s.vaseColor);
@@ -206,7 +205,6 @@ export function VaseViewer3D({
   const rotationSpeed = useUIStore((s) => s.rotationSpeed);
   const meshData = useVaseMesh(params, seed, forceTestTubeSupport, suppressTestTubeSupport);
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const lastTapRef = useRef(0);
   const [interactionEnabled, setInteractionEnabled] = useState(false);
   const paramsKey = JSON.stringify(params);
   const isPreview = mode === "preview";
@@ -220,24 +218,11 @@ export function VaseViewer3D({
   const resolvedRotationMode = isPreview ? "vase" : rotationMode;
   const resolvedRotationSpeed = isPreview ? (staticPreview ? 0 : 0.35) : rotationSpeed;
 
-  const handleDoubleTap = useCallback(
-    (e: React.TouchEvent) => {
-      const now = Date.now();
-      if (now - lastTapRef.current < 350) {
-        e.preventDefault();
-        randomize();
-      }
-      lastTapRef.current = now;
-    },
-    [randomize],
-  );
-
   return (
     <div
       className={`viewer-3d${isPreview ? " viewer-3d-preview" : ""}${
         !isPreview && interactionEnabled ? " viewer-3d-unlocked" : " viewer-3d-locked"
       }`}
-      onTouchEnd={isPreview || !interactionEnabled ? undefined : handleDoubleTap}
     >
       {!isPreview && (
         <button
