@@ -7,6 +7,15 @@ et ce projet suit un versioning de type **SemVer**.
 
 ---
 
+## [1.1.143] - 2026-10-23
+
+### Corrigé
+- Rétablit le diaporama du hero sur mobile avec les mêmes images et transitions que sur ordinateur.
+
+### Modifié
+- Met le diaporama en pause lorsque le hero est hors écran ou que l’onglet est masqué, puis reprend automatiquement son défilement.
+- Affiche une image fixe sans fondu lorsque la préférence « Réduire les animations » est activée.
+
 ## [1.1.142] - 2026-10-23
 
 ### Corrigé

@@ -392,6 +392,18 @@
     forwards;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .shop-hero-gallery-image-current {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .shop-hero-gallery-image-previous {
+    display: none;
+  }
+}
+
 .shop-hero-gallery-placeholder {
   height: 100%;
   padding: 26px;

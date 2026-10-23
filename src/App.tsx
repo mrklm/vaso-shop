@@ -514,6 +514,12 @@ function App() {
   const [customerMessage, setCustomerMessage] = useState("");
   const [heroGalleryIndex, setHeroGalleryIndex] = useState(0);
   const [heroGalleryPreviousIndex, setHeroGalleryPreviousIndex] = useState<number | null>(null);
+  const heroGalleryRef = useRef<HTMLDivElement>(null);
+  const [isHeroVisible, setIsHeroVisible] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState(() => !document.hidden);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const [containerIllustrationIndex, setContainerIllustrationIndex] = useState(0);
   const [solifloreChoice, setSolifloreChoice] = useState<SolifloreChoice>("");
   const [isModelStepConfirmed, setIsModelStepConfirmed] = useState(false);
@@ -812,8 +818,39 @@ function App() {
   }, [availableColors, selectedColorId, setSelectedColorId]);
 
   useEffect(() => {
-    if (isMobileColorLayout || heroGalleryImages.length <= 1) {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotion = () => setPrefersReducedMotion(query.matches);
+    const updateVisibility = () => setIsPageVisible(!document.hidden);
+    query.addEventListener("change", updateMotion);
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => {
+      query.removeEventListener("change", updateMotion);
+      document.removeEventListener("visibilitychange", updateVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    const gallery = heroGalleryRef.current;
+    if (!gallery) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsHeroVisible(entry.isIntersecting);
+    });
+    observer.observe(gallery);
+    return () => observer.disconnect();
+  }, [shopConfig]);
+
+  useEffect(() => {
+    setHeroGalleryIndex(0);
+    setHeroGalleryPreviousIndex(null);
+  }, [heroGalleryImages]);
+
+  useEffect(() => {
+    if (prefersReducedMotion || heroGalleryImages.length <= 1) {
       setHeroGalleryIndex(0);
+      setHeroGalleryPreviousIndex(null);
+      return undefined;
+    }
+    if (!isHeroVisible || !isPageVisible) {
       setHeroGalleryPreviousIndex(null);
       return undefined;
     }
@@ -841,7 +878,9 @@ function App() {
       }
     };
   }, [
-    isMobileColorLayout,
+    isHeroVisible,
+    isPageVisible,
+    prefersReducedMotion,
     heroGalleryFadeInMs,
     heroGalleryFadeOutMs,
     heroGalleryImages,
@@ -1533,7 +1572,11 @@ function App() {
               </div>
 
               <div className="shop-hero-media">
-                <div className="shop-hero-gallery" aria-label="Photos d'atelier">
+                <div
+                  ref={heroGalleryRef}
+                  className="shop-hero-gallery"
+                  aria-label="Photos d'atelier"
+                >
                   <div
                     className="shop-hero-gallery-orb"
                     style={
